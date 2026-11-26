@@ -19,7 +19,7 @@ abstract final class TaxiDaySheet {
     final d = OwnerDates.only(day);
     final rows = controller.dayRows(d);
     final festival = controller.festivalOn(d);
-    final canAdd = controller.canAddOn(d);
+    final canAdd = controller.canAddOn(d) && !TaxiDriverDeps.isDayOff(d);
     final action = await OwnerSheet.show<_DayAction>(
       context,
       look: TaxiCal.look,

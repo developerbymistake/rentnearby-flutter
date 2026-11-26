@@ -6,6 +6,11 @@ import 'package:bakhli/features/nearby/controllers/nearby_centre_controller.dart
 import 'package:bakhli/features/nearby/models/nearby_models.dart';
 import 'package:bakhli/features/taxi/guest/taxi_card.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_feed_repository.dart';
+import 'package:bakhli/features/taxi/guest/v2/taxi_popular_routes.dart';
+import 'package:bakhli/features/taxi/guest/v2/taxi_journey_date.dart';
+import 'package:bakhli/features/taxi/guest/v2/taxi_results_controller.dart';
+import 'package:bakhli/features/taxi/guest/v2/taxi_results_screen.dart';
+import 'package:bakhli/features/taxi/guest/v2/taxi_seeker_cache.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_list_controller_v2.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_list_screen_v2.dart';
 import 'package:bakhli/features/taxi/models/taxi_browse_item.dart';
@@ -52,7 +57,10 @@ bool _long = false;
 
 class _Repo extends TaxiFeedRepository {
   @override
-  Future<NearbyPage<TaxiFeedItem>> local({required double lat, required double lng, String? pageToken, int pageSize = 20, String? category}) async {
+  Future<List<TaxiPopularRoute>> popularRoutes() async => const [];
+
+  @override
+  Future<NearbyPage<TaxiFeedItem>> local({required double lat, required double lng, String? pageToken, int pageSize = 20, String? category, String? date}) async {
     final hero = _f(_j('h', _long ? 'Pradeep Kumar Singh Rawat Travels' : 'Pradeep Kumar', 'Dzire', 4, fare: 2400, to: 'Nainital', featured: true, km: _long ? 40 : 5, label: _long ? 'far' : 'near', city: _long ? 'Ramgarh' : 'Haldwani'));
     final f2 = _f(_j('f2', 'Rakesh Singh', 'Innova', 7, fare: 2400, to: 'Nainital', featured: true, trip: 'RoundTrip'));
     return NearbyPage(
@@ -66,7 +74,7 @@ class _Repo extends TaxiFeedRepository {
   }
 
   @override
-  Future<TaxiRouteFeed> route({required double fromLat, required double fromLng, required double toLat, required double toLng, String? category}) async =>
+  Future<TaxiRouteFeed> route({required double fromLat, required double fromLng, required double toLat, required double toLng, String? category, String? date, String sort = 'nearest', TaxiCityPair? cities}) async =>
       TaxiRouteFeed(tiers: [
         TaxiTier(key: TaxiTierKey.onRoute, items: [
           _f(_j('r1', 'Pradeep Kumar', 'Dzire', 4, fare: 2600, to: 'Almora', trip: 'RoundTrip')),
@@ -154,10 +162,21 @@ void main() {
     debugDisableShadows = false;
     _base();
     Get.find<AuthController>().tabIndex.value = 3;
-    final c = Get.put(TaxiListControllerV2(root: true, repo: _Repo(), waysRepo: FakeWaysRepo()), tag: TaxiListControllerV2.tag);
-    await pumpPhone(t, const TaxiListScreenV2(root: true), size: const Size(360, 2000));
-    await _settle(t);
-    c.setTo(PlaceResult(name: 'Almora', subtitle: '', latLng: const LatLng(29.6, 79.66)));
+    TaxiSeekerCache.clearMemory();
+    Get.put(
+      TaxiResultsController(
+        args: TaxiResultsArgs(
+          from: PlaceResult(name: 'Haldwani', subtitle: '', latLng: const LatLng(29.2, 79.5)),
+          fromNearYou: false,
+          to: PlaceResult(name: 'Almora', subtitle: '', latLng: const LatLng(29.6, 79.66)),
+          date: TaxiJourneyDate.today(),
+        ),
+        repo: _Repo(),
+        waysRepo: FakeWaysRepo(),
+      ),
+      tag: TaxiResultsController.tag,
+    );
+    await pumpPhone(t, const TaxiResultsScreen(), size: const Size(360, 2000));
     await _settle(t);
     await shot(t, 'route_1.0_360');
     expect(t.takeException(), isNull);

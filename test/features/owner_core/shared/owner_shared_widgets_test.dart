@@ -84,6 +84,58 @@ void main() {
         NumbersRow(tiles: [NumberTile(value: '12', label: 'New requests'), NumberTile(value: '3', label: 'Missed'), NumberTile(value: '4.8', label: 'Rating')]),
       ]),
     );
+
+    testWidgets('NumberTile.dot draws a dot before the label and keeps the tap', (t) async {
+      var taps = 0;
+      await pumpPhone(
+        t,
+        _page([
+          Material(
+            child: OwnerFacts(facts: [
+              NumberTile(value: '3', label: 'Bookings', dot: const Color(0xFF2E7D32), onTap: () => taps++),
+              const NumberTile(value: '0', label: 'Days off'),
+            ]),
+          ),
+        ]),
+      );
+      final dots = find.byWidgetPredicate((w) => w is Container && w.decoration is BoxDecoration && (w.decoration! as BoxDecoration).shape == BoxShape.circle);
+      expect(dots, findsOneWidget);
+      expect(t.getTopLeft(dots).dx, lessThan(t.getTopLeft(find.text('Bookings')).dx));
+      await t.tap(find.text('Bookings'));
+      expect(taps, 1);
+    });
+
+    testWidgets('a row without dots draws no dot (Stay Owner Home unchanged)', (t) async {
+      await pumpPhone(
+        t,
+        _page(const [
+          NumbersRow(tiles: [NumberTile(value: '2', label: 'New enquiries'), NumberTile(value: '1', label: 'Offers waiting'), NumberTile(value: '3', label: 'Confirmed')]),
+        ]),
+      );
+      final dots = find.byWidgetPredicate((w) => w is Container && w.decoration is BoxDecoration && (w.decoration! as BoxDecoration).shape == BoxShape.circle);
+      expect(dots, findsNothing);
+      final pad = t.widgetList<Padding>(find.descendant(of: find.byType(NumbersRow), matching: find.byType(Padding))).map((p) => p.padding).toList();
+      expect(pad, contains(DS.sym(h: 12, v: 12)));
+    });
+
+    testOwnerSizes(
+      'four facts in one row fit with tight padding',
+      () => _page(const [
+        Material(
+          child: OwnerFacts(tight: true, facts: [
+            NumberTile(value: '1', label: 'Route'),
+            NumberTile(value: '12', label: 'New requests'),
+            NumberTile(value: '7', label: 'Missed'),
+            NumberTile(value: '4.8', label: 'Rating'),
+          ]),
+        ),
+      ]),
+      check: (t, size, scale) async {
+        for (final l in ['Route', 'New requests', 'Missed', 'Rating']) {
+          expect(find.text(l), findsOneWidget);
+        }
+      },
+    );
   });
 
   group('plan add rule', () {

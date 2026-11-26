@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import '../../../utils/spot_photo_url.dart';
 import '../models/trip_spot_category.dart';
 import 'discovery_api.dart';
+import 'map_marker_art.dart';
+import 'map_marker_sizes.dart';
 
 typedef MarkerFetch = Future<Uint8List?> Function(String url);
 
@@ -104,7 +106,7 @@ class CanvasMarkerPainter implements MarkerPainter {
   static const double _ringDot = 1;
   static const double _ringPhoto = 2;
   static const double _shadowPad = 3;
-  static const double _glyphRatio = 0.58;
+  static const double _artRatio = 0.64;
 
   static double canvasDp(double markerDp) => markerDp + _shadowPad * 2;
 
@@ -116,7 +118,7 @@ class CanvasMarkerPainter implements MarkerPainter {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, size, size));
     _shadow(canvas, c, r, t);
-    canvas.drawCircle(c, r, Paint()..color = TripSpotCategory.colorOf(category));
+    canvas.drawCircle(c, r, Paint()..color = TripSpotCategory.colorOf(DiscIds.badgeKey(category)));
     canvas.drawCircle(
       c,
       r - _ringBadge * t.pxPerDp / 2,
@@ -125,7 +127,7 @@ class CanvasMarkerPainter implements MarkerPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = _ringBadge * t.pxPerDp,
     );
-    _glyph(canvas, c, TripSpotCategory.iconOf(category), r * 2 * _glyphRatio);
+    await _art(canvas, c, category, r * 2 * _artRatio);
     return _png(recorder, size);
   }
 
@@ -176,48 +178,80 @@ class CanvasMarkerPainter implements MarkerPainter {
     }
   }
 
-  static double stopRingDp() => DS.s(3);
+  static double stopRingDp([DiscTuning? t]) => DS.s(MapMarkerSizes.stopRing) * (t?.ringGrow ?? 1);
   static double stopBadgeDp(DiscTuning t) => t.stopBadgeDp ?? DS.s(20);
+  static double stopBadgeRingDp(DiscTuning t) => _ringBadge * t.ringGrow;
+  static double stopPhotoRingDp(DiscTuning t) => _ringPhoto * t.ringGrow;
 
   static double stopCanvasDp(DiscTuning t) {
-    final outer = t.photoDp / 2 + stopRingDp();
+    final outer = t.photoDp / 2 + stopRingDp(t);
     final corner = outer * _corner + stopBadgeDp(t) / 2 + _ringBadge;
     return 2 * (corner > outer + _shadowPad ? corner : outer + _shadowPad);
   }
 
   static const double _corner = 0.7071;
 
-  // The image is drawn at the zoom-17 size and scaled down, so the number shows at caption size at zoom 14.
+  // The image is drawn at the zoom-17 size and scaled down, so the number shows at caption size times the marker scale at zoom 14.
   static TextStyle stopNumberStyle(DiscTuning t) {
     final base = TypeTokens.caption;
     final grow = t.photoDp / (t.photoMidDp ?? t.photoDp);
-    return base.copyWith(color: FitnessAppTheme.white, height: 1, fontSize: base.fontSize! * grow * t.pxPerDp);
+    return base.copyWith(color: FitnessAppTheme.white, height: 1, fontSize: base.fontSize! * grow * t.sizeScale * t.pxPerDp);
+  }
+
+  // Pixel side of the photo circle inside the white ring, at the zoom-17 size the stop is drawn at.
+  static int stopPhotoPx(DiscTuning t) => t.px(t.photoDp - 2 * stopPhotoRingDp(t));
+
+  // Decode size that makes the shorter side cover the circle, never larger than that and never upscaled.
+  static ({int width, int height}) coverSize(int width, int height, int side) {
+    final short = width < height ? width : height;
+    if (short <= side || short <= 0) return (width: width, height: height);
+    final k = side / short;
+    final w = (width * k).round(), h = (height * k).round();
+    return (width: w < 1 ? 1 : w, height: h < 1 ? 1 : h);
+  }
+
+  static Future<ui.Image?> _decodeCover(Uint8List bytes, int side) async {
+    final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+    ui.ImageDescriptor? d;
+    try {
+      d = await ui.ImageDescriptor.encoded(buffer);
+      final size = coverSize(d.width, d.height, side);
+      final codec = await d.instantiateCodec(targetWidth: size.width, targetHeight: size.height);
+      try {
+        return (await codec.getNextFrame()).image;
+      } finally {
+        codec.dispose();
+      }
+    } catch (_) {
+      return null;
+    } finally {
+      d?.dispose();
+      buffer.dispose();
+    }
+  }
+
+  // A 1 px clear image that replaces a stop image the map no longer shows.
+  Future<Uint8List> blank() {
+    final recorder = ui.PictureRecorder();
+    Canvas(recorder, const Rect.fromLTWH(0, 0, 1, 1));
+    return _png(recorder, 1);
   }
 
   // Route stop: the spot photo (or its category icon) in the white ring, the day colour ring outside, the order badge on the corner.
   Future<Uint8List> stop({Uint8List? thumb, required String category, required Color ring, required int number, required DiscTuning t}) async {
-    ui.Image? src;
-    if (thumb != null) {
-      try {
-        final codec = await ui.instantiateImageCodec(thumb, targetWidth: t.thumbPx * 2, allowUpscaling: false);
-        src = (await codec.getNextFrame()).image;
-        codec.dispose();
-      } catch (_) {
-        src = null;
-      }
-    }
+    final src = thumb == null ? null : await _decodeCover(thumb, stopPhotoPx(t));
     try {
       final p = t.pxPerDp;
       final size = t.px(stopCanvasDp(t)).toDouble();
       final r = t.photoDp * p / 2;
-      final outer = r + stopRingDp() * p;
+      final outer = r + stopRingDp(t) * p;
       final c = Offset(size / 2, size / 2);
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, size, size));
       _shadow(canvas, c, outer, t);
       canvas.drawCircle(c, outer, Paint()..color = ring);
       canvas.drawCircle(c, r, Paint()..color = FitnessAppTheme.white);
-      final inner = Rect.fromCircle(center: c, radius: r - _ringPhoto * p);
+      final inner = Rect.fromCircle(center: c, radius: r - stopPhotoRingDp(t) * p);
       final image = src;
       if (image != null) {
         final side = image.width < image.height ? image.width : image.height;
@@ -227,19 +261,20 @@ class CanvasMarkerPainter implements MarkerPainter {
         canvas.drawImageRect(image, from, inner, Paint()..filterQuality = FilterQuality.high);
         canvas.restore();
       } else {
-        canvas.drawCircle(c, inner.width / 2, Paint()..color = TripSpotCategory.colorOf(category));
-        _glyph(canvas, c, TripSpotCategory.iconOf(category), inner.width * _glyphRatio);
+        canvas.drawCircle(c, inner.width / 2, Paint()..color = TripSpotCategory.colorOf(DiscIds.badgeKey(category)));
+        await _art(canvas, c, category, inner.width * _artRatio);
       }
       final b = stopBadgeDp(t) * p / 2;
       final at = c + Offset(outer * _corner, -outer * _corner);
       canvas.drawCircle(at, b, Paint()..color = ring);
+      final badgeRing = stopBadgeRingDp(t) * p;
       canvas.drawCircle(
         at,
-        b - _ringBadge * p / 2,
+        b - badgeRing / 2,
         Paint()
           ..color = FitnessAppTheme.white
           ..style = PaintingStyle.stroke
-          ..strokeWidth = _ringBadge * p,
+          ..strokeWidth = badgeRing,
       );
       final tp = TextPainter(
         textDirection: TextDirection.ltr,
@@ -253,16 +288,11 @@ class CanvasMarkerPainter implements MarkerPainter {
     }
   }
 
-  static void _glyph(Canvas canvas, Offset c, IconData icon, double size) {
-    final tp = TextPainter(
-      textDirection: TextDirection.ltr,
-      text: TextSpan(
-        text: String.fromCharCode(icon.codePoint),
-        style: TextStyle(fontFamily: icon.fontFamily, package: icon.fontPackage, fontSize: size, color: FitnessAppTheme.white, height: 1),
-      ),
-    )..layout();
-    tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
-    tp.dispose();
+  static Future<void> _art(Canvas canvas, Offset c, String category, double side) async {
+    final img = await MapMarkerArt.image(category, side.round());
+    if (img == null) return;
+    final to = Rect.fromCenter(center: c, width: side, height: side);
+    canvas.drawImageRect(img, Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()), to, Paint()..filterQuality = FilterQuality.high);
   }
 
   @override

@@ -204,6 +204,7 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
   int? _dataSig;
   String? _photoSig;
   String? _selImg;
+  bool _selSmall = false;
   Worker? _stateWorker;
   VoidCallback? _unhook;
   bool _disposed = false;
@@ -413,6 +414,7 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
       }
     } else {
       selectedPlannedDay.value = day;
+      if (wasPlanned) await refreshPlanned();
     }
   }
 
@@ -532,17 +534,27 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
     selectedPlannedDay.value = host.plannedDayOf(s.id);
     selected.value = s;
     final img = kind == DiscSelKind.photo ? _slotName(s.id) : null;
+    final small = kind == DiscSelKind.planned && host.plannedIsDot(s.id);
     _selImg = img;
+    _selSmall = small;
     try {
-      await port.setGeoJson(DiscIds.srcSel, DiscGeoJson.sel(s, kind, tier: _tiers[s.id], img: img));
-      if (lift && gen == _gen) await _lift(port, s, kind);
+      await port.setGeoJson(DiscIds.srcSel, DiscGeoJson.sel(s, kind, tier: _tiers[s.id], img: img, small: small));
+      if (lift && gen == _gen) await _lift(port, s, kind, small: small);
     } catch (_) {}
+  }
+
+  /// The trip map changed which day shows full stops: an open planned stop takes the halo of its new size.
+  Future<void> refreshPlanned() async {
+    final sel = selected.value;
+    if (sel == null || selectedKind.value != DiscSelKind.planned || !isAttached) return;
+    if (host.plannedIsDot(sel.id) == _selSmall) return;
+    await _show(sel, DiscSelKind.planned, lift: false);
   }
 
   // MapLibre world = 512 dp x 2^zoom, so dp per degree of latitude gives the camera zoom.
   static double zoomOf(double dpPerLat, double lat) => math.log(dpPerLat * 360 * math.cos(lat * math.pi / 180) / 512) / math.ln2;
 
-  Future<void> _lift(DiscoveryMapPort port, DiscoverySpot s, DiscSelKind kind) async {
+  Future<void> _lift(DiscoveryMapPort port, DiscoverySpot s, DiscSelKind kind, {required bool small}) async {
     final view = viewSize?.call();
     if (view == null || view.isEmpty) return;
     final u = unitsPerDp();
@@ -560,8 +572,8 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
     if (selected.value?.id == s.id) selectedScreenX.value = x;
     final zoom = zoomOf(perLat, s.lat);
     final halo = zoom.isFinite
-        ? tuning.haloRadiusAt(kind.name,
-            zoom, dotKind: DiscSelKind.dot.name, plannedKind: DiscSelKind.planned.name, photoScale: DiscPaint.selIconScale)
+        ? tuning.haloRadiusAt(kind.name, zoom,
+            dotKind: DiscSelKind.dot.name, plannedKind: DiscSelKind.planned.name, photoScale: DiscPaint.selIconScale, small: small)
         : tuning.haloPhotoDp / 2;
     double? target;
     if (mode == DiscoveryMode.full) {
@@ -593,6 +605,7 @@ class TripDiscoveryLayer implements DiscoveryLayerApi {
 
   void _clearSelectionState() {
     _selImg = null;
+    _selSmall = false;
     selected.value = null;
     selectedKind.value = null;
     selectedPlannedDay.value = null;

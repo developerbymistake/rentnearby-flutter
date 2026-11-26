@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../config/app_routes.dart';
@@ -14,15 +16,16 @@ import '../../../nearby/controllers/nearby_centre_controller.dart';
 import '../../../nearby/nearby_strings.dart';
 import '../../../nearby/widgets/nearby_header_strip.dart';
 import '../../../nearby/widgets/nearby_state_views.dart';
-import '../../../nearby/widgets/place_search_bar.dart';
-import '../../ways/widgets/taxi_ways_entry_card.dart';
 import '../../models/taxi_browse_item.dart';
 import '../taxi_card.dart';
 import '../taxi_navigation.dart';
 import '../../taxi_option_sets.dart';
-import 'route_cities_strip.dart';
+import 'taxi_date_sheet.dart';
 import 'taxi_feed_repository.dart';
 import 'taxi_list_controller_v2.dart';
+import 'taxi_popular_routes.dart';
+import 'taxi_search_card.dart';
+import 'taxi_search_strings.dart';
 
 class TaxiListScreenV2 extends StatefulWidget {
   final bool root;
@@ -37,6 +40,9 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
   final _auth = Get.find<AuthController>();
   final _scroll = ScrollController();
   bool _picking = false;
+  bool _pickingDate = false;
+  Timer? _dayTimer;
+  late final AppLifecycleListener _life;
 
   @override
   void initState() {
@@ -45,10 +51,25 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
         ? Get.find<TaxiListControllerV2>(tag: TaxiListControllerV2.tag)
         : Get.put(TaxiListControllerV2(root: widget.root), tag: TaxiListControllerV2.tag);
     _scroll.addListener(_onScroll);
+    _life = AppLifecycleListener(onResume: _dayChanged);
+    _armDay();
+  }
+
+  void _armDay() {
+    _dayTimer?.cancel();
+    _dayTimer = Timer(_ctrl.untilNextDay + const Duration(seconds: 1), _dayChanged);
+  }
+
+  void _dayChanged() {
+    if (!mounted) return;
+    _ctrl.checkDay();
+    _armDay();
   }
 
   @override
   void dispose() {
+    _dayTimer?.cancel();
+    _life.dispose();
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
     Get.delete<TaxiListControllerV2>(tag: TaxiListControllerV2.tag);
@@ -72,16 +93,23 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
     try {
       final PlaceResult? p = await LocationSearchSheet.show(context, bias: _ctrl.origin, palette: templateModulePalette);
       if (p == null || !mounted) return;
-      final other = isFrom ? _ctrl.to.value : (_ctrl.from.value ?? PlaceResult(name: '', subtitle: '', latLng: _ctrl.origin));
-      if (_ctrl.isTooClose(p, other)) {
-        AppToast.warning('From and To must be different places');
-        return;
-      }
       isFrom ? _ctrl.setFrom(p) : _ctrl.setTo(p);
+      if (_ctrl.samePlace) AppToast.warning(TaxiSearchStrings.samePlace);
     } catch (_) {
       AppToast.error(NearbyStrings.searchFailed);
     } finally {
       _picking = false;
+    }
+  }
+
+  Future<void> _pickDate() async {
+    if (_pickingDate) return;
+    _pickingDate = true;
+    try {
+      final d = await TaxiDateSheet.pick(context, initial: _ctrl.date.value, today: _ctrl.today);
+      if (d != null && mounted) _ctrl.setDate(d);
+    } finally {
+      _pickingDate = false;
     }
   }
 
@@ -103,6 +131,7 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
           SliverToBoxAdapter(child: _buildHeader(context)),
           SliverToBoxAdapter(child: _in(0, _buildReviewStrip())),
           SliverToBoxAdapter(child: _in(1, _buildTiles())),
+          SliverToBoxAdapter(child: _buildPopular()),
           SliverToBoxAdapter(child: _buildHeaderStrip()),
           _buildBody(),
           SliverToBoxAdapter(child: _buildFooter(bottom)),
@@ -136,7 +165,7 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
 
   String get _subtitle {
     final far = _ctrl.header.value?.farAway ?? false;
-    return _ctrl.to.value != null ? 'Taxis for your route' : (far ? 'Find the nearest taxis' : 'Taxis near you');
+    return far ? 'Find the nearest taxis' : 'Taxis near you';
   }
 
   Widget _buildHeader(BuildContext context) {
@@ -153,41 +182,47 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
   String _fromText() {
     final f = _ctrl.from.value;
     if (f != null) return f.name;
-    final c = NearbyCentreController.to;
-    final label = c.pinLabel;
-    return c.hasPin && label != null ? label : 'Near you';
+    return _ctrl.pinLabel ?? TaxiSearchStrings.nearYou;
   }
 
   Widget _buildSelectors() {
-    return Obx(() {
-      final f = _ctrl.from.value;
-      final t = _ctrl.to.value;
-      NearbyCentreController.to.centreVersion.value;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          PlaceSearchBarView(
-            caption: 'From',
-            label: _fromText(),
-            art: ListingArt.roundPushpin,
-            onTap: () => _pick(isFrom: true),
-            onClear: f == null ? null : _ctrl.useCentreAsFrom,
-            clearLabel: 'Use my centre',
-            margin: EdgeInsets.fromLTRB(DS.s(16), DS.gv(24), DS.s(16), 0),
-          ),
-          PlaceSearchBarView(
-            caption: 'To',
-            label: t?.name,
-            hint: 'Search a place',
-            art: ListingArt.search,
-            onTap: () => _pick(isFrom: false),
-            onClear: t == null ? null : _ctrl.clearTo,
-            clearLabel: 'Clear To',
-            margin: EdgeInsets.fromLTRB(DS.s(16), DS.gv(12), DS.s(16), DS.gv(4)),
-          ),
-        ],
-      );
-    });
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Obx(() {
+          final f = _ctrl.from.value;
+          final t = _ctrl.to.value;
+          final d = _ctrl.date.value;
+          NearbyCentreController.to.centreVersion.value;
+          return Padding(
+            padding: EdgeInsets.only(top: DS.gv(24)),
+            child: TaxiSearchCard(
+              fromLabel: _fromText(),
+              toLabel: t?.name,
+              date: d,
+              isToday: _ctrl.isToday,
+              canSwap: _ctrl.canSwap,
+              onFrom: () => _pick(isFrom: true),
+              onTo: () => _pick(isFrom: false),
+              onDate: _pickDate,
+              onSwap: _ctrl.swap,
+              onClearFrom: f == null ? null : _ctrl.useCentreAsFrom,
+              onClearTo: t == null ? null : _ctrl.clearTo,
+            ),
+          );
+        }),
+        Obx(() {
+          _ctrl.to.value;
+          _ctrl.from.value;
+          NearbyCentreController.to.centreVersion.value;
+          return SearchTaxisButton(onPressed: _ctrl.canSearch ? _ctrl.search : null);
+        }),
+      ],
+    );
+  }
+
+  Widget _buildPopular() {
+    return Obx(() => TaxiPopularRoutesRail(routes: _ctrl.popular.toList(), onTap: _ctrl.applyPopular));
   }
 
   Widget _buildReviewStrip() {
@@ -327,17 +362,12 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
 
   Widget _stateBox({required bool error}) => error
       ? NearbyError(onRetry: _ctrl.retry, tone: ListingTone.coral)
-      : NearbyEmpty(
-          title: _ctrl.isRoute ? NearbyStrings.routeEmptyTitle : NearbyStrings.taxisEmptyTitle,
-          body: _ctrl.isRoute ? NearbyStrings.routeEmptyBody : NearbyStrings.taxisEmptyBody,
-          tone: ListingTone.coral,
-        );
+      : NearbyEmpty(title: NearbyStrings.taxisEmptyTitle, body: NearbyStrings.taxisEmptyBody, tone: ListingTone.coral);
 
   Widget _buildBody() {
     return Obx(() {
       NearbyCentreController.to.centreVersion.value;
-      if (_ctrl.isLoading.value && _ctrl.items.isEmpty && _ctrl.route.value == null) return _buildSkeleton();
-      if (_ctrl.isRoute) return _routeBody();
+      if (_ctrl.isLoading.value && _ctrl.items.isEmpty && _ctrl.featured.isEmpty) return _buildSkeleton();
       final items = _ctrl.items;
       final featured = _ctrl.featured;
       if (items.isEmpty && featured.isEmpty) {
@@ -352,72 +382,6 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
         if (thin) const NearbyThin(),
       ]);
     });
-  }
-
-  Widget _tierTitle(TaxiTier t, TaxiRouteFeed r) {
-    final to = _ctrl.to.value?.name ?? '';
-    switch (t.key) {
-      case TaxiTierKey.onRoute:
-        return _title(NearbyStrings.driversOnRoute);
-      case TaxiTierKey.passing:
-        return _title(NearbyStrings.driversPassing);
-      case TaxiTierKey.basedNearFrom:
-        return _title(NearbyStrings.driversBasedNearby);
-      default:
-        return _title(NearbyStrings.taxisInTo(t.header?.centreCityName ?? to));
-    }
-  }
-
-  Widget _showMore(TaxiTier t) {
-    return Obx(() {
-      final loading = _ctrl.loadingTiers.contains(t.key);
-      return Padding(
-        padding: EdgeInsets.fromLTRB(DS.s(KitMetrics.gutter), DS.gv(4), DS.s(KitMetrics.gutter), DS.gv(8)),
-        child: loading
-            ? Center(child: SizedBox(height: DS.s(24), width: DS.s(24), child: CircularProgressIndicator(strokeWidth: DS.s(2), color: _tone.g2)))
-            : Center(child: ListingFilterChip(tone: _tone, label: NearbyStrings.showMore, selected: false, onTap: () => _ctrl.showMoreOf(t.key))),
-      );
-    });
-  }
-
-  Widget _routeBody() {
-    final r = _ctrl.route.value;
-    final to = _ctrl.to.value;
-    final waysAvailable = _ctrl.waysCheck.isAvailable;
-    if (r == null) return SliverList.list(children: [_title(_localTitle()), _stateBox(error: _ctrl.loadFailed.value)]);
-    final children = <Widget>[];
-    final shown = [for (final t in r.tiers) if (t.items.isNotEmpty) t];
-    if (shown.isEmpty) {
-      children.add(_stateBox(error: false));
-    } else if (to != null) {
-      children.add(RouteCitiesStrip(
-        fromLat: _ctrl.origin.latitude,
-        fromLng: _ctrl.origin.longitude,
-        toLat: to.latLng.latitude,
-        toLng: to.latLng.longitude,
-        fromName: _ctrl.from.value?.name,
-        toName: to.name,
-      ));
-    }
-    for (final t in shown) {
-      final open = !t.collapsed || _ctrl.isExpanded(t.key);
-      children.add(_tierTitle(t, r));
-      if (open) {
-        for (var i = 0; i < t.items.length; i++) {
-          children.add(_card(t.items[i], index: i));
-        }
-      }
-      if ((t.collapsed && !open) || (open && t.hasMore)) children.add(_showMore(t));
-    }
-    if (to != null && waysAvailable) {
-      children.add(TaxiWaysEntryCard(
-        from: _ctrl.routeFrom,
-        to: to,
-        empty: !r.hasRouteDrivers,
-        fromMyLocation: _ctrl.fromMyLocation,
-      ));
-    }
-    return SliverList.list(children: children);
   }
 
   Widget _buildSkeleton() {

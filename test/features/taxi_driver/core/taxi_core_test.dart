@@ -257,11 +257,12 @@ void main() {
       final h = TaxiHarness.setUp(homeJson(attention: [att('TravellerChoseYou', 1, {'offerId': 'o', 'confirmBy': by})]), clock: () => now);
       await pumpPhone(tester, TaxiDriverHomeScreen(controller: h.home), size: const Size(360, 800));
       await settle(tester);
-      final numbers = tester.widget(find.byType(NumbersRow));
+      final status = tester.widget(find.byType(TaxiStatusCard));
       now = now.add(const Duration(seconds: 1));
       await tester.pump(const Duration(seconds: 1));
       expect(find.text('12:39 left to confirm'), findsOneWidget);
-      expect(identical(tester.widget(find.byType(NumbersRow)), numbers), isTrue);
+      expect(identical(tester.widget(find.byType(TaxiStatusCard)), status), isTrue);
+      expect(find.byType(NumbersRow), findsNothing);
       await finish(tester);
     });
 
@@ -280,7 +281,7 @@ void main() {
       await finish(tester);
     });
 
-    testWidgets('hero: green band, car row, route and local day facts, ring strip, no Available now row', (tester) async {
+    testWidgets('hero: green band, car row, four numbers, ring strip, no Local day rate, no Available now row', (tester) async {
       final h = TaxiHarness.setUp(homeJson(attention: const []));
       final hub = Get.put(TaxiHubController(userId: () => 'user-a', fetch: () async => {'data': taxiJson()}), tag: TaxiHubController.tag);
       await hub.reload();
@@ -295,9 +296,11 @@ void main() {
       expect(inCard(find.byType(TaxiCarRow)), findsOneWidget);
       expect(inCard(find.text('Maruti Ertiga')), findsOneWidget);
       expect(inCard(find.text('6 seats')), findsOneWidget);
-      expect(find.text('Route'), findsOneWidget);
-      expect(find.text('₹2,500'), findsOneWidget);
-      expect(find.text('Local day rate'), findsOneWidget);
+      for (final l in ['Route', 'New requests', 'Missed', 'Rating']) {
+        expect(inCard(find.text(l)), findsOneWidget, reason: l);
+      }
+      expect(find.text('₹2,500'), findsNothing);
+      expect(find.text('Local day rate'), findsNothing);
       expect(inCard(find.text('Requests will ring')), findsOneWidget);
       expect(inCard(find.text('Notifications are on.')), findsOneWidget);
       expect(find.textContaining('Going offline'), findsNothing);

@@ -50,6 +50,7 @@ Map<String, dynamic> homeJson({
   String? vehicleName = 'Maruti Ertiga',
   int? seats = 6,
   String? photo,
+  Map<String, dynamic>? availability = const {'month': '2026-11', 'bookings': 3, 'daysOff': 0},
 }) =>
     {
       'role': 'TAXI_DRIVER',
@@ -75,7 +76,10 @@ Map<String, dynamic> homeJson({
       },
       'attention': attention,
       'attentionCount': attentionCount ?? attention.length,
-      'numbers': {'taxi': taxi ?? {'newRequests': 0}, 'centreBadge': badge},
+      'numbers': {
+        'taxi': {...(taxi ?? {'newRequests': 0}), 'availability': ?availability},
+        'centreBadge': badge,
+      },
       'planCard': ?planCard,
     };
 

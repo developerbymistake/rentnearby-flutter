@@ -3,6 +3,7 @@ import 'package:bakhli/design/design.dart';
 import '../../map_discovery/pack/map_pack_index.dart';
 import '../../map_discovery/pack/map_pack_models.dart';
 import '../models/trip_spot_category.dart';
+import 'discovery_ids.dart';
 
 class DiscArea {
   final double lat;
@@ -68,7 +69,7 @@ class DiscTiers {
   }
 
   static int groupOf(String category) {
-    final c = TripSpotCategory.colorOf(category);
+    final c = TripSpotCategory.colorOf(DiscIds.badgeKey(category));
     if (c == TripTokens.spotWater) return grpWater;
     if (c == TripTokens.spotNature) return grpNature;
     if (c == TripTokens.spotHeritage) return grpHeritage;

@@ -9,6 +9,7 @@ abstract final class TaxiDriverDeps {
   static Widget _none() => const SizedBox.shrink();
   static Future<void> _noRefresh() async {}
   static List<DateTime> _noDays(DateTime from, DateTime to) => const [];
+  static bool _notOff(DateTime day) => false;
 
   static Widget Function() upcomingCard = _none;
   static Widget Function() planCard = _none;
@@ -19,6 +20,7 @@ abstract final class TaxiDriverDeps {
   static void Function() openChooseRoute = _openChooseRoute;
   static void Function({String? section}) openHub = _openHub;
   static Future<void> Function() refreshHome = _noRefresh;
+  static bool Function(DateTime day) isDayOff = _notOff;
 
   static void _openEntry(String entryId) => Get.toNamed(AppRoutes.taxiCalendarEntry, arguments: {'id': entryId});
 
@@ -46,5 +48,6 @@ abstract final class TaxiDriverDeps {
     openChooseRoute = _openChooseRoute;
     openHub = _openHub;
     refreshHome = _noRefresh;
+    isDayOff = _notOff;
   }
 }

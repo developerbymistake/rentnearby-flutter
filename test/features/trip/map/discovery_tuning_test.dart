@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/trip/map/discovery_ids.dart';
+import 'package:bakhli/features/trip/map/map_marker_sizes.dart';
 import 'package:bakhli/features/trip/map/trip_discovery_layer.dart';
 import 'package:bakhli/features/trip/map/trip_marker_images.dart';
 import 'package:flutter/painting.dart';
@@ -27,13 +28,14 @@ void main() {
     }
   }
 
-  test('approved scale: zoom 10 / 14 / 17 = photo 132 / 180 / 216, badge 90 / 120 / 144, dot 54 / 84 / 102, selected 78 / 108 / 129', () {
+  test('approved scale: zoom 10 / 14 / 17 = photo 151.8 / 207 / 248.4, badge 103.5 / 138 / 165.6, dot 62.1 / 96.6 / 117.3, selected 89.7 / 124.2 / 148.35', () {
     DS.applyApproved();
-    for (final t in [DiscTuning.trip, DiscTuning.stay]) {
-      near(stops(t.photoIconSize).map((f) => f * t.photoDp).toList(), [132, 180, 216]);
-      near(stops(t.badgeIconSize).map((f) => f * t.badgeDp).toList(), [90, 120, 144]);
-      near(stops(t.dotRadius(1)).map((r) => (r + 1) * 2).toList(), [54, 84, 102]);
-      near(stops(t.selDotRadius(2)).map((r) => (r + 2) * 2).toList(), [78, 108, 129]);
+    const g = MapMarkerSizes.growth;
+    for (final t in [DiscTuning.trip, DiscTuning.stay, DiscTuning.tripStops]) {
+      near(stops(t.photoIconSize).map((f) => f * t.photoDp).toList(), [132 * g, 180 * g, 216 * g]);
+      near(stops(t.badgeIconSize).map((f) => f * t.badgeDp).toList(), [90 * g, 120 * g, 144 * g]);
+      near(stops(t.dotRadius(1)).map((r) => (r + 1) * 2).toList(), [54 * g, 84 * g, 102 * g]);
+      near(stops(t.selDotRadius(2)).map((r) => (r + 2) * 2).toList(), [78 * g, 108 * g, 129 * g]);
       expect(t.hitDp, 44);
     }
     expect(DiscTuning.trip.photoMax, 40);
@@ -43,8 +45,8 @@ void main() {
   test('markers are drawn at the zoomed-in size, so the zoom only scales them down', () {
     DS.applyApproved();
     final t = DiscTuning.trip;
-    expect(t.photoDp, closeTo(216, 1e-9));
-    expect(t.badgeDp, closeTo(144, 1e-9));
+    expect(t.photoDp, closeTo(216 * MapMarkerSizes.growth, 1e-9));
+    expect(t.badgeDp, closeTo(144 * MapMarkerSizes.growth, 1e-9));
     for (final f in [...stops(t.photoIconSize), ...stops(t.badgeIconSize)]) {
       expect(f, lessThanOrEqualTo(1.0));
     }
@@ -54,12 +56,12 @@ void main() {
     DS.applyApproved();
     final t = DiscTuning.trip;
     final sel = (t.selIconSize(DiscPaint.selIconScale) as List);
-    expect((sel[6] as double) * t.photoDp, closeTo(216, 1e-9), reason: 'normal zoom: photo and badge share one scale');
-    expect((sel[6] as double) * t.badgeDp, closeTo(144, 1e-9));
+    expect((sel[6] as double) * t.photoDp, closeTo(216 * MapMarkerSizes.growth, 1e-9), reason: 'normal zoom: photo and badge share one scale');
+    expect((sel[6] as double) * t.badgeDp, closeTo(144 * MapMarkerSizes.growth, 1e-9));
     final out = sel[4] as List;
     expect(out.take(3).toList(), ['match', ['get', 'kind'], 'badge']);
-    expect((out[3] as double) * t.badgeDp, closeTo(108, 1e-9));
-    expect((out[4] as double) * t.photoDp, closeTo(158.4, 1e-9));
+    expect((out[3] as double) * t.badgeDp, closeTo(108 * MapMarkerSizes.growth, 1e-9));
+    expect((out[4] as double) * t.photoDp, closeTo(158.4 * MapMarkerSizes.growth, 1e-9));
     final halo = t.haloRadius('dot', DiscPaint.selIconScale) as List;
     final small = halo[4] as List, full = halo[8] as List;
     expect(full[3], closeTo(t.haloDotDp / 2, 1e-9));
@@ -68,7 +70,7 @@ void main() {
     expect((small[4] as double) * 2, greaterThan(44 * DiscPaint.selIconScale));
   });
 
-  test('3x of the 2026-11-24 sizes in every marker field, halo too; route stops and the tap box unchanged', () {
+  test('3x of the 2026-11-24 sizes times the one growth constant in every marker field, halo too; the tap box unchanged', () {
     DS.applyApproved();
     const head = (photo: 72.0, badge: 48.0, dot: 34.0, selDot: 43.0, haloPhoto: 101.6, haloDot: 60.8, photoMin: 44.0, dotMin: 18.0);
     for (final t in [DiscTuning.trip, DiscTuning.stay]) {
@@ -83,9 +85,21 @@ void main() {
       expect(t.hitDp, greaterThanOrEqualTo(44));
     }
     final stops = DiscTuning.tripStops;
-    expect(stops.photoDp, closeTo(head.photo, 1e-9));
-    expect(stops.photoMinDp!, closeTo(head.photoMin, 1e-9));
-    expect(stops.stopBadgeDp!, closeTo(43.2, 1e-9));
+    expect(stops.photoDp, closeTo(head.photo * DiscTuning.markerScale, 1e-9));
+    expect(stops.photoMinDp!, closeTo(head.photoMin * DiscTuning.markerScale, 1e-9));
+    expect(stops.stopBadgeDp!, closeTo(54 * 0.8 * DiscTuning.markerScale, 1e-9));
+    for (final z in [DiscTuning.zoomOut, DiscTuning.zoomMid, DiscTuning.zoomIn]) {
+      expect(stops.haloRadiusAt('planned', z, dotKind: 'dot', plannedKind: 'planned', photoScale: 2),
+          stops.haloRadiusAt('photo', z, dotKind: 'dot', plannedKind: 'planned', photoScale: 1),
+          reason: 'a planned stop halo is the 1x photo halo at zoom $z');
+      expect(stops.haloRadiusAt('planned', z, dotKind: 'dot', plannedKind: 'planned', photoScale: 2, small: true),
+          stops.haloRadiusAt('dot', z, dotKind: 'dot', plannedKind: 'planned', photoScale: 1),
+          reason: 'a planned stop drawn as a dot takes the dot halo at zoom $z');
+    }
+    final z14 = (dot: stops.haloRadiusAt('planned', DiscTuning.zoomMid, dotKind: 'dot', plannedKind: 'planned', photoScale: 1, small: true),
+        photo: stops.haloRadiusAt('planned', DiscTuning.zoomMid, dotKind: 'dot', plannedKind: 'planned', photoScale: 1));
+    expect(z14.photo, closeTo(112 * DiscTuning.markerScale * 0.8 / 2, 1e-9), reason: '154.6 dp around a 103.5 dp photo stop');
+    expect(z14.dot, closeTo(67.25 * DiscTuning.markerScale * 0.8 / 2, 1e-9), reason: '92.8 dp around a 48.3 dp stop dot');
   });
 
   test('big markers declutter: every non-photo spot has a badge, badges and dots collide by rank, dots from zoom 12', () {
@@ -144,7 +158,8 @@ void main() {
     DS.applyApproved();
     final scaled = TripMarkerImages.cacheKey('w/12', 'https://a/x.jpg', DiscTuning.trip);
     expect(scaled, isNot(raw));
-    expect(scaled, startsWith('w_12_216_'));
+    expect((216 * MapMarkerSizes.growth).round(), 248);
+    expect(scaled, startsWith('w_12_248_'));
   });
 
   testWidgets('compose: the trip photo marker canvas follows px(photoDp) under the approved scale', (tester) async {

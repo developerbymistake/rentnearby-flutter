@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:bakhli/design/tokens/design_scale.dart';
 import 'package:bakhli/features/buddy/buddy_live.dart';
@@ -14,6 +16,9 @@ import 'package:bakhli/features/buddy/viewer/widgets/viewer_map_scene.dart';
 import 'package:bakhli/features/buddy/viewer/widgets/viewer_route_map.dart';
 import 'package:bakhli/features/map_discovery/pack/map_pack_index.dart';
 import 'package:bakhli/features/map_discovery/pack/map_pack_models.dart';
+import 'package:bakhli/features/trip/map/discovery_api.dart';
+import 'package:bakhli/features/trip/map/map_marker_sizes.dart';
+import 'package:bakhli/features/trip/map/trip_route_stops.dart';
 import 'package:bakhli/features/trip/widgets/trip_map_controls.dart';
 import 'package:bakhli/features/trip/widgets/trip_map_spot_card.dart';
 import 'package:bakhli/features/trip/widgets/trip_spot_detail_sheet.dart';
@@ -21,6 +26,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
+import '../../trip/map/route_stops_fake_map.dart';
 import 'viewer_fixtures.dart';
 
 const _photo = 'https://res.cloudinary.com/x/image/upload/v1/atlas/spots/naini.jpg';
@@ -40,6 +46,19 @@ ViewerTrip _trip() {
   ((j['days'] as List).first as Map<String, dynamic>)['routeGeoJson'] = _road();
   return ViewerTrip.fromJson(j);
 }
+
+const _fourMb = 4 * 1024 * 1024;
+
+ViewerMapScene _bigScene(int days, int perDay) => ViewerMapScene(days: const [], stops: [
+      for (var d = 1; d <= days; d++)
+        for (var i = 0; i < perDay; i++)
+          ViewerMapStop(
+            day: d,
+            index: i,
+            spot: ViewerSpot(id: 'd${d}s$i', name: 'd${d}s$i', category: 'temple', latitude: 29.38, longitude: 79.46, visitMinutes: 0),
+            color: ViewerLook.routeColor(d),
+          ),
+    ]);
 
 class _FakeMap extends StatefulWidget {
   const _FakeMap(this.view);
@@ -123,7 +142,10 @@ void main() {
       expect(s.route.number, 3);
       expect(s.cityKey, 210000101);
       expect(s.line, 'Day 2 · Stop 3 · About 1 h 30 m here');
-      expect(ViewerMapScene.tuning.photoDp, DS.s(54));
+      expect(ViewerMapScene.tuning.photoDp, MapMarkerSizes.dp(MapMarkerSizes.photoMid));
+      expect(ViewerMapScene.tuning.photoDp, DiscTuning.tripStops.photoMidDp);
+      expect(ViewerMapScene.tuning.sizeScale, DiscTuning.tripStops.sizeScale);
+      expect(ViewerMapScene.haloRadius, greaterThan(ViewerMapScene.tuning.photoDp / 2));
     });
 
     test('a day without a road line is dashed with round dots; a road day is solid', () {
@@ -162,6 +184,63 @@ void main() {
       expect(withPhoto.route.spot.hasThumb, isTrue);
       expect(scene.stopAt(1, 1)!.route.spot.hasThumb, isFalse);
       expect(scene.stopAt(1, 1)!.route.spot.category, 'temple');
+    });
+  });
+
+  group('stop markers by view (10 days x 6 places)', () {
+    test('a picked day is the full day, All has none; dots use the dot size flat like the stops', () {
+      final scene = _bigScene(2, 2);
+      expect(scene.fullDay(ViewerMapScene.all), isNull);
+      expect(scene.fullDay(2), 2);
+      expect(ViewerMapScene.tuning.dotDp, MapMarkerSizes.dp(MapMarkerSizes.dotMid));
+      final size = TripRouteStops(tuning: ViewerMapScene.tuning).layerIconSize as List;
+      for (var k = 0; k < 2; k++) {
+        final m = size[4 + 2 * k] as List;
+        expect([m[3], m[4]], [1.0, 1.0], reason: 'dot and stop keep one size at every zoom under the fixed halo');
+      }
+    });
+
+    test('the picked stop halo hugs the marker it rings: photo stop in its own day, dot in All and on other days', () {
+      final gap = DS.s(MapMarkerSizes.viewerHaloGap) * MapMarkerSizes.scale;
+      expect(ViewerMapScene.haloRadiusOf(full: true), ViewerMapScene.haloRadius);
+      expect(ViewerMapScene.haloRadiusOf(full: true), closeTo(ViewerMapScene.tuning.photoDp / 2 + gap, 1e-9));
+      expect(ViewerMapScene.haloRadiusOf(full: false), closeTo(ViewerMapScene.tuning.dotDp / 2 + gap, 1e-9));
+      expect(ViewerMapScene.haloRadiusOf(full: false), lessThan(ViewerMapScene.haloRadiusOf(full: true)));
+      final src = File('lib/features/buddy/viewer/widgets/viewer_route_map.dart').readAsStringSync().replaceAll('\r\n', '\n');
+      final halo = RegExp(r'Future<void> _drawHalo\(\)[\s\S]*?\n  \}').firstMatch(src)!.group(0)!;
+      expect(halo.contains('circleRadius: ViewerMapScene.haloRadiusOf(full: _v.scene.fullDay(_v.selected) == p.day)'), isTrue);
+      final fit = RegExp(r'Future<void> _fit\([\s\S]*?\n  \}').firstMatch(src)!.group(0)!;
+      expect(fit.contains('ViewerMapScene.haloRadiusOf(full: _v.scene.fullDay(_v.selected) != null)'), isTrue);
+    });
+
+    testWidgets('day view: only the picked day holds photo stops, under 4 MB; switching swaps; All shows dots only', (t) async {
+      await t.runAsync(() async {
+        final scene = _bigScene(10, 6);
+        final map = RouteStopsFakeMap();
+        final stops = TripRouteStops(tuning: ViewerMapScene.tuning);
+        final routes = [for (final s in scene.stops) s.route];
+        Set<String> slots(int day) => {
+              for (var i = 0; i < scene.stops.length; i++)
+                if (scene.stops[i].day == day) TripRouteStops.imageOf(i),
+            };
+        await stops.draw(map, routes, scene.stopOpacities(3), fullDay: scene.fullDay(3));
+        var full = await map.fullTextures();
+        expect(full.keys.toSet(), slots(3));
+        expect(full.values.fold<int>(0, (a, b) => a + b), lessThan(_fourMb));
+        expect(map.dotImages, {for (final s in scene.stops) if (s.day != 3) TripRouteStops.dotImageOf(s.color)});
+        expect(map.featureProps.where((p) => p['k'] == TripRouteStops.kindFull).length, 6);
+
+        await stops.setOpacity(map, scene.stopOpacities(7), fullDay: scene.fullDay(7));
+        full = await map.fullTextures();
+        expect(full.keys.toSet(), slots(7));
+        expect(full.values.fold<int>(0, (a, b) => a + b), lessThan(_fourMb));
+
+        await stops.setOpacity(map, scene.stopOpacities(ViewerMapScene.all), fullDay: scene.fullDay(ViewerMapScene.all));
+        expect(await map.fullTextures(), isEmpty);
+        expect(map.featureProps.map((p) => p['k']).toSet(), {TripRouteStops.kindDot});
+        expect(map.featureProps.map((p) => p['op']).toSet(), {1.0});
+        stops.dispose();
+      });
     });
   });
 

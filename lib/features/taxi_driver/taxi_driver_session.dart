@@ -18,6 +18,8 @@ import '../taxi/requests/controllers/driver_app_bookings_controller.dart';
 import 'notices/taxi_notice_copy.dart';
 import 'calendar/taxi_calendar_controller.dart';
 import 'calendar/taxi_upcoming_card.dart';
+import 'availability/taxi_availability_api.dart';
+import 'availability/taxi_availability_store.dart';
 
 abstract final class TaxiDriverSession {
   static const String name = 'taxi_driver';
@@ -63,6 +65,15 @@ abstract final class TaxiDriverSession {
     // end A7
     // A8 session
     // end A8
+    TaxiDriverDeps.isDayOff = (day) => TaxiAvailabilityStore.maybe?.isOff(day) ?? false;
+    OwnerSessionHooks.register('${name}_availability', (_, _) => TaxiHourlyLimit.reset());
+    OwnerPushSync.register('${name}_availability', (type, args) {
+      if (reloadsCalendar(type)) TaxiAvailabilityStore.maybe?.refresh(force: true);
+    });
+    ShellTeardown.register(ShellKind.taxiDriver, () {
+      if (Get.isRegistered<TaxiAvailabilityStore>()) Get.delete<TaxiAvailabilityStore>(force: true);
+      TaxiHourlyLimit.reset();
+    });
   }
 
   static final TaxiDebouncer _homeDebounce = TaxiDebouncer(const Duration(milliseconds: 500));
@@ -86,9 +97,11 @@ abstract final class TaxiDriverSession {
     final uid = Get.isRegistered<AuthController>() ? Get.find<AuthController>().user.value?.id : null;
     OwnerCache.remove(uid, OwnerCacheKeys.planCard);
     OwnerCache.remove(uid, OwnerCacheKeys.calUpcoming);
+    OwnerCache.remove(uid, OwnerCacheKeys.daysOff);
     TaxiDriverHomeController.maybe?.reload(force: true);
     TaxiHubController.maybe?.reload(force: true);
     TaxiCalendarController.maybe?.refreshAll(force: true);
+    TaxiAvailabilityStore.maybe?.refresh(force: true);
   }
 }
 

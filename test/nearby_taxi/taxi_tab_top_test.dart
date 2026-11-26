@@ -7,6 +7,9 @@ import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/features/nearby/controllers/nearby_centre_controller.dart';
 import 'package:bakhli/features/nearby/models/nearby_models.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_feed_repository.dart';
+import 'package:bakhli/features/taxi/guest/v2/taxi_popular_routes.dart';
+import 'package:bakhli/features/taxi/guest/v2/taxi_search_card.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_list_controller_v2.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_list_screen_v2.dart';
 import 'package:flutter/material.dart';
@@ -20,7 +23,10 @@ import '../ui_golden/golden_support.dart';
 
 class _Repo extends TaxiFeedRepository {
   @override
-  Future<NearbyPage<TaxiFeedItem>> local({required double lat, required double lng, String? pageToken, int pageSize = 20, String? category}) async =>
+  Future<List<TaxiPopularRoute>> popularRoutes() async => const [];
+
+  @override
+  Future<NearbyPage<TaxiFeedItem>> local({required double lat, required double lng, String? pageToken, int pageSize = 20, String? category, String? date}) async =>
       NearbyPage(items: [
         TaxiFeedItem.fromJson({
           'id': 'a',
@@ -49,7 +55,7 @@ void main() {
   tearDown(Get.reset);
 
   for (final w in [300.0, 360.0]) {
-    testWidgets('taxi tab has only the From and To inputs and no extra search controls at $w dp', (t) async {
+    testWidgets('taxi tab has the search card (From, To, Date) and Search taxis at $w dp', (t) async {
       Get.reset();
       (Get.put<LocationController>(JLoc()) as JLoc).userLocation.value = const LatLng(29.2, 79.5);
       Get.put<AuthController>(JAuth());
@@ -64,6 +70,11 @@ void main() {
       expect(find.byType(TextField), findsNothing);
       expect(find.bySemanticsLabel('From, Near you'), findsOneWidget);
       expect(find.bySemanticsLabel('To, Search a place'), findsOneWidget);
+      expect(find.text('Date of journey'), findsOneWidget);
+      expect(find.text('Today'), findsOneWidget);
+      expect(find.text('Search taxis'), findsOneWidget);
+      expect(t.widget<PrimaryButton>(find.descendant(of: find.byType(SearchTaxisButton), matching: find.byType(PrimaryButton))).onPressed, isNull);
+      expect(find.text('Ask'), findsNothing);
       expect(find.text('Ramesh Kumar'), findsOneWidget);
       expect(find.text('Call'), findsOneWidget);
       expect(find.text('WhatsApp'), findsOneWidget);

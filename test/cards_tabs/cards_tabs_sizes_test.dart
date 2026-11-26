@@ -15,6 +15,7 @@ import 'package:bakhli/features/stay/guest/v2/stay_landing_screen_v2.dart';
 import 'package:bakhli/features/stay/stay_types_controller.dart';
 import 'package:bakhli/features/taxi/guest/taxi_card.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_feed_repository.dart';
+import 'package:bakhli/features/taxi/guest/v2/taxi_popular_routes.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_list_controller_v2.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_list_screen_v2.dart';
 import 'package:flutter/material.dart';
@@ -87,11 +88,14 @@ class _Stays extends StayLandingControllerV2 {
 }
 
 class _Repo extends TaxiFeedRepository {
+  @override
+  Future<List<TaxiPopularRoute>> popularRoutes() async => const [];
+
   _Repo(this.n, {this.gate});
   final int n;
   final Completer<void>? gate;
   @override
-  Future<NearbyPage<TaxiFeedItem>> local({required double lat, required double lng, String? pageToken, int pageSize = 20, String? category}) async {
+  Future<NearbyPage<TaxiFeedItem>> local({required double lat, required double lng, String? pageToken, int pageSize = 20, String? category, String? date}) async {
     if (gate != null) await gate!.future;
     final items = [for (var i = 0; i < n; i++) TaxiFeedItem.fromJson(_taxi(i))];
     return NearbyPage(items: items, featured: items.where((t) => t.item.isFeatured).toList());
@@ -152,7 +156,10 @@ void main() {
           await _openTaxi(t, n, w, s);
           await _settle(t);
           expect(t.takeException(), isNull);
-          expect(find.byType(PlaceSearchBarView), findsNWidgets(2));
+          expect(find.byType(PlaceSearchBarView), findsNWidgets(3));
+          expect(find.text('From'), findsOneWidget);
+          expect(find.text('To'), findsOneWidget);
+          expect(find.text('Date of journey'), findsOneWidget);
           if (n > 0) {
             expect(find.byType(WorkoutCard), findsOneWidget);
             expect(find.byType(WideCard), findsNothing);

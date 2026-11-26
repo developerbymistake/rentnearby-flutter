@@ -164,6 +164,24 @@ class OwnerNumbers {
   }
 }
 
+class OwnerHomeAvailability {
+  const OwnerHomeAvailability({this.month, this.bookings, this.daysOff});
+
+  final DateTime? month;
+  final int? bookings;
+  final int? daysOff;
+
+  static OwnerHomeAvailability? maybe(Object? raw) {
+    final j = OwnerJson.mapOrNull(raw);
+    if (j == null) return null;
+    return OwnerHomeAvailability(
+      month: OwnerDates.month(j['month']),
+      bookings: OwnerJson.intOrNull(j['bookings']),
+      daysOff: OwnerJson.intOrNull(j['daysOff']),
+    );
+  }
+}
+
 class OwnerUpcoming {
   const OwnerUpcoming({
     this.rows = const [],
@@ -274,6 +292,7 @@ class OwnerHomeDto {
     this.upcoming = const OwnerUpcoming(),
     this.planCard,
     this.festival,
+    this.availability,
     this.raw = const {},
   });
 
@@ -287,6 +306,7 @@ class OwnerHomeDto {
   final OwnerUpcoming upcoming;
   final OwnerPlanCard? planCard;
   final FestivalRow? festival;
+  final OwnerHomeAvailability? availability;
   final Map<String, dynamic> raw;
 
   factory OwnerHomeDto.fromJson(Map<String, dynamic> j) {
@@ -302,6 +322,7 @@ class OwnerHomeDto {
       upcoming: OwnerUpcoming.fromJson(OwnerJson.map(j['upcoming'])),
       planCard: OwnerPlanCard.maybe(j['planCard']),
       festival: FestivalRow.maybe(j['festival']),
+      availability: OwnerHomeAvailability.maybe(OwnerJson.map(OwnerJson.map(j['numbers'])['taxi'])['availability']),
       raw: j,
     );
   }

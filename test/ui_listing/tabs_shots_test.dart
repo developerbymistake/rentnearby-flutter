@@ -8,6 +8,7 @@ import 'package:bakhli/features/stay/guest/v2/stay_landing_controller_v2.dart';
 import 'package:bakhli/features/stay/guest/v2/stay_landing_screen_v2.dart';
 import 'package:bakhli/features/stay/stay_types_controller.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_feed_repository.dart';
+import 'package:bakhli/features/taxi/guest/v2/taxi_popular_routes.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_list_controller_v2.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_list_screen_v2.dart';
 import 'package:flutter/material.dart';
@@ -71,7 +72,10 @@ Map<String, dynamic> _taxi(String id, String name, String vehicle, int seats, {i
 
 class _Repo extends TaxiFeedRepository {
   @override
-  Future<NearbyPage<TaxiFeedItem>> local({required double lat, required double lng, String? pageToken, int pageSize = 20, String? category}) async =>
+  Future<List<TaxiPopularRoute>> popularRoutes() async => const [];
+
+  @override
+  Future<NearbyPage<TaxiFeedItem>> local({required double lat, required double lng, String? pageToken, int pageSize = 20, String? category, String? date}) async =>
       NearbyPage(items: [
         TaxiFeedItem.fromJson(_taxi('a', 'Pradeep Kumar', 'Dzire', 4, rate: 12, featured: true)),
         TaxiFeedItem.fromJson(_taxi('b', 'Rakesh Singh', 'Innova', 7, rate: 16)),

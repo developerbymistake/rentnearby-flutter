@@ -50,8 +50,10 @@ class PlaceSearchBarView extends StatelessWidget {
     this.compact = false,
     this.busy = false,
     this.margin = EdgeInsets.zero,
+    this.flat = false,
   });
 
+  final bool flat;
   final String? label;
   final String? caption;
   final String? hint;
@@ -82,7 +84,7 @@ class PlaceSearchBarView extends StatelessWidget {
       child: Container(
         height: cap == null ? height : null,
         constraints: cap == null ? null : BoxConstraints(minHeight: height),
-        decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(38), boxShadow: DS.shadows(ShadowTokens.elev2)),
+        decoration: flat ? null : BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(38), boxShadow: DS.shadows(ShadowTokens.elev2)),
         child: _grow(
           cap != null,
           Row(

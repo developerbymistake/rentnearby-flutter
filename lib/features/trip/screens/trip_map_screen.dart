@@ -216,6 +216,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
   Future<void> _onStyleLoaded() async {
     final map = _map;
     if (map == null || _styleLoaded) return;
+    _stops.resetImages();
     await map.setSymbolTextAllowOverlap(true);
     await map.setSymbolTextIgnorePlacement(true);
     await map.setSymbolIconAllowOverlap(true);
@@ -265,6 +266,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
         plannedDayOf: (id) => _plan.plan.value?.dayOfSpot(id),
         topInset: () => _overlayHeight(_topKey, DS.s(120)),
         bottomInset: () => MediaQuery.paddingOf(context).bottom,
+        plannedIsDot: _plannedIsDot,
         targetDayFor: _spotActions.targetDayFor,
         onAdd: _spotActions.add,
         onRemove: _spotActions.remove,
@@ -568,6 +570,13 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
       );
 
   List<double> _stopOpacity() => [for (final s in _stops.stops) _dayOpacity(s.day)];
+
+  int? get _stopFullDay => _plan.mapFocus == TripMapFocus.day ? _selected : null;
+
+  bool _plannedIsDot(String spotId) {
+    final full = _stopFullDay;
+    return full == null || _plan.plan.value?.dayOfSpot(spotId) != full;
+  }
 
   static Future<Uint8List> _buildStayPinImage() =>
       _buildPinImage(TravelPalette.sunriseStart, 'camping', size: 48, radius: 19, glyphSize: 22);
@@ -934,10 +943,11 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
       }
       _drawnDays.add(d);
     }
-    await _stops.draw(map, stops, [for (final s in stops) _dayOpacity(s.day)], below: map.circleManager?.layerIds.first);
+    await _stops.draw(map, stops, [for (final s in stops) _dayOpacity(s.day)], below: map.circleManager?.layerIds.first, fullDay: _stopFullDay);
     if (p.isMultiCity) await _drawLegs(map, p, below);
     await _drawStayPins(map, p);
     await _disc?.setPlannedIds({for (final s in p.allSpots) s.id});
+    await _disc?.refreshPlanned();
   }
 
   Future<void> _applySelection() async {
@@ -949,7 +959,8 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
       await _setLine(map, '${_sourceId(d)}-glow', _lineProps(d, glow: true));
       await _setLine(map, '${_sourceId(d)}-line', _lineProps(d, glow: false));
     }
-    await _stops.setOpacity(map, _stopOpacity());
+    await _stops.setOpacity(map, _stopOpacity(), fullDay: _stopFullDay);
+    await _disc?.refreshPlanned();
     final p = _plan.plan.value;
     for (final e in _stayPins.entries) {
       final opacity = _stayPinOpacity(e.key);
@@ -1005,15 +1016,16 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
       return;
     }
     final size = MediaQuery.sizeOf(context);
-    var top = _overlayHeight(_topKey, DS.s(120)) + DS.s(24);
-    var bottom = DS.s(24);
+    final reach = _stops.reachFor(_stopFullDay);
+    var top = _overlayHeight(_topKey, DS.s(120)) + DS.s(24) + reach;
+    var bottom = DS.s(24) + reach;
     final room = size.height - DS.s(120);
     if (top + bottom > room && room > 0) {
       final scale = room / (top + bottom);
       top *= scale;
       bottom *= scale;
     }
-    final side = min(DS.s(48), size.width * 0.12);
+    final side = min(min(DS.s(48), size.width * 0.12) + reach, size.width / 4);
     await map.animateCamera(CameraUpdate.newLatLngBounds(
       box,
       left: side,
