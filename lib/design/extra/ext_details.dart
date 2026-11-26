@@ -73,42 +73,12 @@ abstract final class DetailLook {
 
   static Color wash(ListingTone t, double a) => t.haloBase.withValues(alpha: a);
 
-  static BorderRadius get r68 => DS.br(const BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(68),
-    bottomLeft: Radius.circular(8),
-    bottomRight: Radius.circular(8),
-  ));
-  static BorderRadius get r54 => DS.br(const BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(54),
-    bottomLeft: Radius.circular(8),
-    bottomRight: Radius.circular(8),
-  ));
-  static BorderRadius get r40 => DS.br(const BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(40),
-    bottomLeft: Radius.circular(8),
-    bottomRight: Radius.circular(8),
-  ));
-  static BorderRadius get r32 => DS.br(const BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(32),
-    bottomLeft: Radius.circular(8),
-    bottomRight: Radius.circular(8),
-  ));
-  static BorderRadius get r30 => DS.br(const BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(30),
-    bottomLeft: Radius.circular(8),
-    bottomRight: Radius.circular(8),
-  ));
-  static BorderRadius get r24 => DS.br(const BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(24),
-    bottomLeft: Radius.circular(8),
-    bottomRight: Radius.circular(8),
-  ));
+  static BorderRadius get r68 => DS.br(CardRadius.hero);
+  static BorderRadius get r54 => DS.br(CardRadius.hero);
+  static BorderRadius get r40 => DS.br(CardRadius.hero);
+  static BorderRadius get r32 => DS.br(CardRadius.tile);
+  static BorderRadius get r30 => DS.br(CardRadius.tile);
+  static BorderRadius get r24 => DS.br(CardRadius.tile);
 
   static bool narrow(BuildContext context) => MediaQuery.sizeOf(context).width < 340;
 

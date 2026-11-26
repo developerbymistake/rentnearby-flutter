@@ -85,4 +85,19 @@ void main() {
     expect(u.left, 0);
     expect(u.reached, isTrue);
   });
+
+  test('MyProfile reads the name lock date (nameChangeAllowedAt or nextAllowedAt) and tells when it is locked', () {
+    final now = DateTime.utc(2026, 11, 27, 12);
+    final a = MyProfile.fromJson(const {'nameChangeAllowedAt': '2026-12-11T00:00:00Z'});
+    expect(a.nameChangeAllowedAt, DateTime.utc(2026, 12, 11));
+    expect(a.nameLockedAt(now), isTrue);
+    expect(a.nameLockedAt(DateTime.utc(2026, 12, 12)), isFalse);
+    expect(MyProfile.fromJson(const {'nextAllowedAt': '2026-12-11T00:00:00Z'}).nameChangeAllowedAt, DateTime.utc(2026, 12, 11));
+    final none = MyProfile.fromJson(const {});
+    expect(none.nameChangeAllowedAt, isNull);
+    expect(none.nameLockedAt(now), isFalse);
+    final locked = none.withNameChangeAllowedAt(DateTime.utc(2026, 12, 1));
+    expect(locked.nameLockedAt(now), isTrue);
+    expect(locked.messagePolicy, none.messagePolicy);
+  });
 }

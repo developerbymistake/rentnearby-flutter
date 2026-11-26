@@ -80,7 +80,7 @@ class PlanLimitSheet extends StatelessWidget {
             Gap.v(12),
             Container(
               padding: DS.sym(h: 16, v: 4),
-              decoration: BoxDecoration(color: OwnerLook.gateBox, borderRadius: DS.br(CardRadius.hero)),
+              decoration: BoxDecoration(color: OwnerLook.gateBox, borderRadius: DS.br(CardRadius.tile)),
               child: Column(
                 children: [
                   for (final r in spec.rows) _kv(r.label, r.value, sub: r.sub, highlight: r.highlight),

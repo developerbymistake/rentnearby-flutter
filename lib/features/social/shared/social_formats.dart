@@ -22,6 +22,11 @@ abstract final class SocialFormats {
 
   static String monthName(int month) => month >= 1 && month <= 12 ? monthNames[month - 1] : '';
 
+  static String dayMonth(DateTime t) {
+    final d = t.toLocal();
+    return '${d.day} ${monthName(d.month).substring(0, 3)}';
+  }
+
   static String when(TripWhen w) {
     if (w.kind == TripWhen.monthKind) return monthName(w.month % 100);
     final n = w.months < 1 ? 1 : w.months;

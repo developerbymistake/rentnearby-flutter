@@ -176,13 +176,24 @@ class TripOverviewScreen extends StatelessWidget {
             PopupMenuItem<int>(
               key: ValueKey('overview_menu_extra_$i'),
               value: i + 1,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(extraMenuItems[i].label, style: Ink3D.text(13, FontWeight.w600, extraMenuItems[i].danger ? DesignColors.error : Ink3D.title)),
-                  if (extraMenuItems[i].subtitle != null)
-                    Text(extraMenuItems[i].subtitle!, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
+                  if (extraMenuItems[i].art != null) ...[
+                    ExcludeSemantics(child: Art3D(asset: extraMenuItems[i].art!, size: 30, shadowBlur: 2, shadowOffset: const Offset(1, 2))),
+                    Gap.h(10),
+                  ],
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(extraMenuItems[i].label, style: Ink3D.text(13, FontWeight.w600, extraMenuItems[i].danger ? DesignColors.error : Ink3D.title)),
+                        if (extraMenuItems[i].subtitle != null)
+                          Text(extraMenuItems[i].subtitle!, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),

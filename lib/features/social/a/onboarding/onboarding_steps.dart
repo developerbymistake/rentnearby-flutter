@@ -5,6 +5,7 @@ import '../../../../config/profile_photo_strings.dart';
 import '../../../../controllers/profile_photo_controller.dart';
 import '../../../../design/design.dart';
 import '../../../../design/extra/ext_auth.dart';
+import '../../../../design/extra/ext_buddy.dart';
 import '../../../../utils/input_formatters.dart';
 import '../../../../widgets/profile_photo_circle.dart';
 import '../../../buddy/shared/buddy_look.dart';
@@ -54,16 +55,24 @@ class OnboardingStepDots extends StatelessWidget {
     }
     return Semantics(
       label: SocialStringsA.stepOf(step + 1, OnboardingController.stepCount),
-      child: ExcludeSemantics(child: SizedBox(width: DS.s(300), child: Row(children: children))),
+      child: ExcludeSemantics(child: Row(children: children)),
     );
   }
 }
 
 class OnboardingHeader extends StatelessWidget {
-  const OnboardingHeader({super.key, required this.step, this.onBack});
+  const OnboardingHeader({super.key, required this.step, this.onBack, this.onMenu});
 
   final int step;
   final VoidCallback? onBack;
+  final void Function(Rect anchor)? onMenu;
+
+  static const double edge = 18;
+  static const double cardGap = 24;
+  static const double buttonSize = 46;
+  static const Key backKey = ValueKey('ob_back');
+  static const Key menuKey = ValueKey('ob_menu');
+  static const Key titleKey = ValueKey('ob_title');
 
   static String subtitleOf(int step) => switch (step) {
         0 => SocialStringsA.obStep1,
@@ -71,12 +80,26 @@ class OnboardingHeader extends StatelessWidget {
         _ => SocialStringsA.obStep3,
       };
 
+  Widget _round(Color white, {required Key key, required IconData icon, required String label, required VoidCallback onTap}) => Tap3D(
+        tapKey: key,
+        onTap: onTap,
+        label: label,
+        exclude: true,
+        child: Container(
+          width: DS.s(buttonSize),
+          height: DS.s(buttonSize),
+          decoration: BoxDecoration(shape: BoxShape.circle, color: white.withValues(alpha: Alpha.v25)),
+          child: Icon(icon, size: DS.s(icon == Icons.more_vert_rounded ? 24 : 28), color: white),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final white = DesignColors.onPrimary;
     final back = onBack;
+    final menu = onMenu;
     return Container(
-      padding: EdgeInsets.fromLTRB(DS.s(22), MediaQuery.paddingOf(context).top + DS.s(18), DS.s(22), DS.s(54)),
+      padding: EdgeInsets.fromLTRB(DS.s(edge), MediaQuery.paddingOf(context).top + DS.s(14), DS.s(edge), DS.s(22)),
       decoration: BoxDecoration(
         gradient: ListingTone.indigo.gradient,
         borderRadius: DS.br(const BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32))),
@@ -87,24 +110,17 @@ class OnboardingHeader extends StatelessWidget {
           Row(
             children: [
               if (back != null) ...[
-                Tap3D(
-                  onTap: back,
-                  label: SocialStringsB.back,
-                  exclude: true,
-                  child: Container(
-                    width: DS.s(46),
-                    height: DS.s(46),
-                    decoration: BoxDecoration(shape: BoxShape.circle, color: white.withValues(alpha: Alpha.v25)),
-                    child: Icon(Icons.chevron_left_rounded, size: DS.s(28), color: white),
-                  ),
-                ),
+                _round(white, key: backKey, icon: Icons.chevron_left_rounded, label: SocialStringsB.back, onTap: back),
                 Gap.h(12),
               ],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Semantics(header: true, child: Text(SocialStringsA.obTitle, style: Ink3D.text(24, FontWeight.w700, white, height: 1.15, letterSpacing: 0))),
+                    Semantics(
+                      header: true,
+                      child: Text(SocialStringsA.obTitle, key: titleKey, style: Ink3D.text(24, FontWeight.w700, white, height: 1.15, letterSpacing: 0)),
+                    ),
                     Padding(
                       padding: EdgeInsets.only(top: DS.s(4)),
                       child: Text(subtitleOf(step), style: Ink3D.text(14, FontWeight.w400, white.withValues(alpha: Alpha.v92), letterSpacing: 0)),
@@ -112,6 +128,14 @@ class OnboardingHeader extends StatelessWidget {
                   ],
                 ),
               ),
+              if (menu != null)
+                Builder(
+                  builder: (ctx) => _round(white, key: menuKey, icon: Icons.more_vert_rounded, label: SocialStringsA.obMenu, onTap: () {
+                    final box = ctx.findRenderObject() as RenderBox?;
+                    if (box == null || !box.hasSize) return;
+                    menu(box.localToGlobal(Offset.zero) & box.size);
+                  }),
+                ),
             ],
           ),
           Gap.v(16),
@@ -129,28 +153,41 @@ class OnboardingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        margin: DS.insets(l: 18, r: 18),
-        padding: DS.insets(l: 20, t: 20, r: 20, b: 22),
+        margin: DS.insets(l: OnboardingHeader.edge, r: OnboardingHeader.edge),
+        padding: DS.insets(l: 16, t: 18, r: 16, b: 20),
         decoration: BoxDecoration(color: DesignColors.surface, borderRadius: AuthInk.cardRadius, boxShadow: AuthInk.cardShadow),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
       );
 }
 
 class _FieldLabel extends StatelessWidget {
-  const _FieldLabel(this.text, {this.trailing, this.trailingWarn = false});
+  const _FieldLabel(this.text, {this.top = true});
 
   final String text;
-  final String? trailing;
-  final bool trailingWarn;
+  final bool top;
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(16), DS.s(4), DS.gv(8)),
+        padding: EdgeInsets.fromLTRB(DS.s(4), top ? DS.gv(20) : 0, DS.s(4), DS.gv(10)),
+        child: Text(text, style: Ink3D.text(13, FontWeight.w600, Ink3D.sub)),
+      );
+}
+
+class _CountLabel extends StatelessWidget {
+  const _CountLabel({required this.text, required this.count, required this.ok, this.top = true});
+
+  final String text;
+  final String count;
+  final bool ok;
+  final bool top;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.fromLTRB(DS.s(4), top ? DS.gv(20) : 0, DS.s(4), DS.gv(10)),
         child: Row(
           children: [
             Expanded(child: Text(text, style: Ink3D.text(13, FontWeight.w600, Ink3D.sub))),
-            if (trailing != null)
-              Text(trailing!, style: Ink3D.text(12.5, FontWeight.w600, trailingWarn ? AuthInk.warn : TagChip.colorsOf(TagKind.place).$2, letterSpacing: 0)),
+            Text(count, style: Ink3D.text(12.5, FontWeight.w600, ok ? TagChip.colorsOf(TagKind.place).$2 : AuthInk.warn, letterSpacing: 0)),
           ],
         ),
       );
@@ -257,7 +294,7 @@ class GenderCards extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: on ? tone.gradient : null,
           color: on ? null : Form3D.fill,
-          borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(34), bottomLeft: Radius.circular(12), bottomRight: Radius.circular(12))),
+          borderRadius: DS.br(CardRadius.card),
           boxShadow: on ? tone.glow(blur: 10, dy: 6) : null,
         ),
         child: Stack(
@@ -461,6 +498,42 @@ class OnboardingStepYou extends StatelessWidget {
   }
 }
 
+class OnboardingIdentityChips extends StatelessWidget {
+  const OnboardingIdentityChips({super.key, required this.phone, required this.username, required this.idPill});
+
+  static const Key sideBySideKey = ValueKey('ob_identity_side_by_side');
+  static const double _fitSlack = 1.1;
+
+  final String? phone;
+  final String? username;
+  final Widget Function(bool compact) idPill;
+
+  @override
+  Widget build(BuildContext context) {
+    final line = phone;
+    if (line == null) return idPill(false);
+    return LayoutBuilder(builder: (context, box) {
+      final a = AuthVerifiedRow.compactWidth(context, line);
+      final b = UsernameLockedPill.compactWidth(context, username);
+      final gap = DS.s(8);
+      if (a + b + gap <= box.maxWidth * _fitSlack) {
+        return Row(
+          key: sideBySideKey,
+          children: [
+            Expanded(flex: a.round(), child: AuthVerifiedRow(art: ListingArt.key, text: line, compact: true)),
+            SizedBox(width: gap),
+            Expanded(flex: b.round(), child: idPill(true)),
+          ],
+        );
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [AuthVerifiedRow(art: ListingArt.key, text: line), Gap.v(10), idPill(false)],
+      );
+    });
+  }
+}
+
 class OnboardingStepStyle extends StatelessWidget {
   const OnboardingStepStyle({super.key, required this.c});
 
@@ -475,34 +548,34 @@ class OnboardingStepStyle extends StatelessWidget {
   Widget build(BuildContext context) {
     return OnboardingCard(
       children: [
-        Obx(() => Padding(
-              padding: EdgeInsets.fromLTRB(DS.s(4), 0, DS.s(4), DS.gv(8)),
-              child: Row(
-                children: [
-                  Expanded(child: Text(SocialStringsA.interestsLabel, style: Ink3D.text(13, FontWeight.w600, Ink3D.sub))),
-                  Text(SocialStringsA.ofFive(c.interests.length),
-                      style: Ink3D.text(12.5, FontWeight.w600, c.interests.length >= ProfileRules.interestsMin ? TagChip.colorsOf(TagKind.place).$2 : AuthInk.warn, letterSpacing: 0)),
-                ],
-              ),
+        Obx(() => _CountLabel(
+              text: SocialStringsA.interestsLabel,
+              count: SocialStringsA.ofFive(c.interests.length),
+              ok: c.interests.length >= ProfileRules.interestsMin,
+              top: false,
             )),
-        Obx(() => Wrap(
-              spacing: DS.gh(9),
-              runSpacing: DS.gv(9),
+        Obx(() => ChoiceTileGrid(
               children: [
                 for (final i in c.interestOptions)
-                  ChoiceArtChip(key: ValueKey('ob_int_$i'), label: i, art: SocialArtA.interest(i), selected: c.interests.contains(i), onTap: () => c.toggleInterest(i)),
+                  ChoiceArtTile(key: ValueKey('ob_int_$i'), label: i, art: SocialArtA.interest(i), selected: c.interests.contains(i), onTap: () => c.toggleInterest(i)),
               ],
             )),
-        const _FieldLabel(SocialStringsA.skillsLabel),
-        Obx(() => Wrap(
-              spacing: DS.gh(9),
-              runSpacing: DS.gv(9),
+        Obx(() => _CountLabel(
+              text: SocialStringsA.skillsLabel,
+              count: SocialStringsA.picked(c.skills.length),
+              ok: c.skills.length >= ProfileRules.skillsMin,
+            )),
+        Obx(() => ChoiceTileGrid(
               children: [
                 for (final s in c.skillOptions)
-                  ChoiceArtChip(key: ValueKey('ob_skill_$s'), label: s, art: SocialArtA.skill(s), selected: c.skills.contains(s), onTap: () => c.toggleSkill(s)),
+                  ChoiceArtTile(key: ValueKey('ob_skill_$s'), label: s, art: SocialArtA.skill(s), selected: c.skills.contains(s), onTap: () => c.toggleSkill(s)),
               ],
             )),
-        const _FieldLabel(SocialStringsA.placesLabel),
+        Obx(() => _CountLabel(
+              text: SocialStringsA.placesLabel,
+              count: SocialStringsA.placesAdded(c.places.length),
+              ok: c.places.length >= ProfileRules.placesMin,
+            )),
         Tap3D(
           tapKey: const ValueKey('ob_add_place'),
           onTap: () => _addPlace(context),
@@ -525,10 +598,8 @@ class OnboardingStepStyle extends StatelessWidget {
             ? const SizedBox.shrink()
             : Padding(
                 padding: EdgeInsets.only(top: DS.gv(10)),
-                child: Wrap(
-                  spacing: DS.gh(8),
-                  runSpacing: DS.gv(8),
-                  children: [for (final p in c.places) TagChip(text: p, kind: TagKind.place, onRemove: () => c.removePlace(p))],
+                child: ChoiceTileGrid(
+                  children: [for (final p in c.places) PlaceTile(key: ValueKey('ob_place_$p'), text: p, onRemove: () => c.removePlace(p))],
                 ),
               )),
       ],
@@ -571,7 +642,7 @@ class ProfilePreviewCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: DesignColors.surface,
-        borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(40), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
+        borderRadius: DS.br(CardRadius.hero),
         boxShadow: tone.glow(blur: 14, dy: 4),
       ),
       child: Column(
@@ -647,14 +718,14 @@ class OnboardingStepAbout extends StatelessWidget {
   Widget build(BuildContext context) {
     return OnboardingCard(
       children: [
-        const _FieldLabel(SocialStringsA.aboutYou),
+        const _FieldLabel(SocialStringsA.aboutYou, top: false),
         Obx(() {
           final filled = c.about.value.trim().isNotEmpty;
           return Container(
             padding: DS.sym(h: 16, v: 10),
             constraints: BoxConstraints(minHeight: DS.s(84)),
             decoration: BoxDecoration(
-              borderRadius: DS.circular(20),
+              borderRadius: DS.br(CardRadius.card),
               border: Border.all(color: filled ? BuddyLook.tealStart : Form3D.outline, width: DS.s(2)),
             ),
             child: TextField(

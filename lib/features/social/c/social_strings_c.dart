@@ -76,8 +76,8 @@ abstract final class SocialStringsC {
   static String activeTrips(int n) => n == 1 ? '1 active trip' : '$n active trips';
   static String joinRequests(int n) => n == 1 ? '1 join request a month' : '$n join requests a month';
   static String freeHas(int n) => 'Free has $n';
-  static const String genderOnly = 'Women-only or men-only trips';
-  static const String genderOnlySub = 'Only for your own gender';
+  static const String genderOnly = 'Women-only trips';
+  static const String genderOnlySub = 'Men-only and Anyone are free';
   static const String nearMe = 'Near me filter';
   static const String nearMeSub = 'See trips starting close to you';
   static const String alwaysFree = 'Always free: replying to people who wrote to you, follow, privacy, report and block.';
@@ -106,7 +106,7 @@ abstract final class SocialStringsC {
   static String joinLimitLine(int n) => n == 1 ? 'You can send 1 join request a month.' : 'You can send $n join requests a month.';
   static String chatLimitLine(int n) => 'You can message $n new people a month.';
   static String tripLimitLine(int n) => n == 1 ? 'You can have 1 active trip.' : 'You can have $n active trips.';
-  static const String plusFeatureLine = 'Same-gender trips and the Near me filter come with Bakhli Plus.';
+  static const String plusFeatureLine = 'Women-only trips and the Near me filter come with Bakhli Plus.';
   static String resetsOn(String date) => 'Resets on $date.';
   static const String notNow = 'Not now';
   static const String ok = 'OK';

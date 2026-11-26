@@ -6,6 +6,7 @@ import 'package:bakhli/features/social/c/chat/dm_room_screen.dart';
 import 'package:bakhli/features/social/c/chat/models/chat_models.dart';
 import 'package:bakhli/features/social/c/chat/room_controller.dart';
 import 'package:bakhli/features/social/c/social_strings_c.dart';
+import 'package:bakhli/features/social/c/widgets/chat_room_header.dart';
 import 'package:bakhli/features/social/shared/social_me_controller.dart';
 import 'package:bakhli/features/social/shared/social_models.dart';
 import 'package:flutter/material.dart';
@@ -73,6 +74,7 @@ void main() {
         expect(find.text(SocialStringsC.members(4)), findsOneWidget);
         expect(find.text('Meera joined the trip'), findsOneWidget);
         expect(find.descendant(of: find.byType(ChatBubble3D), matching: find.text('Rohan M.')), findsOneWidget);
+        expect(t.getTopLeft(find.text('Rohan M.')).dx, closeTo(t.getTopLeft(find.text('Booked the cab for 6 AM from Delhi.')).dx, 0.5));
         expect(t.widget<ChatSystemNote>(find.ancestor(of: find.text('Meera joined the trip'), matching: find.byType(ChatSystemNote))).colors, BuddyLook.note[NoteToneColor.teal]);
         expect(find.byKey(const ValueKey('dm_trip_art')), findsOneWidget);
         expect(find.text('Booked the cab for 6 AM from Delhi.'), findsOneWidget);
@@ -95,6 +97,64 @@ void main() {
       });
     }
   }
+
+  testWidgets('trip bubbles and the direct header show short names', (t) async {
+    final trip = roomOf(kind: 'T', trip: {'tripId': 't1', 'title': 'Manali', 'memberCount': 4, 'photoUrls': []});
+    final api = FakeChatApi()
+      ..roomResult = BuddyOk(trip)
+      ..messagesResult = BuddyOk(MessagesPage(items: [msgOf(1, sender: 'u-meera', senderName: 'Meera Joshi', text: 'Hi all!')], lastSeq: 1));
+    await pumpSocial(t, DmRoomScreen(controller: controller(api)));
+    expect(find.descendant(of: find.byType(ChatBubble3D), matching: find.text('Meera J.')), findsOneWidget);
+    expect(find.text('Meera Joshi'), findsNothing);
+    await disposeSocial(t);
+
+    final direct = FakeChatApi()
+      ..roomResult = BuddyOk(roomOf())
+      ..messagesResult = BuddyOk(MessagesPage(items: [msgOf(1, text: 'Hi')], lastSeq: 1));
+    await pumpSocial(t, DmRoomScreen(controller: controller(direct)));
+    expect(find.descendant(of: find.byType(ChatRoomHeader), matching: find.text('Kavya S.')), findsOneWidget);
+    expect(find.text('Kavya Sharma'), findsNothing);
+    await disposeSocial(t);
+  });
+
+  void expectCompactRow(WidgetTester t, Finder avatar) {
+    final header = find.byKey(const ValueKey('dm_room_header'));
+    expect(header, findsOneWidget);
+    expect(find.byType(ChatHeader3D), findsNothing);
+    expect(find.descendant(of: header, matching: find.byType(Art3D)), findsNothing);
+    expect(find.descendant(of: header, matching: find.byWidgetPredicate((w) => w is Image && w.image is AssetImage && (w.image as AssetImage).assetName == ListingArt.speechBalloon)), findsNothing);
+    final back = find.descendant(of: header, matching: find.byIcon(Icons.chevron_left_rounded));
+    final more = find.byKey(const ValueKey('dm_room_more'));
+    final cy = t.getCenter(back).dy;
+    expect(t.getCenter(avatar).dy, closeTo(cy, 1));
+    expect(t.getCenter(more).dy, closeTo(cy, 1));
+    expect(t.getCenter(back).dx, lessThan(t.getCenter(avatar).dx));
+    expect(t.getCenter(avatar).dx, lessThan(t.getCenter(more).dx));
+    expect(t.getSize(header).height, lessThan(DS.s(90)));
+  }
+
+  testWidgets('direct chat header is one compact row with no chat art', (t) async {
+    final api = FakeChatApi()
+      ..roomResult = BuddyOk(roomOf())
+      ..messagesResult = BuddyOk(MessagesPage(items: [msgOf(1, text: 'Hi')], lastSeq: 1));
+    await pumpSocial(t, DmRoomScreen(controller: controller(api)));
+    expectCompactRow(t, find.byKey(const ValueKey('chat_room_header_avatar')));
+    expect(find.descendant(of: find.byKey(const ValueKey('dm_room_header')), matching: find.text('Kavya S.')), findsOneWidget);
+    expect(t.takeException(), isNull);
+    await disposeSocial(t);
+  });
+
+  testWidgets('trip chat header is one compact row with no decorative art', (t) async {
+    final api = FakeChatApi()
+      ..roomResult = BuddyOk(roomOf(kind: 'T', trip: {'tripId': 't1', 'title': 'Manali', 'memberCount': 4, 'photoUrls': []}))
+      ..messagesResult = BuddyOk(MessagesPage(items: [msgOf(1, text: 'Hi')], lastSeq: 1));
+    await pumpSocial(t, DmRoomScreen(controller: controller(api)));
+    expectCompactRow(t, find.byKey(const ValueKey('dm_trip_art')));
+    expect(t.getSize(find.byKey(const ValueKey('dm_trip_art'))).width, closeTo(DS.s(ChatRoomHeader.avatar), 0.5));
+    expect(find.descendant(of: find.byKey(const ValueKey('dm_room_header')), matching: find.text(SocialStringsC.members(4))), findsOneWidget);
+    expect(t.takeException(), isNull);
+    await disposeSocial(t);
+  });
 
   testWidgets('a left trip member sees no composer', (t) async {
     final api = FakeChatApi()..roomResult = BuddyOk(roomOf(kind: 'T', lock: 'left', canSend: false, trip: {'tripId': 't1', 'title': 'Manali'}));

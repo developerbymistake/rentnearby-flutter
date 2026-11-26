@@ -947,8 +947,7 @@ class _ProfileSheet extends StatelessWidget {
   final bool closeEnabled;
 
   static double get _artRoom => DS.s(56);
-  static const BorderRadius _primaryRadius =
-      BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20), bottomRight: Radius.circular(20), bottomLeft: Radius.circular(8));
+  static const BorderRadius _primaryRadius = BorderRadius.all(Radius.circular(20));
 
   Widget _button(String label, VoidCallback? onTap, {required bool primary, bool loading = false}) {
     return Padding(

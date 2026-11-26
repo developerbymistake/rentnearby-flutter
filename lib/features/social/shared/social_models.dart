@@ -343,6 +343,7 @@ class MyProfile {
     this.following = 0,
     this.buddies = 0,
     this.publicTrips = const [],
+    this.nameChangeAllowedAt,
   });
 
   final String userId;
@@ -369,8 +370,42 @@ class MyProfile {
   final int following;
   final int buddies;
   final List<PublicTrip> publicTrips;
+  final DateTime? nameChangeAllowedAt;
 
   SocialPerson get person => SocialPerson(userId: userId, name: name, username: username, photoUrl: photoUrl, initial: initial, homeCity: homeCity);
+
+  bool nameLockedAt(DateTime now) {
+    final at = nameChangeAllowedAt;
+    return at != null && at.isAfter(now.toUtc());
+  }
+
+  MyProfile withNameChangeAllowedAt(DateTime? at) => MyProfile(
+        userId: userId,
+        name: name,
+        username: username,
+        photoUrl: photoUrl,
+        initial: initial,
+        gender: gender,
+        birthMonth: birthMonth,
+        birthYear: birthYear,
+        homeCity: homeCity,
+        homeState: homeState,
+        about: about,
+        interests: interests,
+        skills: skills,
+        places: places,
+        isPrivate: isPrivate,
+        messagePolicy: messagePolicy,
+        notifyMessages: notifyMessages,
+        notifyFollows: notifyFollows,
+        notifyFollowedTrips: notifyFollowedTrips,
+        trips: trips,
+        followers: followers,
+        following: following,
+        buddies: buddies,
+        publicTrips: publicTrips,
+        nameChangeAllowedAt: at,
+      );
 
   factory MyProfile.fromJson(Map<String, dynamic> j) {
     final c = BuddyJson.map(j['counters']);
@@ -400,6 +435,7 @@ class MyProfile {
       following: BuddyJson.integer(c['following']),
       buddies: BuddyJson.integer(c['buddies']),
       publicTrips: BuddyJson.list(j['publicTrips'], PublicTrip.fromJson),
+      nameChangeAllowedAt: BuddyJson.time(j['nameChangeAllowedAt'] ?? j['nextAllowedAt']),
     );
   }
 }

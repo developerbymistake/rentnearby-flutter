@@ -5,6 +5,7 @@ import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
 import '../tokens/design_scale.dart';
+import '../tokens/card_tokens.dart';
 
 abstract final class ChatLook3D {
   static const Color bannerFill = Color(0xFFFFF1DE);
@@ -58,18 +59,8 @@ abstract final class ChatLook3D {
   ];
 }
 
-BorderRadius get _kRow => BorderRadius.only(
-  topLeft: Radius.circular(DS.radius(8)),
-  topRight: Radius.circular(DS.radius(54)),
-  bottomLeft: Radius.circular(DS.radius(8)),
-  bottomRight: Radius.circular(DS.radius(8)),
-);
-BorderRadius get _kChip => BorderRadius.only(
-  topLeft: Radius.circular(DS.radius(8)),
-  topRight: Radius.circular(DS.radius(24)),
-  bottomLeft: Radius.circular(DS.radius(8)),
-  bottomRight: Radius.circular(DS.radius(8)),
-);
+BorderRadius get _kRow => DS.br(CardRadius.hero);
+BorderRadius get _kChip => DS.br(CardRadius.card);
 
 double _scale(BuildContext context) => MediaQuery.textScalerOf(context).scale(1);
 

@@ -158,17 +158,18 @@ class ErrorLine extends StatelessWidget {
 }
 
 class TickRow extends StatelessWidget {
-  const TickRow({super.key, required this.label, required this.checked, required this.onTap});
+  const TickRow({super.key, required this.label, required this.checked, required this.onTap, this.hint});
 
   final String label;
   final bool checked;
   final VoidCallback? onTap;
+  final String? hint;
 
   @override
   Widget build(BuildContext context) => Tap3D(
         onTap: onTap,
         toggled: checked,
-        label: label,
+        label: hint == null ? label : '$label $hint',
         exclude: true,
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: DS.s(40)),
@@ -186,7 +187,14 @@ class TickRow extends StatelessWidget {
                 child: checked ? Icon(Icons.check_rounded, size: DS.s(18), color: DesignColors.onPrimary) : null,
               ),
               Gap.h(12),
-              Expanded(child: Text(label, style: Ink3D.text(14, FontWeight.w600, Ink3D.title, letterSpacing: 0))),
+              Expanded(
+                child: hint == null
+                    ? Text(label, style: Ink3D.text(14, FontWeight.w600, Ink3D.title, letterSpacing: 0))
+                    : Text.rich(TextSpan(children: [
+                        TextSpan(text: '$label ', style: Ink3D.text(14, FontWeight.w600, Ink3D.title, letterSpacing: 0)),
+                        TextSpan(text: hint, style: Ink3D.text(14, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
+                      ])),
+              ),
             ],
           ),
         ),
@@ -201,7 +209,7 @@ class ReasonChips extends StatelessWidget {
   final ValueChanged<String>? onPick;
 
   static BorderRadius get radius =>
-      DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(20), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
+      DS.br(CardRadius.card);
 
   @override
   Widget build(BuildContext context) => Wrap(

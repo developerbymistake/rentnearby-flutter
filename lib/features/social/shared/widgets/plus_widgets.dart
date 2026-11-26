@@ -50,8 +50,7 @@ class _BannerCard extends StatelessWidget {
   final PlanModel? plus;
   final VoidCallback onTap;
 
-  static BorderRadius get _radius =>
-      DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(40), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
+  static BorderRadius get _radius => DS.br(CardRadius.hero);
 
   List<(String, String)> _perks() {
     final p = plus;

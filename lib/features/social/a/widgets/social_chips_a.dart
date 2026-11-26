@@ -51,43 +51,110 @@ abstract final class SocialButtonsA {
   static const double smallFont = 13;
 }
 
-class ChoiceArtChip extends StatelessWidget {
-  const ChoiceArtChip({super.key, required this.label, required this.art, required this.selected, required this.onTap, this.error = false});
+class ChoiceArtTile extends StatelessWidget {
+  const ChoiceArtTile({super.key, required this.label, required this.art, required this.selected, required this.onTap});
 
   final String label;
   final String art;
   final bool selected;
   final VoidCallback onTap;
-  final bool error;
 
-  static BorderRadius get radius =>
-      DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(18), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
+  static const double height = 58;
 
   @override
   Widget build(BuildContext context) {
     final tone = ListingTone.indigo;
-    final fg = selected ? DesignColors.onPrimary : Ink3D.sub;
     return Tap3D(
       onTap: onTap,
       label: label,
       selected: selected,
       exclude: true,
       child: Container(
-        padding: DS.insets(l: 8, t: 6, r: 12, b: 6),
+        height: DS.s(height),
+        padding: DS.sym(h: 10),
         decoration: BoxDecoration(
           gradient: selected ? tone.gradient : null,
-          color: selected ? null : DesignColors.surface,
-          borderRadius: radius,
-          border: selected ? null : Border.all(color: error ? DesignColors.statusAttention : Form3D.outline, width: DS.s(1.5)),
-          boxShadow: selected ? tone.glow(blur: 0, dy: 4) : DS.shadows(Form3D.cardShadow),
+          color: selected ? null : Form3D.fill,
+          borderRadius: DS.br(CardRadius.card),
+          boxShadow: selected ? tone.glow(blur: 0, dy: 4) : null,
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            ExcludeSemantics(child: Art3D(asset: art, size: 22, shadowBlur: 2, shadowOffset: const Offset(1, 2))),
+            ExcludeSemantics(child: Art3D(asset: art, size: 30, shadowBlur: 3, shadowOffset: const Offset(2, 4))),
+            Gap.h(8),
+            Expanded(
+              child: Text(label,
+                  maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13.5, FontWeight.w600, selected ? DesignColors.onPrimary : Ink3D.sub, height: 1.2, letterSpacing: 0)),
+            ),
+            if (selected) ...[
+              Gap.h(6),
+              Container(
+                width: DS.s(20),
+                height: DS.s(20),
+                decoration: const BoxDecoration(shape: BoxShape.circle, color: DesignColors.surface),
+                child: Icon(Icons.check_rounded, size: DS.s(14), color: tone.g2),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ChoiceTileGrid extends StatelessWidget {
+  const ChoiceTileGrid({super.key, required this.children});
+
+  final List<Widget> children;
+
+  static const double wideFrom = 480;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, box) {
+        final cols = box.maxWidth >= DS.s(wideFrom, scaled: false) ? 3 : 2;
+        final rows = <Widget>[];
+        for (var i = 0; i < children.length; i += cols) {
+          if (i > 0) rows.add(Gap.v(10));
+          rows.add(Row(
+            children: [
+              for (var k = 0; k < cols; k++) ...[
+                if (k > 0) Gap.h(10),
+                Expanded(child: i + k < children.length ? children[i + k] : const SizedBox.shrink()),
+              ],
+            ],
+          ));
+        }
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
+      });
+}
+
+// A picked place as one equal grid tile (pin art, name, remove), so places sit on the same grid as Interests and Skills.
+class PlaceTile extends StatelessWidget {
+  const PlaceTile({super.key, required this.text, required this.onRemove});
+
+  final String text;
+  final VoidCallback onRemove;
+
+  static const double height = 44;
+
+  @override
+  Widget build(BuildContext context) {
+    final (bg, fg) = TagChip.colorsOf(TagKind.place);
+    return Tap3D(
+      onTap: onRemove,
+      label: SocialStringsA.removeTag(text),
+      exclude: true,
+      child: Container(
+        height: DS.s(height),
+        padding: DS.insets(l: 10, r: 10),
+        decoration: BoxDecoration(color: bg, borderRadius: DS.br(CardRadius.card)),
+        child: Row(
+          children: [
+            const ExcludeSemantics(child: Art3D(asset: ListingArt.roundPushpin, size: 20, shadowBlur: 2, shadowOffset: Offset(1, 2))),
+            Gap.h(8),
+            Expanded(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13.5, FontWeight.w600, fg, letterSpacing: 0))),
             Gap.h(6),
-            Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13.5, FontWeight.w600, fg, letterSpacing: 0))),
-            if (selected) ...[Gap.h(4), Icon(Icons.check_rounded, size: DS.s(14), color: DesignColors.onPrimary)],
+            Icon(Icons.close_rounded, size: DS.s(15), color: fg),
           ],
         ),
       ),

@@ -37,7 +37,7 @@ class FollowRequestsView extends StatelessWidget {
           if (state != null)
             state
           else ...[
-            Gap.v(6),
+            Gap.v(16),
             PeopleCard(children: [
               for (final r in items)
                 SocialPersonTile(

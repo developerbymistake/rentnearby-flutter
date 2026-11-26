@@ -4,8 +4,9 @@ import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
 import 'status_pill.dart';
 import '../tokens/design_scale.dart';
+import '../tokens/card_tokens.dart';
 
-BorderRadius get _kCardRadius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
+BorderRadius get _kCardRadius => DS.br(CardRadius.hero);
 
 class ReplyRow {
   const ReplyRow(this.label, this.value, {this.done, this.step});

@@ -9,7 +9,7 @@ class TripStatusCard extends StatelessWidget {
   final Widget child;
   final VoidCallback? onTap;
 
-  static BorderRadius get _radius => DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(32), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
+  static BorderRadius get _radius => DS.br(CardRadius.tile);
 
   @override
   Widget build(BuildContext context) {

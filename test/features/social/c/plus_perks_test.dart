@@ -25,7 +25,7 @@ void main() {
     expect(c.perks().where((p) => p.subtitle != null && p.title != SocialStringsC.genderOnly && p.title != SocialStringsC.nearMe), isEmpty);
   });
 
-  test('the women-only or men-only perk uses the woman raising hand art', () {
+  test('the women-only perk uses the woman raising hand art', () {
     Get.put<SocialMeController>(FakeSocialMeController(freeLimits()));
     final c = SeekerPlusController(plans: FakePlanController());
     expect(c.perks().firstWhere((p) => p.title == SocialStringsC.genderOnly).art, HubArt.womanRaising);

@@ -69,7 +69,7 @@ class ViewerGhostCard extends StatelessWidget {
           padding: DS.sym(h: 18, v: 14),
           decoration: BoxDecoration(
             color: ViewerLook.ghostBg,
-            borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(40), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
+            borderRadius: DS.br(CardRadius.card),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

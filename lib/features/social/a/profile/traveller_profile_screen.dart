@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../design/design.dart';
+import '../../../../design/extra/ext_details.dart';
 import '../../../buddy/buddies/models/buddy_models.dart';
 import '../../../buddy/shared/buddy_look.dart';
 import '../../../buddy/shared/widgets/buddy_page.dart';
@@ -25,6 +26,8 @@ class TravellerProfileScreen extends StatefulWidget {
   static const Key messageKey = ValueKey('traveller_message');
   static const Key buddyKey = ValueKey('traveller_buddy');
   static const Key menuKey = ValueKey('traveller_menu');
+  static const Key backKey = ValueKey('traveller_back');
+  static const Key topBarKey = ValueKey('traveller_top_bar');
 
   @override
   State<TravellerProfileScreen> createState() => _TravellerProfileScreenState();
@@ -58,17 +61,20 @@ class _TravellerProfileScreenState extends State<TravellerProfileScreen> {
     return Obx(() {
       final p = c.profile.value;
       final st = c.state.value;
+      final title = p?.person.name ?? '';
       return BuddyPage(
-        title: p?.person.shortName ?? '',
-        trailing: [
-          if (p != null)
-            Semantics(
-              label: '${SocialStrings.report} / ${SocialStrings.block}',
-              button: true,
-              excludeSemantics: true,
-              child: KitRoundButton(key: TravellerProfileScreen.menuKey, icon: Icons.more_vert_rounded, onTap: _menu),
-            ),
-        ],
+        title: title,
+        header: _TravellerTopBar(
+          title: title,
+          trailing: p == null
+              ? null
+              : Semantics(
+                  label: '${SocialStrings.report} / ${SocialStrings.block}',
+                  button: true,
+                  excludeSemantics: true,
+                  child: KitRoundButton(key: TravellerProfileScreen.menuKey, icon: Icons.more_vert_rounded, onTap: _menu),
+                ),
+        ),
         body: switch (st) {
           TravellerLoad.loading => Padding(
               padding: DS.gapInsets(l: 18, t: 8, r: 18),
@@ -156,8 +162,8 @@ class _TravellerProfileScreenState extends State<TravellerProfileScreen> {
         children: [
           ProfileHeroCard(
             person: p.person,
-            displayName: p.person.shortName,
             gender: p.gender,
+            about: p.privateLocked ? '' : p.about,
             trips: p.trips,
             followers: p.followers,
             following: p.following,
@@ -168,12 +174,37 @@ class _TravellerProfileScreenState extends State<TravellerProfileScreen> {
           if (p.privateLocked)
             NoteBanner(art: BuddyArt.locked, text: '${SocialStringsA.privateTitle}. ${SocialStringsA.privateLine}')
           else ...[
-            Gap.v(24),
-            ProfileChipsSection(about: p.about, interests: p.interests, places: p.places, skills: p.skills),
+            ProfileChipsSection(interests: p.interests, places: p.places, skills: p.skills),
             ProfileTripsSection(title: SocialStringsA.publicTrips(p.publicTrips.length), trips: p.publicTrips),
           ],
           Gap.v(24),
         ],
+    );
+  }
+}
+
+class _TravellerTopBar extends StatelessWidget {
+  const _TravellerTopBar({required this.title, this.trailing});
+
+  final String title;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final end = trailing;
+    return KitStatusBar(
+      lightIcons: false,
+      child: Padding(
+        key: TravellerProfileScreen.topBarKey,
+        padding: EdgeInsets.fromLTRB(DS.s(14), MediaQuery.paddingOf(context).top + DS.gv(8), DS.s(14), DS.gv(8)),
+        child: Row(
+          children: [
+            DetailGlassButton(key: TravellerProfileScreen.backKey, solid: true, onTap: () => Navigator.of(context).maybePop()),
+            Expanded(child: Semantics(header: true, label: title, child: const SizedBox.shrink())),
+            ?end,
+          ],
+        ),
+      ),
     );
   }
 }

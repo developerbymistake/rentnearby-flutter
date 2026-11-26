@@ -55,7 +55,7 @@ class _DayList extends StatelessWidget {
             SectionLabel(d.$1, trailing: '₹${_g(d.$2)}', padding: DS.insets(l: 22, t: 16, r: 22, b: 8)),
             Container(
               margin: DS.sym(h: 18),
-              decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(40), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))), boxShadow: BuddyLook.cardShadows(DS.size)),
+              decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.tile), boxShadow: BuddyLook.cardShadows(DS.size)),
               child: Column(children: [for (final r in d.$3) _row(r)]),
             ),
           ],
@@ -352,7 +352,7 @@ class _LinksHarness extends StatelessWidget {
   Widget _booking(String art, String title, String sub, String kind, String id) => Container(
         margin: DS.insets(l: 18, t: 14, r: 18),
         padding: DS.sym(h: 16, v: 14),
-        decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(40), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))), boxShadow: BuddyLook.cardShadows(DS.size)),
+        decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.hero), boxShadow: BuddyLook.cardShadows(DS.size)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
             Art3D(asset: '$_dir$art.png', size: 46, shadowBlur: 3, shadowOffset: const Offset(2, 4)),

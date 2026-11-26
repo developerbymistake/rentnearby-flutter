@@ -465,12 +465,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
         margin: DS.gapInsets(l: 18, t: 0, r: 18, b: 6),
         decoration: BoxDecoration(
           color: DesignColors.surface,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(DS.radius(8)),
-            bottomLeft: Radius.circular(DS.radius(8)),
-            bottomRight: Radius.circular(DS.radius(8)),
-            topRight: Radius.circular(DS.radius(28)),
-          ),
+          borderRadius: DS.br(CardRadius.card),
           boxShadow: DS.shadows(Ink3D.softShadow),
         ),
         clipBehavior: Clip.antiAlias,

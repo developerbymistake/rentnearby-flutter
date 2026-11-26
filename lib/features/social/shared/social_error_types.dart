@@ -3,6 +3,7 @@ abstract final class SocialErrorTypes {
   static const String socialOnHold = 'SocialOnHold';
   static const String under18 = 'Under18';
   static const String identityLocked = 'IdentityLocked';
+  static const String nameChangeTooSoon = 'NameChangeTooSoon';
   static const String invalidProfile = 'InvalidProfile';
   static const String invalidPost = 'InvalidPost';
   static const String invalidCities = 'InvalidCities';
@@ -12,7 +13,7 @@ abstract final class SocialErrorTypes {
   static const String requestGone = 'RequestGone';
   static const String notFollower = 'NotFollower';
   static const String tripPostNotFound = 'TripPostNotFound';
-  static const String tripNotOpen = 'TripNotOpen';
+  static const String tripGenderMismatch = 'TripGenderMismatch';
   static const String tripNotPostable = 'TripNotPostable';
   static const String plusRequired = 'PlusRequired';
   static const String publicTripLimit = 'PublicTripLimit';

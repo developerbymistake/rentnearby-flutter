@@ -46,7 +46,7 @@ class SeekerHomeSkeleton extends StatelessWidget {
   static const BorderRadius tileRadius = BorderRadius.only(
     topLeft: Radius.circular(8),
     topRight: Radius.circular(8),
-    bottomLeft: Radius.circular(40),
+    bottomLeft: Radius.circular(CardRadius.heroNotch),
     bottomRight: Radius.circular(8),
   );
 }

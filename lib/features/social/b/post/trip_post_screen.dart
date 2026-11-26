@@ -15,7 +15,7 @@ import '../../shared/social_nav.dart';
 import '../../shared/social_strings.dart';
 import '../../shared/widgets/follow_button.dart';
 import '../../shared/widgets/mutuals_line.dart';
-import '../social_nav_b.dart';
+import '../models/join_gender_rule.dart';
 import '../social_strings_b.dart';
 import '../../a/widgets/social_chips_a.dart';
 import '../widgets/social_widgets_b.dart';
@@ -33,7 +33,7 @@ class TripPostScreen extends StatefulWidget {
   static const Key menuKey = ValueKey('trip_post_menu');
   static const Key joinRequestsKey = ValueKey('trip_post_join_requests');
   static const Key openTripKey = ValueKey('trip_post_open_trip');
-  static const Key seeTripsKey = ValueKey('trip_post_see_trips');
+  static const Key onlyForKey = ValueKey('trip_post_only_for');
 
   @override
   State<TripPostScreen> createState() => _TripPostScreenState();
@@ -63,7 +63,7 @@ class _TripPostScreenState extends State<TripPostScreen> {
 
   double get _snackBottom {
     final t = c.trip.value;
-    return c.state.value == TripPostLoad.ready && t != null && !t.notOpen && !t.sample ? _barSnack : 24;
+    return c.state.value == TripPostLoad.ready && t != null && !t.sample ? _barSnack : 24;
   }
 
   Future<void> _request(PublicTrip t) async {
@@ -118,7 +118,7 @@ class _TripPostScreenState extends State<TripPostScreen> {
     return Container(
       margin: DS.gapInsets(l: 18, t: 8, r: 18),
       padding: DS.insets(l: 16, t: 12, r: 12, b: 12),
-      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(18), boxShadow: DS.shadows(Form3D.cardShadow)),
+      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.card), boxShadow: DS.shadows(Form3D.cardShadow)),
       child: Row(
         children: [
           Expanded(
@@ -142,9 +142,8 @@ class _TripPostScreenState extends State<TripPostScreen> {
                           ],
                         ),
                         if ((o.username ?? '').isNotEmpty) Text(o.username!, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w400, Ink3D.hint, letterSpacing: 0)),
-                        if (sub.isNotEmpty && !t.notOpen) Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
-                        if (t.notOpen && (o.homeCity ?? '').isNotEmpty) Text(o.homeCity!, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
-                        if (!t.notOpen) MutualsLine(mutuals: t.mutuals),
+                        if (sub.isNotEmpty) Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
+                        MutualsLine(mutuals: t.mutuals),
                       ],
                     ),
                   ),
@@ -152,7 +151,7 @@ class _TripPostScreenState extends State<TripPostScreen> {
               ),
             ),
           ),
-          if (!t.isMine && !t.notOpen && !t.sample) ...[
+          if (!t.isMine && !t.sample) ...[
             Gap.h(8),
             FollowButton(userId: o.userId, iFollow: t.iFollowOwner, followRequested: false, followsMe: false, compact: true, light: true, onChanged: (f, _) => c.trip.value = c.trip.value?.copyWith(iFollowOwner: f)),
           ],
@@ -164,7 +163,7 @@ class _TripPostScreenState extends State<TripPostScreen> {
   Widget _cover(PublicTrip t) {
     final seed = SocialLookB.seedOf(t.cityKey, t.tripId);
     final white = DesignColors.onPrimary;
-    final cover = Container(
+    return Container(
       margin: DS.gapInsets(l: 18, t: 18, r: 18),
       height: DS.s(150),
       padding: DS.insets(l: 16, t: 14, r: 16, b: 12),
@@ -185,7 +184,6 @@ class _TripPostScreenState extends State<TripPostScreen> {
         ],
       ),
     );
-    return t.notOpen ? Opacity(opacity: Alpha.v55, child: cover) : cover;
   }
 
   Widget _facts(PublicTrip t) {
@@ -224,42 +222,8 @@ class _TripPostScreenState extends State<TripPostScreen> {
         child: Text(t.text, style: Ink3D.text(14.5, FontWeight.w400, Ink3D.body, height: 1.5, letterSpacing: 0)),
       );
 
-  Widget _notOpen(PublicTrip t) => Container(
-        key: const ValueKey('trip_post_not_open'),
-        margin: DS.gapInsets(l: 18, t: 22, r: 18),
-        padding: DS.insets(l: 20, t: 24, r: 20, b: 24),
-        decoration: BoxDecoration(color: DesignColors.surface, borderRadius: SocialLookB.coverRadius, boxShadow: DS.shadows(Form3D.cardShadow)),
-        child: Column(
-          children: [
-            Container(
-              width: DS.s(84),
-              height: DS.s(84),
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(color: BuddyLook.pillOff, shape: BoxShape.circle),
-              child: ExcludeSemantics(child: Art3D(asset: ListingArt.locked, size: 52, shadowBlur: 3, shadowOffset: const Offset(2, 3))),
-            ),
-            Gap.v(12),
-            Text(SocialStringsB.notOpenTitle, textAlign: TextAlign.center, style: Ink3D.text(18, FontWeight.w700, Ink3D.title, letterSpacing: 0)),
-            Gap.v(4),
-            Text(SocialStringsB.notOpenBody(t.joinGender), textAlign: TextAlign.center, style: Ink3D.text(14, FontWeight.w400, Ink3D.sub, letterSpacing: 0)),
-            Gap.v(16),
-            Padding(
-              padding: DS.insets(l: 40, r: 40),
-              child: GradientPillButton(
-                key: TripPostScreen.seeTripsKey,
-                tone: BuddyLook.teal,
-                label: SocialStringsB.seeTrips,
-                height: SocialButtonsA.midHeight,
-                fontSize: SocialButtonsA.midFont,
-                onTap: SocialNavB.backToTravelBuddies,
-              ),
-            ),
-          ],
-        ),
-      );
-
   Widget? _bar(PublicTrip t) {
-    if (t.notOpen || t.sample) return null;
+    if (t.sample) return null;
     final teal = BuddyLook.teal;
     final Widget child;
     if (t.isMine) {
@@ -286,7 +250,15 @@ class _TripPostScreenState extends State<TripPostScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              GradientPillButton(tone: ListingTone.indigo, icon: Icons.check_rounded, label: SocialStringsB.requested, enabled: false, onTap: null, offColor: BuddyLook.checkOff),
+              GradientPillButton(
+                tone: ListingTone.indigo,
+                icon: Icons.check_rounded,
+                label: SocialStringsB.requested,
+                enabled: false,
+                onTap: null,
+                offColor: BuddyLook.checkOff,
+                offLabelColor: BuddyLook.subText,
+              ),
               Tap3D(
                 tapKey: TripPostScreen.cancelKey,
                 onTap: c.busy.value ? null : _cancel,
@@ -301,6 +273,15 @@ class _TripPostScreenState extends State<TripPostScreen> {
           ),
         'member' => WhitePillButton(tone: teal, label: SocialStringsB.openTrip, onTap: () => Get.toNamed(AppRoutes.tripView, arguments: {'tripId': t.tripId})),
         'declined' => GradientPillButton(tone: teal, label: SocialStringsB.notThisTime, enabled: false, onTap: null),
+        _ when JoinGenderRule.blocks(t) => GradientPillButton(
+            key: TripPostScreen.onlyForKey,
+            tone: teal,
+            label: SocialStringsB.onlyFor(t.joinGender),
+            enabled: false,
+            onTap: null,
+            offColor: Form3D.fillOff,
+            offLabelColor: BuddyLook.subText,
+          ),
         _ => t.seatsLeft <= 0
             ? GradientPillButton(tone: teal, label: SocialStringsB.full, enabled: false, onTap: null)
             : GradientPillButton(key: TripPostScreen.requestKey, tone: teal, label: SocialStringsB.requestToJoin, onTap: () => _request(t)),
@@ -353,13 +334,9 @@ class _TripPostScreenState extends State<TripPostScreen> {
                   children: [
                     _ownerCard(t),
                     _cover(t),
-                    if (t.notOpen)
-                      _notOpen(t)
-                    else ...[
-                      _facts(t),
-                      if (t.text.trim().isNotEmpty) _text(t),
-                      const SafetyLine(text: SocialStrings.safetyMeet),
-                    ],
+                    _facts(t),
+                    if (t.text.trim().isNotEmpty) _text(t),
+                    const SafetyLine(text: SocialStrings.safetyMeet),
                     Gap.v(12),
                   ],
                 ),

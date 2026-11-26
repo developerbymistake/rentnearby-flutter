@@ -8,6 +8,7 @@ import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
 import 'package:bakhli/design/tokens/design_scale.dart';
+import '../tokens/card_tokens.dart';
 
 class DialogLine {
   const DialogLine(this.text, {this.art});
@@ -273,7 +274,7 @@ class BusyOverlay3D extends StatelessWidget {
   final double? progress;
   final String? caption;
 
-  static BorderRadius get radius => DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(36), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
+  static BorderRadius get radius => DS.br(CardRadius.hero);
 
   @override
   Widget build(BuildContext context) {
@@ -449,7 +450,7 @@ class MenuPopup3D extends StatelessWidget {
         padding: EdgeInsets.symmetric(vertical: DS.s(6)),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(32)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+          borderRadius: DS.br(CardRadius.card),
           boxShadow: [BoxShadow(color: Color(0x4D000000), offset: DS.shadowOffset(const Offset(0, 10)), blurRadius: DS.shadowBlur(28))],
         ),
         child: Column(

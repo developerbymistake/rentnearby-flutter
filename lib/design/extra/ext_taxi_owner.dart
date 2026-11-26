@@ -16,7 +16,7 @@ abstract final class TaxiOwnerArt {
 }
 
 abstract final class TaxiOwnerLook {
-  static const BorderRadius card = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(36), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
+  static const BorderRadius card = CardRadius.hero;
   static const Color lockHalo = Color(0x2EFFFFFF);
   static const Color band = Color(0x1C000000);
   static const Color panel = Color(0x2EFFFFFF);
@@ -114,7 +114,7 @@ class TaxiRouteCard3D extends StatelessWidget {
           Container(
             constraints: BoxConstraints(minHeight: DS.s(104)),
             padding: EdgeInsets.fromLTRB(DS.s(left), DS.s(14), DS.s(12), DS.s(14)),
-            decoration: BoxDecoration(borderRadius: DS.br(TaxiOwnerLook.card), gradient: tone.gradient, boxShadow: tone.glow()),
+            decoration: BoxDecoration(borderRadius: DS.br(CardRadius.card), gradient: tone.gradient, boxShadow: tone.glow()),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -280,7 +280,7 @@ class TaxiBucketChip extends StatelessWidget {
                   padding: EdgeInsets.fromLTRB(DS.s(MediaQuery.sizeOf(context).width < Form3D.narrow ? 62 : 70), DS.s(10), DS.s(10), DS.s(10)),
                   alignment: Alignment.centerLeft,
                   decoration: BoxDecoration(
-                    borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
+                    borderRadius: DS.br(CardRadius.card),
                     gradient: tone.gradient,
                     boxShadow: selected ? tone.glow(blur: 8) : const [],
                   ),
@@ -347,7 +347,7 @@ class TaxiLeadCard3D extends StatelessWidget {
         padding: DS.sym(h: 10, v: 3),
         decoration: BoxDecoration(
           color: hot ? TaxiOwnerLook.urgent : Colors.white,
-          borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(14), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
+          borderRadius: DS.br(const BorderRadius.all(Radius.circular(8))),
         ),
         child: Text(text.toUpperCase(), maxLines: 1, style: Ink3D.text(11, FontWeight.w700, hot ? TaxiOwnerLook.urgentText : (pillColor ?? tone.button), letterSpacing: 0.4)),
       );

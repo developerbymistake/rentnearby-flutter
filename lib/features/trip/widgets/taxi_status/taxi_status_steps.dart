@@ -49,7 +49,7 @@ class _Step extends StatelessWidget {
     final row = Container(
       key: ValueKey('taxi_step_$number'),
       padding: DS.all(12),
-      decoration: BoxDecoration(color: active ? ListingPalette.indigo.tint : null, borderRadius: DS.br(CardRadius.tile)),
+      decoration: BoxDecoration(color: active ? ListingPalette.indigo.tint : null, borderRadius: DS.br(CardRadius.card)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

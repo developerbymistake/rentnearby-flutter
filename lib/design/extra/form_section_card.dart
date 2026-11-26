@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
 import 'package:bakhli/design/tokens/design_scale.dart';
+import '../tokens/card_tokens.dart';
 
 enum FormArtSide { left, right }
 
@@ -18,7 +19,7 @@ class FormSectionCard extends StatelessWidget {
     this.requiredMark = false,
     this.hint,
     this.artSide = FormArtSide.left,
-    this.corner = 36,
+    this.corner = CardRadius.heroNotch,
     this.trailing,
     this.margin,
   });
@@ -144,7 +145,7 @@ class FormSectionCard extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(DS.s(18), 0, DS.s(18), DS.s(18)),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(corner)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        borderRadius: DS.br(BorderRadius.only(topLeft: const Radius.circular(CardRadius.corner), topRight: Radius.circular(corner), bottomLeft: const Radius.circular(CardRadius.corner), bottomRight: const Radius.circular(CardRadius.corner))),
         boxShadow: DS.shadows(Form3D.cardShadow),
       ),
       child: Column(
@@ -198,7 +199,7 @@ class FormNoteCard extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(DS.s(84), DS.s(14), DS.s(onTap == null ? 16 : 10), DS.s(14)),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+            borderRadius: DS.br(CardRadius.card),
             boxShadow: DS.shadows(Form3D.cardShadow),
           ),
           child: Row(

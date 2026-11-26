@@ -24,6 +24,7 @@ import '../../../buddy/viewer/viewer_deps.dart';
 import '../../../buddy/viewer/viewer_strings.dart';
 import '../../../buddy/viewer/widgets/leave_trip_dialog.dart';
 import '../../shared/social_error_types.dart';
+import '../../shared/social_formats.dart';
 import '../../shared/social_me_controller.dart';
 import '../../shared/social_models.dart';
 import '../../shared/social_nav.dart';
@@ -33,6 +34,7 @@ import '../../a/widgets/social_chips_a.dart';
 import '../../shared/widgets/plus_widgets.dart';
 import '../../shared/widgets/social_avatar_stack.dart';
 import '../social_strings_c.dart';
+import '../widgets/chat_room_header.dart';
 import 'models/chat_models.dart';
 import 'open_room_tracker.dart';
 import 'report_message_dialog.dart';
@@ -173,14 +175,15 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
 
   @override
   Widget build(BuildContext context) => KitStatusBar(
+        lightIcons: false,
         child: Scaffold(
           backgroundColor: ListingPalette.indigo.page,
           body: Obx(() {
             final view = _c.view.value;
             return Column(
               children: [
-                _header(),
-                Expanded(child: _body(view)),
+                SafeArea(bottom: false, child: _header()),
+                Expanded(child: MediaQuery.removePadding(context: context, removeTop: true, child: _body(view))),
                 if (view == RoomView.ready) _pinnedSafety(),
                 if (view == RoomView.ready) _bottom(),
               ],
@@ -195,37 +198,28 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
       final trip = r?.trip;
       final title = trip?.title ?? '';
       final (art, tone) = SocialTripRoomRow.lookOf(trip?.tripId ?? widget.tripId ?? '', cityKey: trip?.cityKey ?? 0);
-      return ChatHeader3D(
+      return ChatRoomHeader(
+        key: const ValueKey('dm_room_header'),
         tone: _tone,
         initial: ChatLook3D.initialOf(title),
         name: title,
         subtitle: SocialStringsC.members(trip?.memberCount ?? 0),
         subtitleLead: (trip != null && (trip.photoUrls.isNotEmpty || trip.initials.isNotEmpty)) ? SocialAvatarStack(key: const ValueKey('dm_trip_members'), photoUrls: trip.photoUrls, initials: trip.initials, size: 22) : null,
-        leading: Container(
-          key: const ValueKey('dm_trip_art'),
-          width: DS.s(54),
-          height: DS.s(54),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(gradient: tone.gradient, borderRadius: DS.circular(16), border: Border.all(color: ChatLook3D.avatarRing, width: DS.s(3))),
-          child: Image.asset(art, width: DS.s(38), height: DS.s(38)),
-        ),
-        sticker: null,
-        art: null,
+        leading: ChatRoomHeader.tripArt(key: const ValueKey('dm_trip_art'), art: art, gradient: tone.gradient),
         onBack: () => Get.back(),
         onMore: r == null ? null : _tripMenu,
         moreKey: const ValueKey('dm_room_more'),
       );
     }
     final subtitle = r != null ? SocialPersonRoomRow.subtitleOf(r) : (_peer?.homeCity ?? SocialStringsC.newToYou);
-    return ChatHeader3D(
+    return ChatRoomHeader(
+      key: const ValueKey('dm_room_header'),
       tone: _tone,
       initial: _peer?.initial.isNotEmpty == true ? _peer!.initial : ChatLook3D.initialOf(_peerName),
-      name: _peerName,
+      name: SocialFormats.shortName(_peerName),
       nameTrailing: GenderGlyph(gender: _peer?.gender ?? ''),
       avatarGradient: BuddyLook.avatarGradient(_peer?.userId ?? widget.userId ?? _peerName),
       subtitle: subtitle,
-      sticker: null,
-      art: ListingArt.speechBalloon,
       onBack: () => Get.back(),
       onMore: _peer == null ? null : _directMenu,
       moreKey: const ValueKey('dm_room_more'),
@@ -342,7 +336,7 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
     if (m.isSystem) return ChatSystemNote(m.text, colors: BuddyLook.note[NoteToneColor.teal]);
     final mine = _c.isMine(m) || m.isLocal;
     final ticks = !mine || m.isLocal ? ChatTicks.none : (!trip && peerRead >= m.seq ? ChatTicks.read : ChatTicks.sent);
-    final sender = trip && !mine && (m.senderName ?? '').isNotEmpty ? m.senderName : null;
+    final sender = trip && !mine && (m.senderName ?? '').isNotEmpty ? SocialFormats.shortName(m.senderName!) : null;
     Widget bubble = ChatBubble3D(
       tone: _tone,
       text: m.text,

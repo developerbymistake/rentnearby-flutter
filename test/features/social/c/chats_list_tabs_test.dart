@@ -2,12 +2,14 @@ import 'package:bakhli/config/shell_kind.dart';
 import 'package:bakhli/config/user_roles.dart';
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/controllers/chat_controller.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/ext_chat.dart';
 import 'package:bakhli/features/buddy/shared/buddy_look.dart';
 import 'package:bakhli/features/buddy/shared/buddy_result.dart';
 import 'package:bakhli/features/social/c/chat/models/chat_models.dart';
 import 'package:bakhli/features/social/c/chat/rooms_controller.dart';
 import 'package:bakhli/features/social/c/social_strings_c.dart';
+import 'package:bakhli/features/social/c/widgets/icon_title_header.dart';
 import 'package:bakhli/models/conversation_model.dart';
 import 'package:bakhli/screens/chats_list_screen.dart';
 import 'package:flutter/material.dart';
@@ -90,6 +92,43 @@ void main() {
     }
   }
 
+  for (final w in socialWidths) {
+    for (final s in socialScales) {
+      testWidgets('Messages header: back, title and a small chat icon in one row, search on the right (${w.toInt()} x$s)', (t) async {
+        seeker(ShellKind.seeker, UserRoleKeys.seeker);
+        rooms();
+        await pumpSocial(t, const ChatsListScreen(), width: w, scale: s);
+        expect(find.byType(IconTitleHeader), findsOneWidget);
+        expect(find.byType(ModuleTitleBar), findsNothing);
+        final back = t.getRect(find.byTooltip('Back'));
+        final title = t.getRect(find.text('Messages'));
+        final icon = t.getRect(find.byKey(const ValueKey('icon_title_art')));
+        final search = t.getRect(find.byTooltip('Search'));
+        expect(t.widget<RoundIconButton3D>(find.byKey(const ValueKey('icon_title_art'))).asset, ListingArt.speechBalloon);
+        expect(icon.height, closeTo(search.height, 0.5));
+        expect(title.center.dy, closeTo(back.center.dy, 1));
+        expect(icon.center.dy, closeTo(back.center.dy, 1));
+        expect(title.left, greaterThan(back.right));
+        expect(icon.left, greaterThanOrEqualTo(title.right));
+        expect(search.left, greaterThanOrEqualTo(icon.right));
+        expect(t.takeException(), isNull);
+        await disposeSocial(t);
+      });
+    }
+  }
+
+  testWidgets('people rows show short names', (t) async {
+    seeker(ShellKind.seeker, UserRoleKeys.seeker);
+    rooms();
+    await pumpSocial(t, const ChatsListScreen());
+    expect(find.descendant(of: find.byKey(const ValueKey('social_room_p1')), matching: find.text('Kavya S.')), findsOneWidget);
+    expect(find.text('Kavya Sharma'), findsNothing);
+    await t.tap(find.text(SocialStringsC.requests));
+    await t.pump(const Duration(milliseconds: 400));
+    expect(find.descendant(of: find.byKey(const ValueKey('social_request_q1')), matching: find.text('Kavya S.')), findsOneWidget);
+    await disposeSocial(t);
+  });
+
   testWidgets('owner shell keeps the old list without tabs', (t) async {
     seeker(ShellKind.stayOwner, UserRoleKeys.stayOwner);
     rooms();
@@ -133,6 +172,12 @@ void main() {
     for (final i in ['R', 'M', 'A']) {
       expect(find.descendant(of: row, matching: find.text(i)), findsOneWidget);
     }
+    final card = t
+        .widgetList<Container>(find.descendant(of: row, matching: find.byType(Container)))
+        .map((c) => c.decoration)
+        .whereType<BoxDecoration>()
+        .firstWhere((d) => d.boxShadow != null);
+    expect(card.borderRadius, DS.br(CardRadius.card));
     await disposeSocial(t);
   });
 

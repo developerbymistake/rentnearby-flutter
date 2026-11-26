@@ -657,7 +657,7 @@ class WideCard extends StatelessWidget {
         child: Stack(
           children: [
             content,
-            if (hasTrailing && !slim) Positioned(right: DS.s(6), top: photoKind ? bannerH + DS.s(6) : DS.s(6), child: trailing!),
+            if (hasTrailing && !slim) Positioned(right: DS.s(photoKind ? 6 : 10), top: photoKind ? bannerH + DS.s(6) : DS.s(10), child: trailing!),
           ],
         ),
       ),

@@ -1,4 +1,5 @@
 import 'package:bakhli/controllers/plan_controller.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/social/c/plus/seeker_plus_controller.dart';
 import 'package:bakhli/features/social/c/plus/seeker_plus_screen.dart';
 import 'package:bakhli/features/social/c/social_strings_c.dart';
@@ -57,12 +58,16 @@ void main() {
   testWidgets('what you get uses the plan numbers, not typed ones', (t) async {
     setUpPlans();
     await pumpSocial(t, const SeekerPlusScreen());
-    expect(find.text(SocialStringsC.chatPeople(15)), findsOneWidget);
+    expect(find.text(SocialStringsC.chatPeople(10)), findsOneWidget);
+    expect(find.text('Chat with 10 new people a month'), findsOneWidget);
     expect(find.text(SocialStringsC.chatPeopleSub(3)), findsOneWidget);
     expect(find.text(SocialStringsC.publicTrips(3)), findsOneWidget);
     expect(find.text(SocialStringsC.activeTrips(10)), findsOneWidget);
     expect(find.text(SocialStringsC.joinRequests(5)), findsOneWidget);
     expect(find.text(SocialStringsC.genderOnly), findsOneWidget);
+    expect(find.text('Women-only trips'), findsOneWidget);
+    expect(find.text('Men-only and Anyone are free'), findsOneWidget);
+    expect(find.textContaining('or men-only'), findsNothing);
     expect(find.text(SocialStringsC.nearMe), findsOneWidget);
     await disposeSocial(t);
   });
@@ -76,6 +81,19 @@ void main() {
     await t.tap(find.byKey(const ValueKey('plus_subscribe')));
     await t.pump();
     expect(plans.bought, [('b1000000-0000-0000-0000-000000000502', 3)]);
+    await disposeSocial(t);
+  });
+
+  testWidgets('plan cards and their ring use uniform corners', (t) async {
+    setUpPlans();
+    await pumpSocial(t, const SeekerPlusScreen());
+    for (final m in [12, 3, 1]) {
+      final ring = t.widget<Container>(find.byKey(ValueKey('plus_ring_$m')));
+      final ringR = (ring.decoration! as BoxDecoration).borderRadius! as BorderRadius;
+      expect(ringR, DS.br(const BorderRadius.all(Radius.circular(CardRadius.uniformValue + 5))));
+      final card = t.widget<Container>(find.descendant(of: find.byKey(ValueKey('plus_ring_$m')), matching: find.byType(Container)).first);
+      expect((card.decoration! as BoxDecoration).borderRadius, DS.br(CardRadius.card));
+    }
     await disposeSocial(t);
   });
 

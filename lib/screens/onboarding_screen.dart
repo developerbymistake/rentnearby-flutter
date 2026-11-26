@@ -9,6 +9,7 @@ import '../design/extra/ext_auth.dart';
 import '../design/extra/ext_buddy.dart';
 import '../features/buddy/buddy_strings.dart';
 import '../features/buddy/username_actions.dart';
+import '../features/owner_core/onboarding/onboarding_exit.dart';
 import '../features/social/a/onboarding/onboarding_controller.dart';
 import '../features/social/a/onboarding/onboarding_steps.dart';
 import '../features/social/a/social_strings_a.dart';
@@ -134,20 +135,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  Widget? _phoneLine() {
-    final phone = _c.existing ? _auth.profilePhone.value : (_c.phone ?? '');
-    if (phone.isEmpty) return null;
-    return AuthVerifiedRow(art: ListingArt.key, text: '+91 ${SocialFormats.maskPhone(phone)}');
-  }
-
-  Widget _idPill() => Obx(() {
+  Widget _identity() => Obx(() {
+        final phone = _c.existing ? _auth.profilePhone.value : (_c.phone ?? '');
         final username = _c.existing ? _auth.user.value?.username : _auth.signupUsername.value;
-        return UsernameLockedPill(
+        return OnboardingIdentityChips(
+          phone: phone.isEmpty ? null : '+91 ${SocialFormats.maskPhone(phone)}',
           username: username,
-          art: ListingArt.key,
-          copyLabel: BuddyStrings.copyUsername,
-          loadingLabel: BuddyStrings.usernameLoading,
-          onCopy: () => UsernameActions.copy(username!),
+          idPill: (compact) => UsernameLockedPill(
+            username: username,
+            art: ListingArt.key,
+            compact: compact,
+            copyLabel: BuddyStrings.copyUsername,
+            loadingLabel: BuddyStrings.usernameLoading,
+            onCopy: () => UsernameActions.copy(username!),
+          ),
         );
       });
 
@@ -178,9 +179,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          OnboardingHeader(step: step, onBack: step > 0 || _canLeave ? _back : null),
-                          Transform.translate(
-                            offset: Offset(0, -DS.s(38)),
+                          OnboardingHeader(
+                            step: step,
+                            onBack: step > 0 || _canLeave ? _back : null,
+                            onMenu: _canLeave ? null : (r) => OnboardingExit.openMenu(context, isDraft: true, hasDraft: false, anchor: r),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.only(top: DS.gv(OnboardingHeader.cardGap)),
                             child: switch (step) {
                               0 => OnboardingStepYou(
                                   c: _c,
@@ -188,8 +193,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                   onPhoto: _pickPhoto,
                                   nameCtrl: _nameCtrl,
                                   nameFocus: _nameFocus,
-                                  phoneLine: _phoneLine(),
-                                  idPill: _idPill(),
+                                  phoneLine: _identity(),
                                 ),
                               1 => OnboardingStepStyle(c: _c),
                               _ => OnboardingStepAbout(c: _c, aboutCtrl: _aboutCtrl, photoUrl: _auth.user.value?.profilePhotoUrl),

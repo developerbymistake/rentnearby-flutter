@@ -7,6 +7,7 @@ import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
 import 'skeleton_3d.dart';
 import '../tokens/design_scale.dart';
+import '../tokens/card_tokens.dart';
 
 class PlanInk {
   const PlanInk._();
@@ -76,8 +77,7 @@ class PlanLook {
   static double narrowness(BuildContext context) => MediaQuery.sizeOf(context).width;
 }
 
-BorderRadius get _barButtonRadius => BorderRadius.only(
-    topLeft: Radius.circular(DS.radius(20)), topRight: Radius.circular(DS.radius(20)), bottomRight: Radius.circular(DS.radius(20)), bottomLeft: Radius.circular(DS.radius(8)));
+BorderRadius get _barButtonRadius => BorderRadius.all(Radius.circular(DS.radius(20)));
 
 class PlanBarButton extends StatelessWidget {
   const PlanBarButton({super.key, required this.tone, required this.label, required this.onTap, this.white = false, this.loading = false, this.width, this.mutedWhenOff = false});
@@ -284,7 +284,7 @@ class PlanHeroCard3D extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(DS.s(22), DS.s(20), DS.s(22), DS.s(20)),
           decoration: BoxDecoration(
             gradient: tone.gradient,
-            borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(68)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+            borderRadius: DS.br(CardRadius.hero),
             boxShadow: tone.glow(),
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -431,7 +431,7 @@ class PlanCompareCard3D extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        borderRadius: DS.br(CardRadius.tile),
         boxShadow: PlanInk.cardSoft,
       ),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -586,7 +586,7 @@ class PlanCycleCard3D extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(left, DS.s(12), DS.s(14), DS.s(12)),
       decoration: BoxDecoration(
         gradient: tone.gradient,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(40)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        borderRadius: DS.br(CardRadius.card),
         border: Border.all(color: selected ? Colors.white : Colors.transparent, width: DS.s(3)),
         boxShadow: selected ? tone.glow(blur: 14, dy: 6) : null,
       ),
@@ -979,7 +979,7 @@ class PlanSubscriptionCard3D extends StatelessWidget {
           width: double.infinity,
           decoration: BoxDecoration(
             gradient: tone.gradient,
-            borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+            borderRadius: DS.br(CardRadius.hero),
             boxShadow: tone.glow(),
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -1074,7 +1074,7 @@ class PlanStateCard3D extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(DS.s(24), (m == null || m.isEmpty) ? DS.s(artSize - 34) : DS.s(artSize - 26), DS.s(24), DS.s(26)),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+            borderRadius: DS.br(CardRadius.hero),
             boxShadow: [BoxShadow(color: Color(0x4D9E9E9E), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(12))],
           ),
           child: Column(children: [
@@ -1132,14 +1132,14 @@ class PlanSkeleton3D extends StatelessWidget {
         if (hero)
           _block(
             height: 150,
-            radius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(68)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+            radius: DS.br(CardRadius.hero),
             margin: EdgeInsets.fromLTRB(DS.s(18), DS.s(52), DS.s(18), 0),
             bone: Positioned(right: DS.s(18), top: DS.s(-36), child: _disc(110)),
           ),
         for (var i = 0; i < rows; i++)
           _block(
             height: 104,
-            radius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+            radius: DS.br(CardRadius.hero),
             margin: EdgeInsets.fromLTRB(DS.s(18), DS.s(46), DS.s(18), 0),
             bone: Positioned(left: DS.s(12), top: DS.s(-28), child: _disc(96)),
             lines: [_line(30, 150), _line(58, 100)],
@@ -1332,7 +1332,7 @@ class PlanHistoryCard3D extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(left, DS.s(16), narrow ? DS.s(14) : DS.s(20), DS.s(16)),
             decoration: BoxDecoration(
               gradient: tone.gradient,
-              borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+              borderRadius: DS.br(CardRadius.hero),
               boxShadow: [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(10))],
             ),
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1392,7 +1392,7 @@ class LegalCard3D extends StatelessWidget {
         color: Colors.white,
         borderRadius: continued
             ? DS.circular(8)
-            : BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+            : DS.br(CardRadius.hero),
         boxShadow: [BoxShadow(color: Color(0x339E9E9E), offset: DS.shadowOffset(const Offset(1.1, 1.1)), blurRadius: DS.shadowBlur(10))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
@@ -1530,7 +1530,7 @@ class PlanWeekCard3D extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: DS.s(14)),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        borderRadius: DS.br(CardRadius.card),
         boxShadow: PlanInk.cardSoft,
       ),
       child: Row(children: [
@@ -1574,7 +1574,7 @@ class PlanHomeCard3D extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(DS.s(12), DS.s(16), DS.s(18), DS.s(16)),
       decoration: BoxDecoration(
         gradient: tone.gradient,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        borderRadius: DS.br(CardRadius.hero),
         boxShadow: tone.glow(),
       ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [

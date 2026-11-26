@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
 import 'pill_field.dart';
+import '../tokens/card_tokens.dart';
 
 class OptionTileItem {
   const OptionTileItem({required this.label, required this.art, this.big});
@@ -59,7 +60,7 @@ class OptionTileGrid extends StatelessWidget {
             alignment: Alignment.bottomCenter,
             padding: DS.insets(l: 4, r: 4, b: 10),
             decoration: BoxDecoration(
-              borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(22), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
+              borderRadius: DS.br(CardRadius.card),
               color: on ? null : Form3D.wash(tone, 0.11),
               gradient: on ? tone.gradient : null,
               border: bad ? Border.all(color: Form3D.error, width: 1.5) : null,
@@ -162,7 +163,7 @@ class GradientOptionCard extends StatelessWidget {
               alignment: Alignment.bottomLeft,
               padding: DS.insets(l: 8, r: 8, b: 9),
               decoration: BoxDecoration(
-                borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
+                borderRadius: DS.br(CardRadius.card),
                 gradient: tone.gradient,
                 boxShadow: selected
                     ? DS.shadows([
@@ -340,7 +341,7 @@ class DashedAddRow3D extends StatelessWidget {
       painter: DashedRRectPainter(
         line: Form3D.wash(tone, 0.5),
         fill: Form3D.wash(tone, 0.06),
-        radius: BorderRadius.only(topLeft: Radius.circular(8 * u), topRight: Radius.circular(28 * u), bottomLeft: Radius.circular(8 * u), bottomRight: Radius.circular(8 * u)),
+        radius: BorderRadius.all(Radius.circular(CardRadius.uniformValue * u)),
         stroke: 2 * u,
         dash: 7 * u,
         gap: 5 * u,

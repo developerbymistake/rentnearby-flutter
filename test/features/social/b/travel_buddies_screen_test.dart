@@ -1,4 +1,5 @@
 import 'package:bakhli/config/app_routes.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/social/b/feed/travel_buddies_screen.dart';
 import 'package:bakhli/features/social/b/post/join_request_sheet.dart';
 import 'package:bakhli/features/social/b/social_strings_b.dart';
@@ -161,6 +162,38 @@ void main() {
     await settle(t);
     expect(find.text('WIZARD'), findsNothing);
     expect(find.byKey(const ValueKey('plus_limit_sheet')), findsOneWidget);
+    await drain(t);
+  });
+
+  for (final gender in ['Male', 'Other']) {
+    testWidgets('a Women-only trip flagged notOpen for $gender: the full post shows, a calm disabled line replaces Request to join (spec 22)', (t) async {
+      final server = installServer();
+      putSocialMe(server, socialMeWith(gender: gender));
+      server.on('GET', _feed, _page(items: [publicTripJson(id: 'w-1', cities: ['Kasol'], joinGender: 'F', notOpen: true), publicTripJson(id: 'a-1', ownerId: 'aman', cities: ['Spiti'])]));
+      await pumpSocial(t, const TravelBuddiesScreen(), pages: _pages);
+      expect(find.text('Kasol'), findsOneWidget);
+      final only = find.byKey(const ValueKey('feed_only_for_w-1'), skipOffstage: false);
+      expect(only, findsOneWidget);
+      expect(find.text('This trip is for women only', skipOffstage: false), findsOneWidget);
+      final b = t.widget<GradientPillButton>(only);
+      expect(b.enabled, isFalse);
+      expect(b.onTap, isNull);
+      expect(b.offLabelColor, isNotNull);
+      expect(find.byKey(const ValueKey('feed_request_w-1'), skipOffstage: false), findsNothing);
+      expect(find.byKey(const ValueKey('feed_request_a-1'), skipOffstage: false), findsOneWidget);
+      await drain(t);
+    });
+  }
+
+  testWidgets('a Women-only trip seen by a woman shows Request to join; a Men-only trip says for men only', (t) async {
+    final server = installServer();
+    putSocialMe(server, socialMeWith(gender: 'Female'));
+    server.on('GET', _feed, _page(items: [publicTripJson(id: 'w-1', cities: ['Kasol'], joinGender: 'F'), publicTripJson(id: 'm-1', ownerId: 'aman', cities: ['Spiti'], joinGender: 'M', notOpen: true)]));
+    await pumpSocial(t, const TravelBuddiesScreen(), pages: _pages);
+    expect(find.byKey(const ValueKey('feed_request_w-1'), skipOffstage: false), findsOneWidget);
+    expect(find.byKey(const ValueKey('feed_only_for_w-1'), skipOffstage: false), findsNothing);
+    expect(find.byKey(const ValueKey('feed_only_for_m-1'), skipOffstage: false), findsOneWidget);
+    expect(find.text('This trip is for men only', skipOffstage: false), findsOneWidget);
     await drain(t);
   });
 }

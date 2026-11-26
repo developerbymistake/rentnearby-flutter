@@ -31,13 +31,27 @@ void main() {
   });
   tearDown(Get.reset);
 
-  test('Home places Trips to join right after Quick actions', () {
+  test('Home: the Find buddies post card sits right below Quick actions, then Trips to join (spec 23.6)', () {
     final src = File('lib/screens/home_screen.dart').readAsStringSync();
     final qa = src.indexOf('StaggerItem(index: 1, child: SeekerQuickActions())');
-    final rail = src.indexOf('StaggerItem(index: 2, child: TripsToJoinRail())');
+    final post = src.indexOf('StaggerItem(index: 2, child: FindBuddiesPostCard(place: FindBuddiesPostPlace.home))');
+    final rail = src.indexOf('StaggerItem(index: 3, child: TripsToJoinRail())');
     expect(qa, greaterThan(0));
-    expect(rail, greaterThan(qa));
-    expect(src, contains('_sections = 5'));
+    expect(post, greaterThan(qa));
+    expect(rail, greaterThan(post));
+    expect(src, contains('_sections = 6'));
+  });
+
+  testWidgets('the rail header has See all and no Post yours link', (t) async {
+    final server = installServer();
+    server.on('GET', _rail, {
+      'items': [publicTripJson(id: 'trip-1')],
+    });
+    Get.put(TripsRailController(), permanent: true);
+    await pumpSocial(t, _host(), pages: _pages);
+    expect(find.text(SocialStringsB.seeAll), findsOneWidget);
+    expect(find.textContaining('Post yours'), findsNothing);
+    await drain(t);
   });
 
   test('bindings put the rail controller once and the session clear removes it', () {

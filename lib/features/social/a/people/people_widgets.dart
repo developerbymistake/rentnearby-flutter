@@ -122,7 +122,7 @@ class PeopleCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: DesignColors.surface,
-          borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(28), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
+          borderRadius: DS.br(CardRadius.hero),
           boxShadow: BuddyLook.cardShadows(DS.size),
         ),
         child: Column(

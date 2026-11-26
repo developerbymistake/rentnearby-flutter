@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../design/design.dart';
 import '../../../../utils/input_formatters.dart';
 import '../../../buddy/shared/buddy_look.dart';
+import '../../../buddy/shared/widgets/segment_tabs.dart';
 import '../../c/social_strings_c.dart';
 import '../../shared/social_me_controller.dart';
 import '../../shared/social_nav.dart';
@@ -13,14 +14,17 @@ class FeedFilter {
   const FeedFilter({this.q = '', this.who = any, this.near = false});
 
   static const String any = 'any';
-  static const String mine = 'mine';
+  static const String women = 'women';
+  static const String men = 'men';
+  // Same order as the wizard control (Anyone | Men | Women, spec 23.8).
+  static const List<String> whoValues = [any, men, women];
   static const FeedFilter none = FeedFilter();
 
   final String q;
   final String who;
   final bool near;
 
-  int get count => (q.trim().isEmpty ? 0 : 1) + (who == mine ? 1 : 0) + (near ? 1 : 0);
+  int get count => (q.trim().isEmpty ? 0 : 1) + (who == any ? 0 : 1) + (near ? 1 : 0);
 
   FeedFilter copyWith({String? q, String? who, bool? near}) => FeedFilter(q: q ?? this.q, who: who ?? this.who, near: near ?? this.near);
 
@@ -32,18 +36,20 @@ class FeedFilter {
 }
 
 class FeedFilterSheet extends StatefulWidget {
-  const FeedFilterSheet({super.key, required this.initial, required this.myGender, required this.nearMe});
+  const FeedFilterSheet({super.key, required this.initial, required this.nearMe});
 
   final FeedFilter initial;
-  final String myGender;
   final bool nearMe;
 
   static const Key showKey = ValueKey('feed_filter_show');
   static const Key nearSwitchKey = ValueKey('feed_filter_near');
   static const Key nearPlusKey = ValueKey('feed_filter_near_plus');
+  static const Key whoKey = ValueKey('feed_filter_who');
 
-  static Future<FeedFilter?> show(BuildContext context, {required FeedFilter initial, required String myGender, required bool nearMe}) =>
-      Sheet3D.show<FeedFilter>(context, builder: (_) => FeedFilterSheet(initial: initial, myGender: myGender, nearMe: nearMe));
+  static Future<FeedFilter?> show(BuildContext context, {required FeedFilter initial, required bool nearMe}) =>
+      Sheet3D.show<FeedFilter>(context, builder: (_) => FeedFilterSheet(initial: initial, nearMe: nearMe));
+
+  static const List<String> whoLabels = SocialStringsB.joinLabels;
 
   @override
   State<FeedFilterSheet> createState() => _FeedFilterSheetState();
@@ -67,7 +73,7 @@ class _FeedFilterSheetState extends State<FeedFilterSheet> {
   Widget _card({required List<Widget> children}) => Container(
         margin: DS.gapInsets(t: 12),
         padding: DS.insets(l: 16, t: 14, r: 16, b: 14),
-        decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(16), boxShadow: DS.shadows(Form3D.cardShadow)),
+        decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.card), boxShadow: DS.shadows(Form3D.cardShadow)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: children),
       );
 
@@ -107,8 +113,8 @@ class _FeedFilterSheetState extends State<FeedFilterSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final own = SocialStringsB.ownGenderOnly(widget.myGender);
-    final whoLabel = _f.who == FeedFilter.mine && own.isNotEmpty ? own : SocialStringsB.anyone;
+    final whoIndex = FeedFilter.whoValues.indexOf(_f.who) < 0 ? 0 : FeedFilter.whoValues.indexOf(_f.who);
+    final whoLabel = FeedFilterSheet.whoLabels[whoIndex];
     final tone = ListingTone.indigo;
     return Sheet3D(
       tone: tone,
@@ -148,16 +154,14 @@ class _FeedFilterSheetState extends State<FeedFilterSheet> {
           _card(children: [
             _head(SocialStringsB.whoCanJoinCaps, whoLabel),
             Gap.v(10),
-            Wrap(
-              spacing: DS.gh(8),
-              runSpacing: DS.gv(8),
-              children: [
-                SocialPickChip(label: SocialStringsB.anyone, selected: _f.who != FeedFilter.mine || own.isEmpty, onTap: () => setState(() => _f = _f.copyWith(who: FeedFilter.any))),
-                if (own.isNotEmpty) SocialPickChip(label: own, selected: _f.who == FeedFilter.mine, onTap: () => setState(() => _f = _f.copyWith(who: FeedFilter.mine))),
-              ],
+            SegmentTabs(
+              key: FeedFilterSheet.whoKey,
+              labels: FeedFilterSheet.whoLabels,
+              selected: whoIndex,
+              tone: tone,
+              margin: EdgeInsets.zero,
+              onTap: (i) => setState(() => _f = _f.copyWith(who: FeedFilter.whoValues[i])),
             ),
-            Gap.v(8),
-            Text(SocialStringsB.onlyYouCanJoin, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
           ]),
           _card(children: [
             Row(

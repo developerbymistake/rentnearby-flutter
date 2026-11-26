@@ -48,4 +48,10 @@ void main() {
     expect(SocialFormats.maskPhone('1234'), '1234');
     expect(SocialFormats.maskPhone(''), '');
   });
+
+  test('dayMonth gives day and short month in local time', () {
+    final d = DateTime(2026, 12, 11, 12);
+    expect(SocialFormats.dayMonth(d), '11 Dec');
+    expect(SocialFormats.dayMonth(DateTime(2026, 1, 3, 12)), '3 Jan');
+  });
 }

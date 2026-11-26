@@ -67,30 +67,46 @@ void main() {
     expect(c.draft.value.text, 'My own words.');
   });
 
-  test('same-gender only without Plus shows the lock and stays Anyone; with Plus it is set', () async {
-    final server = installServer();
-    putSocialMe(server, socialMeWith(gender: 'Male'));
-    await Future<void>.delayed(const Duration(milliseconds: 20));
-    final c = await ready(PostTripController(persist: false));
-    c.setJoinGender('F');
-    expect(c.genderLocked.value, isFalse);
-    expect(c.draft.value.joinGender, 'A');
-    c.setJoinGender('M');
-    expect(c.genderLocked.value, isTrue);
-    expect(c.draft.value.joinGender, 'A');
-  });
+  for (final gender in ['Male', 'Female', 'Other']) {
+    test('Free $gender poster: Men only is free, Women only shows the Plus lock and stays Anyone (spec 22)', () async {
+      final server = installServer();
+      final me = putSocialMe(server, socialMeWith(gender: gender));
+      await me.load();
+      final c = await ready(PostTripController(persist: false));
+      expect(c.canWomenOnly, isFalse);
+      c.setJoinGender('M');
+      expect(c.genderLocked.value, isFalse);
+      expect(c.draft.value.joinGender, 'M');
+      c.setJoinGender('F');
+      expect(c.genderLocked.value, isTrue);
+      expect(c.draft.value.joinGender, 'A');
+      c.setJoinGender('A');
+      expect(c.genderLocked.value, isFalse);
+      expect(c.draft.value.joinGender, 'A');
+      c.setJoinGender('X');
+      expect(c.draft.value.joinGender, 'A');
+    });
+  }
 
-  test('with Plus the poster can limit to his own gender', () async {
+  test('with Plus any poster, also a man, can post a Women-only trip', () async {
     final server = installServer();
-    final me = putSocialMe(server, socialMeWith(isPlus: true, genderOnly: true, gender: 'Female'));
+    final me = putSocialMe(server, socialMeWith(isPlus: true, genderOnly: true, gender: 'Male'));
     await me.load();
     final c = await ready(PostTripController(persist: false));
-    expect(c.canGenderOnly, isTrue);
+    expect(c.canWomenOnly, isTrue);
     c.setJoinGender('F');
     expect(c.genderLocked.value, isFalse);
     expect(c.draft.value.joinGender, 'F');
     c.toggleCity(manali);
     expect(c.draft.value.text, contains('women only'));
+  });
+
+  test('a restored Women-only draft without Plus falls back to Anyone; Men only is kept', () {
+    final c = PostTripController(persist: false);
+    expect(c.allowedJoin('A'), isTrue);
+    expect(c.allowedJoin('M'), isTrue);
+    expect(c.allowedJoin('F'), isFalse);
+    expect(c.allowedJoin('X'), isFalse);
   });
 
   test('the draft is saved and restored for the same user', () async {
@@ -153,8 +169,12 @@ void main() {
     expect(body['withinMonths'], 2);
   });
 
-  test('PostDraft.autoText ignores a gender value that is not the poster own', () {
-    const d = PostDraft(cities: [manali], joinGender: 'F', days: 3, withinMonths: 1);
-    expect(d.autoText('Male'), 'Heading to Manali for 3 days in the next month. Looking for a travel buddy, open to anyone.');
+  test('PostDraft.autoText follows the chosen join value, whatever the poster gender; unknown values read as anyone', () {
+    const women = PostDraft(cities: [manali], joinGender: 'F', days: 3, withinMonths: 1);
+    expect(women.autoText(), 'Heading to Manali for 3 days in the next month. Looking for a travel buddy, women only.');
+    const men = PostDraft(cities: [manali], joinGender: 'M', days: 3, withinMonths: 1);
+    expect(men.autoText(), contains('men only'));
+    const odd = PostDraft(cities: [manali], joinGender: 'Z', days: 3, withinMonths: 1);
+    expect(odd.autoText(), contains('open to anyone'));
   });
 }

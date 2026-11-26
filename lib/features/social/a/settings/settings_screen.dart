@@ -20,6 +20,7 @@ import '../../shared/social_models.dart';
 import '../../shared/social_nav.dart';
 import '../../shared/social_strings.dart';
 import '../social_strings_a.dart';
+import '../widgets/social_chips_a.dart';
 import 'settings_controller.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -31,6 +32,7 @@ class SettingsScreen extends StatefulWidget {
   static const Key plusKey = ValueKey('settings_plus');
   static const Key logoutKey = ValueKey('settings_logout');
   static const Key deleteKey = ValueKey('settings_delete');
+  static const Key verifiedPillKey = ValueKey('settings_phone_verified');
   static const Key profileLoadingKey = ValueKey('settings_profile_loading');
   static const Key profileErrorKey = ValueKey('settings_profile_error');
 
@@ -102,7 +104,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return IconRow3D(
           art: ListingArt.key,
           title: '+91 ${SocialFormats.maskPhone(_auth.profilePhone.value)}',
-          subtitle: verified ? SocialStringsA.verified : SocialStringsA.notVerified,
+          subtitle: verified ? null : SocialStringsA.notVerified,
+          subtitleChild: verified
+              ? const Align(alignment: Alignment.centerLeft, child: TagChip(key: SettingsScreen.verifiedPillKey, text: SocialStringsA.verified, kind: TagKind.place, small: true))
+              : null,
           trailing: locked
               ? null
               : Tap3D(

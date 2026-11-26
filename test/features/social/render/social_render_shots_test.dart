@@ -25,6 +25,7 @@ import 'package:bakhli/features/social/b/rail/trips_to_join_rail.dart';
 import 'package:bakhli/features/social/b/social_strings_b.dart';
 import 'package:bakhli/features/social/b/wizard/post_trip_controller.dart';
 import 'package:bakhli/features/social/b/wizard/post_trip_screen.dart';
+import 'package:bakhli/features/social/b/wizard/post_when_step.dart';
 import 'package:bakhli/features/social/b/wizard/post_wizard_parts.dart';
 import 'package:bakhli/features/social/c/chat/dm_room_screen.dart';
 import 'package:bakhli/features/social/c/chat/models/chat_models.dart';
@@ -499,7 +500,7 @@ void main() {
       await _end(t);
     });
 
-    testWidgets('D10c When: Roughly, D10d Exact date, D10e Men only tapped', (t) async {
+    testWidgets('D10c When: Roughly, D10d Exact date, D10e Women tapped (Plus box)', (t) async {
       putSeeker();
       seedCities();
       await _wizard(t, step: PostTripController.stepWhen);
@@ -509,7 +510,7 @@ void main() {
       await _tap(t, find.byKey(const ValueKey('post_date_2')));
       await _snap(t, 'D10d_wizard_when_exact');
       await _snapFull(t, 'D10d_wizard_when_exact', 1200);
-      await _tap(t, find.byKey(const ValueKey('post_who_own')));
+      await _tap(t, find.descendant(of: find.byKey(PostWhenStep.whoKey), matching: find.text(SocialStringsB.women)));
       await _snap(t, 'D10e_wizard_when_men_only_plus');
       await _snapFull(t, 'D10e_wizard_when_men_only_plus', 1300);
       await _end(t);
@@ -550,12 +551,22 @@ void main() {
       await _end(t);
     });
 
-    testWidgets('D11b Not open to you', (t) async {
+    testWidgets('D11b Women-only trip seen by a man (This trip is for women only)', (t) async {
       putSeeker();
       final server = installServer();
       putSocialMe(server, socialMeWith(gender: 'Male'));
       server.on('GET', '/social/trips/trip-1', {
-        ...publicTripJson(ownerId: 'neha', ownerName: 'Neha Pant', cities: ['Kasol'], state: 'Himachal Pradesh', joinGender: 'F', notOpen: true, text: '', seats: 0, seatsLeft: 0, when: {'kind': 'within', 'months': 0}),
+        ...publicTripJson(
+          ownerId: 'neha',
+          ownerName: 'Neha Pant',
+          cities: ['Kasol'],
+          state: 'Himachal Pradesh',
+          joinGender: 'F',
+          notOpen: true,
+          text: 'Kasol and Tosh in 4 days in January. Cafes, river walks and the Tosh trail. Looking for 2 women to share a stay and a cab.',
+          seats: 3,
+          seatsLeft: 2,
+        ),
         'owner': {..._person('neha', 'Neha Pant', city: 'Delhi', gender: 'Female'), 'username': 'Bakhli#63320918'},
       });
       await _open(t, const TripPostScreen(tripId: 'trip-1'));

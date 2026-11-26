@@ -327,7 +327,7 @@ class ChatSheetRow extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: DS.br(CardRadius.tile),
+        borderRadius: DS.br(CardRadius.card),
         splashColor: DesignColors.splash,
         highlightColor: Colors.transparent,
         onTap: onTap,

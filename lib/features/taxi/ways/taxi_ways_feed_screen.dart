@@ -508,7 +508,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
       padding: DS.sym(h: 14, v: 10),
       decoration: BoxDecoration(
         color: DesignColors.surface,
-        borderRadius: DS.br(TripLook.softRadius),
+        borderRadius: DS.br(CardRadius.card),
         boxShadow: DS.shadows(PickKit.greyShadow()),
       ),
       child: Column(

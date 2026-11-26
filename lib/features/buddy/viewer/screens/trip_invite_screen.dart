@@ -201,7 +201,7 @@ class _Card extends StatelessWidget {
         padding: padding,
         decoration: BoxDecoration(
           color: DesignColors.surface,
-          borderRadius: DS.br(BorderRadius.only(topLeft: const Radius.circular(8), topRight: Radius.circular(radius), bottomLeft: const Radius.circular(8), bottomRight: const Radius.circular(8))),
+          borderRadius: DS.br(radius >= 36 ? CardRadius.hero : CardRadius.tile),
           boxShadow: DS.shadows(ViewerLook.card),
         ),
         child: child,

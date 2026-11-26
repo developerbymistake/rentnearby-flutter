@@ -29,6 +29,7 @@ abstract final class ProfileRules {
   static const int placesMax = 20;
   static const int oldestYear = 1940;
   static const int adultYears = 18;
+  static const int nameChangeDays = 14;
 
   static List<int> birthYears(DateTime now) => [for (var y = now.year - adultYears; y >= oldestYear; y--) y];
 

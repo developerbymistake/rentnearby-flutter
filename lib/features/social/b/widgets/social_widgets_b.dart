@@ -10,14 +10,15 @@ import '../../../trip/widgets/trip_city_art.dart';
 abstract final class SocialLookB {
   static const Color seatsText = BuddyLook.tealEnd;
 
-  static BorderRadius get cardRadius =>
-      DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(40), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
+  // Corner rule: cards with a top-right control (feed card menu/follow, Post pill, list radios) stay uniform; inner covers and
+  // mid cards use the tile notch; the big trip cover uses the hero notch.
+  static BorderRadius get cardRadius => DS.br(CardRadius.card);
 
-  static BorderRadius get coverRadius =>
-      DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(30), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
+  static BorderRadius get tileRadius => DS.br(CardRadius.tile);
 
-  static BorderRadius get heroRadius =>
-      DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(54), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
+  static BorderRadius get coverRadius => DS.br(CardRadius.tile);
+
+  static BorderRadius get heroRadius => DS.br(CardRadius.hero);
 
   static const List<String> arts = [ListingArt.mountain, ListingArt.canoe, ListingArt.camping, ListingArt.sunriseMountains];
   static final List<ListingTone> _tones = [ListingTone.indigo, ListingTone.coral, ListingTone.teal, ListingTone.cB];
@@ -160,5 +161,23 @@ class SafetyLine extends StatelessWidget {
             Expanded(child: Text(text, style: Ink3D.text(13.5, FontWeight.w400, ChatLook3D.bannerText, height: 1.45, letterSpacing: 0))),
           ],
         ),
+      );
+}
+
+// D10b: a radio ring on unselected rows, the SheetListRow check when selected.
+class RadioMark extends StatelessWidget {
+  const RadioMark({super.key, required this.selected, required this.tone});
+
+  final bool selected;
+  final ListingTone tone;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: DS.s(28),
+        height: DS.s(28),
+        decoration: selected
+            ? BoxDecoration(shape: BoxShape.circle, gradient: tone.gradient, boxShadow: tone.glow(dy: 3, blur: 6))
+            : BoxDecoration(shape: BoxShape.circle, border: Border.all(color: BuddyLook.checkOff, width: DS.s(2))),
+        child: selected ? Icon(Icons.check_rounded, size: DS.s(17), color: DesignColors.onPrimary) : null,
       );
 }

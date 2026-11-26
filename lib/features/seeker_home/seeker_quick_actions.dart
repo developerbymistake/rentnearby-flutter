@@ -97,6 +97,7 @@ class SeekerQuickActions extends StatelessWidget {
                     art: a.art,
                     title: a.title,
                     minCardHeight: 0,
+                    contentScale: tileContentScale,
                     goIcon: a.add ? Icons.add : Icons.arrow_forward,
                     onTap: a.onTap,
                     semanticsLabel: '${a.title}, ${a.body}',
@@ -108,6 +109,8 @@ class SeekerQuickActions extends StatelessWidget {
       ],
     );
   }
+
+  static const double tileContentScale = 0.95;
 
   static double tileWidth(double maxWidth) {
     final w = (maxWidth - DS.s(20)) / 3.1;

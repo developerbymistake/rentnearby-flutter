@@ -4,7 +4,7 @@ import '../../../../design/design.dart';
 import '../buddy_look.dart';
 
 class SegmentTabs extends StatefulWidget {
-  const SegmentTabs({super.key, required this.labels, required this.selected, required this.onTap, required this.tone, this.counts = const {}, this.solidBadges = const {}, this.margin, this.dayDots, this.compact = false});
+  const SegmentTabs({super.key, required this.labels, required this.selected, required this.onTap, required this.tone, this.counts = const {}, this.solidBadges = const {}, this.margin, this.dayDots, this.compact = false, this.locked = const {}});
 
   final List<String> labels;
   final int selected;
@@ -15,6 +15,7 @@ class SegmentTabs extends StatefulWidget {
   final EdgeInsets? margin;
   final List<Color>? dayDots;
   final bool compact;
+  final Set<int> locked;
 
   @override
   State<SegmentTabs> createState() => _SegmentTabsState();
@@ -77,6 +78,7 @@ class _SegmentTabsState extends State<SegmentTabs> {
         tone: widget.tone,
         dot: _dot(i),
         fit: fit,
+        locked: widget.locked.contains(i),
         onTap: () => widget.onTap(i),
       );
 
@@ -134,7 +136,7 @@ class _SegmentTabsState extends State<SegmentTabs> {
 }
 
 class _Cell extends StatelessWidget {
-  const _Cell({required this.label, required this.on, required this.count, required this.solidBadge, required this.tone, required this.onTap, this.dot, required this.fit});
+  const _Cell({required this.label, required this.on, required this.count, required this.solidBadge, required this.tone, required this.onTap, this.dot, required this.fit, this.locked = false});
 
   final String label;
   final bool on;
@@ -144,6 +146,7 @@ class _Cell extends StatelessWidget {
   final VoidCallback onTap;
   final Color? dot;
   final bool fit;
+  final bool locked;
 
   @override
   Widget build(BuildContext context) {
@@ -151,7 +154,7 @@ class _Cell extends StatelessWidget {
     return Tap3D(
       onTap: onTap,
       selected: on,
-      label: count > 0 ? '$label, $count' : label,
+      label: count > 0 ? '$label, $count' : (locked ? '$label, Plus' : label),
       exclude: true,
       child: Container(
         constraints: BoxConstraints(minHeight: DS.s(40)),
@@ -175,6 +178,10 @@ class _Cell extends StatelessWidget {
               Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w700, textColor, letterSpacing: 0)))
             else
               Text(label, maxLines: 1, softWrap: false, style: Ink3D.text(13, FontWeight.w700, textColor, letterSpacing: 0)),
+            if (locked) ...[
+              Gap.h(5),
+              Icon(Icons.lock_rounded, size: DS.s(15), color: on ? DesignColors.onPrimary : BuddyLook.subText),
+            ],
             if (count > 0) ...[
               Gap.h(6),
               Container(

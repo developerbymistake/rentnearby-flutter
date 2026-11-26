@@ -20,6 +20,7 @@ import '../../shared/social_strings.dart';
 import '../onboarding/onboarding_controller.dart';
 import '../social_strings_a.dart';
 import '../widgets/social_chips_a.dart';
+import '../widgets/social_section_card.dart';
 import 'edit_profile_controller.dart';
 import 'place_picker_sheet.dart';
 
@@ -28,6 +29,8 @@ class EditProfileScreen extends StatefulWidget {
 
   static const Key saveKey = ValueKey('edit_save');
   static const Key removePhotoKey = ValueKey('edit_remove_photo');
+  static const Key nameKey = ValueKey('edit_name');
+  static const Key nameRuleKey = ValueKey('edit_name_rule');
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
@@ -65,6 +68,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     FocusScope.of(context).unfocus();
     final error = await c.save();
     if (!mounted) return;
+    _syncText();
     if (error == null) {
       BuddySnack.show(context, SocialStringsA.saved);
     } else {
@@ -127,7 +131,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _photoCard(p),
-        _EditCard(
+        SocialSectionCard(
           art: ListingArt.memo,
           title: SocialStringsA.about,
           hint: Obx(() => _hintText('${c.about.value.length}/${ProfileRules.aboutMax}')),
@@ -137,7 +141,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               Obx(() => Container(
                     padding: DS.sym(h: 14, v: 8),
                     decoration: BoxDecoration(
-                      borderRadius: DS.circular(18),
+                      borderRadius: DS.br(CardRadius.card),
                       border: Border.all(color: c.about.value != p.about ? BuddyLook.tealStart : Form3D.outline, width: DS.s(2)),
                     ),
                     child: TextField(
@@ -177,33 +181,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ],
           ),
         ),
-        _EditCard(
+        SocialSectionCard(
           art: ListingArt.mountain,
           title: SocialStringsA.interests,
           hint: Obx(() => _hintText(SocialStringsA.interestsHint(c.interests.length))),
-          child: Obx(() => Wrap(
-                spacing: DS.gh(9),
-                runSpacing: DS.gv(9),
+          child: Obx(() => ChoiceTileGrid(
                 children: [
                   for (final i in c.interestOptions)
-                    ChoiceArtChip(label: i, art: SocialArtA.interest(i), selected: c.interests.contains(i), onTap: () => c.toggleInterest(i)),
+                    ChoiceArtTile(key: ValueKey('edit_interest_$i'), label: i, art: SocialArtA.interest(i), selected: c.interests.contains(i), onTap: () => c.toggleInterest(i)),
                 ],
               )),
         ),
-        _EditCard(
+        SocialSectionCard(
           art: ListingArt.camera,
           title: SocialStringsA.skills,
           hint: _hintText(SocialStringsA.atLeastOne),
-          child: Obx(() => Wrap(
-                spacing: DS.gh(9),
-                runSpacing: DS.gv(9),
+          child: Obx(() => ChoiceTileGrid(
                 children: [
                   for (final s in c.skillOptions)
-                    ChoiceArtChip(label: s, art: SocialArtA.skill(s), selected: c.skills.contains(s), onTap: () => c.toggleSkill(s)),
+                    ChoiceArtTile(key: ValueKey('edit_skill_$s'), label: s, art: SocialArtA.skill(s), selected: c.skills.contains(s), onTap: () => c.toggleSkill(s)),
                 ],
               )),
         ),
-        _EditCard(
+        SocialSectionCard(
           art: ListingArt.roundPushpin,
           title: SocialStringsA.placesCard,
           hint: Obx(() => _hintText(SocialStringsA.placesCount(c.places.length))),
@@ -216,7 +216,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ],
               )),
         ),
-        _EditCard(
+        SocialSectionCard(
           art: ListingArt.houseWithGarden,
           title: SocialStringsA.homeCity,
           hint: _hintText(SocialStringsA.homeCityHint),
@@ -323,7 +323,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       padding: DS.all(16),
       decoration: BoxDecoration(
         color: DesignColors.surface,
-        borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(40), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
+        borderRadius: SocialSectionCard.radius,
         boxShadow: BuddyLook.cardShadows(DS.size),
       ),
       child: Row(
@@ -368,23 +368,47 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  height: DS.s(50),
-                  padding: DS.sym(h: 16),
-                  alignment: Alignment.centerLeft,
-                  decoration: BoxDecoration(color: Form3D.fill, borderRadius: DS.circular(25)),
-                  child: TextField(
-                    key: const ValueKey('edit_name'),
-                    controller: _nameCtrl,
-                    maxLength: ProfileRules.nameMax,
-                    textCapitalization: TextCapitalization.words,
-                    inputFormatters: noEmojiInputFormatters,
-                    style: Ink3D.text(16, FontWeight.w600, Ink3D.body, letterSpacing: 0),
-                    decoration: AuthPillInput.decoration(SocialStringsA.fullNameHint).copyWith(hintStyle: Ink3D.text(16, FontWeight.w400, Form3D.hint, letterSpacing: 0)),
-                    onChanged: (v) => c.name.value = v,
-                  ),
-                ),
-                Gap.v(8),
+                Obx(() {
+                  final until = c.nameLockedUntil.value;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        height: DS.s(50),
+                        padding: DS.sym(h: 16),
+                        alignment: Alignment.centerLeft,
+                        decoration: BoxDecoration(color: until == null ? Form3D.fill : BuddyLook.pillOff, borderRadius: DS.circular(25)),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                key: EditProfileScreen.nameKey,
+                                controller: _nameCtrl,
+                                readOnly: until != null,
+                                maxLength: ProfileRules.nameMax,
+                                textCapitalization: TextCapitalization.words,
+                                inputFormatters: noEmojiInputFormatters,
+                                style: Ink3D.text(16, FontWeight.w600, until == null ? Ink3D.body : Ink3D.grey, letterSpacing: 0),
+                                decoration: AuthPillInput.decoration(SocialStringsA.fullNameHint).copyWith(hintStyle: Ink3D.text(16, FontWeight.w400, Form3D.hint, letterSpacing: 0)),
+                                onChanged: (v) => c.name.value = v,
+                              ),
+                            ),
+                            if (until != null) Icon(Icons.lock_rounded, size: DS.s(14), color: Form3D.hint),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(6), DS.s(4), 0),
+                        child: Text(
+                          until == null ? SocialStringsA.nameRule : SocialStringsA.nameAgainOn(SocialFormats.dayMonth(until)),
+                          key: EditProfileScreen.nameRuleKey,
+                          style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, height: 1.4, letterSpacing: 0),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+                Gap.v(10),
                 _lockedPills(p, birth),
                 Gap.v(6),
                 Text(SocialStringsA.lockedNote, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, height: 1.4, letterSpacing: 0)),
@@ -410,51 +434,4 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ),
     );
   }
-}
-
-class _EditCard extends StatelessWidget {
-  const _EditCard({required this.art, required this.title, required this.hint, required this.child});
-
-  final String art;
-  final String title;
-  final Widget hint;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        margin: DS.gapInsets(l: 18, t: 20, r: 18),
-        padding: DS.insets(l: 16, t: 16, r: 16, b: 18),
-        decoration: BoxDecoration(
-          color: DesignColors.surface,
-          borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(40), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
-          boxShadow: BuddyLook.cardShadows(DS.size),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                SizedBox(
-                  width: DS.s(40),
-                  height: DS.s(40),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Positioned.fill(
-                        child: DecoratedBox(decoration: BoxDecoration(color: ListingTone.indigo.g2.withValues(alpha: Alpha.tint), borderRadius: DS.circular(12))),
-                      ),
-                      Positioned(left: -DS.s(1), top: -DS.s(6), child: ExcludeSemantics(child: Art3D(asset: art, size: 44, shadowBlur: 3, shadowOffset: const Offset(2, 4)))),
-                    ],
-                  ),
-                ),
-                Gap.h(10),
-                Expanded(child: Text(title, style: Ink3D.text(16, FontWeight.w600, Ink3D.title, letterSpacing: 0))),
-                hint,
-              ],
-            ),
-            Gap.v(10),
-            child,
-          ],
-        ),
-      );
 }

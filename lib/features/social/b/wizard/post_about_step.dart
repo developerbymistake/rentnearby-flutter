@@ -20,6 +20,7 @@ class PostAboutStep extends StatefulWidget {
   static const Key textKey = ValueKey('post_text');
   static const Key editKey = ValueKey('post_edit_answers');
   static const Key tipsKey = ValueKey('post_write_tips');
+  static const Key chipsKey = ValueKey('post_about_chips');
 
   @override
   State<PostAboutStep> createState() => _PostAboutStepState();
@@ -68,7 +69,7 @@ class _PostAboutStepState extends State<PostAboutStep> {
                 exclude: true,
                 child: Container(
                   padding: DS.sym(h: 14, v: 12),
-                  decoration: BoxDecoration(color: Form3D.fill, borderRadius: DS.circular(14)),
+                  decoration: BoxDecoration(color: Form3D.fill, borderRadius: DS.br(CardRadius.card)),
                   child: Text(SocialStringsB.writeTips[i], style: Ink3D.text(14, FontWeight.w400, Ink3D.body, height: 1.4, letterSpacing: 0)),
                 ),
               ),
@@ -86,7 +87,7 @@ class _PostAboutStepState extends State<PostAboutStep> {
     final line = '${SocialFormats.days(d.days)} · ${SocialStringsB.whenLower(d.whenKind, d.withinMonths, d.startDate)} · ${SocialStringsB.whoLower(d.joinGender)}';
     return Container(
       margin: DS.gapInsets(l: 18, t: 8, r: 18),
-      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(16), boxShadow: DS.shadows(Form3D.cardShadow)),
+      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.card), boxShadow: DS.shadows(Form3D.cardShadow)),
       child: Tap3D(
         tapKey: PostAboutStep.editKey,
         onTap: () => c.goTo(PostTripController.stepWhen),
@@ -134,7 +135,7 @@ class _PostAboutStepState extends State<PostAboutStep> {
           Container(
             margin: DS.gapInsets(l: 18, t: 12, r: 18),
             padding: DS.insets(l: 16, t: 14, r: 16, b: 12),
-            decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(20), border: Border.all(color: BuddyLook.tealStart, width: DS.s(2))),
+            decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.card), border: Border.all(color: BuddyLook.tealStart, width: DS.s(2))),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -175,8 +176,9 @@ class _PostAboutStepState extends State<PostAboutStep> {
           if (d.text.trim().isEmpty) WizardNote(text: SocialStringsB.textRequired),
           SmallLabel(text: SocialStringsB.addToPost, padding: DS.gapInsets(l: 22, t: 16, r: 22, b: 10)),
           Padding(
-            padding: DS.insets(l: 22, r: 22),
+            padding: DS.insets(l: 18, r: 18),
             child: Wrap(
+              key: PostAboutStep.chipsKey,
               spacing: DS.gh(10),
               runSpacing: DS.gv(10),
               children: [

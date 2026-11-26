@@ -359,9 +359,14 @@ void main() {
       expect(n, 1);
     });
 
-    test('card corners are capped at 36', () {
+    test('card corners are capped at the moderated notch', () {
       expect(StayLook.cardRadius(68).topRight.x, StayLook.cardRadius(36).topRight.x);
       expect(TaxiLook.cardRadius(54).topRight.x, TaxiLook.cardRadius(36).topRight.x);
+      expect(StayLook.cardRadius(68).topRight.x, closeTo(DS.radius(CardRadius.heroNotch), 0.001));
+      expect(StayLook.cardRadius(68).topLeft.x, closeTo(DS.radius(CardRadius.corner), 0.001));
+      expect(StayLook.cardRadius(30).topRight.x, closeTo(DS.radius(CardRadius.tileNotch), 0.001));
+      expect(StayLook.cardRadius(20).topRight.x, closeTo(DS.radius(CardRadius.uniformValue), 0.001));
+      expect(StayLook.cardRadius(20).topLeft.x, StayLook.cardRadius(20).topRight.x);
       expect(StayLook.cardRadius(20).topRight.x, lessThan(StayLook.cardRadius(36).topRight.x));
     });
   });

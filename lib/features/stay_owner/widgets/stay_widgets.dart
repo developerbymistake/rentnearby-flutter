@@ -36,12 +36,7 @@ abstract final class StayLook {
   static const Color artTintAmber = Color(0x2EF2A93B);
   static const Color artTintTeal = Color(0x291FA396);
 
-  static BorderRadius cardRadius(double topRight) => DS.br(BorderRadius.only(
-        topLeft: const Radius.circular(8),
-        topRight: Radius.circular(topRight > 36 ? 36 : topRight),
-        bottomLeft: const Radius.circular(8),
-        bottomRight: const Radius.circular(8),
-      ));
+  static BorderRadius cardRadius(double topRight) => DS.br(topRight >= 36 ? CardRadius.hero : topRight >= 26 ? CardRadius.tile : CardRadius.card);
 }
 
 class StayHeroCard extends StatelessWidget {
@@ -266,9 +261,9 @@ class StayRowsCard extends StatelessWidget {
     return Padding(
       padding: margin ?? DS.insets(l: 18, t: 14, r: 18),
       child: DecoratedBox(
-        decoration: BoxDecoration(color: Colors.white, borderRadius: StayLook.cardRadius(68), boxShadow: DS.shadows(Ink3D.softShadow)),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: DS.br(CardRadius.tile), boxShadow: DS.shadows(Ink3D.softShadow)),
         child: ClipRRect(
-          borderRadius: StayLook.cardRadius(68),
+          borderRadius: DS.br(CardRadius.tile),
           child: Column(
             children: [
               for (var i = 0; i < rows.length; i++) ...[

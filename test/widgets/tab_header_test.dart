@@ -1,6 +1,7 @@
 import 'package:bakhli/config/app_routes.dart';
 import 'package:bakhli/controllers/chat_controller.dart';
 import 'package:bakhli/controllers/notification_controller.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/widgets/tab_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -132,4 +133,17 @@ void main() {
       });
     }
   }
+
+  testWidgets('the settings gear is tinted coral; bell and chat keep their own art colours', (t) async {
+    await _pump(
+      t,
+      GetMaterialApp(home: Scaffold(body: TabHeaderFrame(title: 'Profile', subtitle: 'x', color: Colors.white, onSettings: () {}, settingsOnly: true, child: const SizedBox()))),
+    );
+    final gear = t.widget<RoundIconButton3D>(find.descendant(of: find.byKey(TabHeaderIcons.settingsKey), matching: find.byType(RoundIconButton3D)));
+    expect(gear.tint, ListingPalette.coral.g1);
+    await _pump(t, _frame());
+    for (final b in t.widgetList<RoundIconButton3D>(find.byType(RoundIconButton3D))) {
+      expect(b.tint, isNull);
+    }
+  });
 }

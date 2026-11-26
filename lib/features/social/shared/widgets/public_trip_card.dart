@@ -72,7 +72,7 @@ class PublicTripCard extends StatelessWidget {
 
   Widget _compact() {
     final card = Container(
-      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: SocialLookB.cardRadius, boxShadow: DS.shadows(Form3D.cardShadow)),
+      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: SocialLookB.tileRadius, boxShadow: DS.shadows(Form3D.cardShadow)),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

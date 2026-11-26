@@ -108,28 +108,18 @@ class TripLegSectionHeader extends StatelessWidget {
   static const double dayCardTop = 16;
   static double get gapAbove => DS.gv(20);
 
-  static const BorderRadius openRadius = BorderRadius.only(topLeft: Radius.circular(6), topRight: Radius.circular(36));
+  static const BorderRadius openRadius = BorderRadius.only(topLeft: Radius.circular(CardRadius.corner - 2), topRight: Radius.circular(CardRadius.heroNotch - 2));
   static const BorderRadius foldedRadius = BorderRadius.only(
-    topLeft: Radius.circular(6),
-    topRight: Radius.circular(38),
-    bottomLeft: Radius.circular(6),
-    bottomRight: Radius.circular(6),
+    topLeft: Radius.circular(CardRadius.corner - 2),
+    topRight: Radius.circular(CardRadius.heroNotch - 2),
+    bottomLeft: Radius.circular(CardRadius.corner - 2),
+    bottomRight: Radius.circular(CardRadius.corner - 2),
   );
   static const BorderRadius _layerRadius = BorderRadius.only(bottomLeft: Radius.circular(18), bottomRight: Radius.circular(18));
 
-  static const BorderRadius lockRadius = BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(28),
-    bottomLeft: Radius.circular(8),
-    bottomRight: Radius.circular(8),
-  );
+  static const BorderRadius lockRadius = CardRadius.card;
 
-  static const BorderRadius sectionRadius = BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(40),
-    bottomLeft: Radius.circular(8),
-    bottomRight: Radius.circular(8),
-  );
+  static const BorderRadius sectionRadius = CardRadius.hero;
 
   @override
   Widget build(BuildContext context) {

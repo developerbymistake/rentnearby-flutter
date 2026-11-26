@@ -12,11 +12,13 @@ import '../features/trip/enquiries/my_enquiry_count_controller.dart';
 double _u(double v) => DS.s(v, scaled: false);
 
 class TabHeaderIcons extends StatelessWidget {
-  const TabHeaderIcons({super.key, this.onSettings});
+  const TabHeaderIcons({super.key, this.onSettings, this.settingsOnly = false});
 
   static const Key settingsKey = ValueKey('tab_header_settings');
+  static Color get gearTint => ListingPalette.coral.g1;
 
   final VoidCallback? onSettings;
+  final bool settingsOnly;
 
   static RxInt? _count<T extends GetxController>(RxInt Function(T) read) =>
       Get.isRegistered<T>() ? read(Get.find<T>()) : null;
@@ -32,6 +34,13 @@ class TabHeaderIcons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = onSettings;
+    if (settingsOnly && settings != null) {
+      return Padding(
+        padding: EdgeInsets.only(bottom: _u(2)),
+        child: _TabHeaderIcon(key: settingsKey, asset: ListingArt.gear, label: 'Settings', unread: null, onTap: settings, tint: gearTint),
+      );
+    }
     return Padding(
       padding: EdgeInsets.only(bottom: _u(2)),
       child: Row(
@@ -67,7 +76,7 @@ class TabHeaderIcons extends StatelessWidget {
           if (onSettings != null)
             Padding(
               padding: EdgeInsets.only(left: _u(10)),
-              child: _TabHeaderIcon(key: settingsKey, asset: ListingArt.gear, label: 'Settings', unread: null, onTap: onSettings!),
+              child: _TabHeaderIcon(key: settingsKey, asset: ListingArt.gear, label: 'Settings', unread: null, onTap: onSettings!, tint: gearTint),
             ),
         ],
       ),
@@ -76,12 +85,13 @@ class TabHeaderIcons extends StatelessWidget {
 }
 
 class _TabHeaderIcon extends StatelessWidget {
-  const _TabHeaderIcon({super.key, required this.asset, required this.label, required this.unread, required this.onTap});
+  const _TabHeaderIcon({super.key, required this.asset, required this.label, required this.unread, required this.onTap, this.tint});
 
   final String asset;
   final String label;
   final int Function()? unread;
   final VoidCallback onTap;
+  final Color? tint;
 
   @override
   Widget build(BuildContext context) {
@@ -90,6 +100,7 @@ class _TabHeaderIcon extends StatelessWidget {
       asset: asset,
       semanticsLabel: label,
       scaled: false,
+      tint: tint,
       onTap: onTap,
       badge: count == null
           ? null
@@ -105,12 +116,13 @@ class _TabHeaderIcon extends StatelessWidget {
 }
 
 class TabHeader extends StatelessWidget {
-  const TabHeader({super.key, required this.title, required this.subtitle, required this.color, this.onSettings});
+  const TabHeader({super.key, required this.title, required this.subtitle, required this.color, this.onSettings, this.settingsOnly = false});
 
   final String title;
   final String subtitle;
   final Color color;
   final VoidCallback? onSettings;
+  final bool settingsOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -144,7 +156,7 @@ class TabHeader extends StatelessWidget {
                 ),
               ),
               SizedBox(width: _u(10)),
-              TabHeaderIcons(onSettings: onSettings),
+              TabHeaderIcons(onSettings: onSettings, settingsOnly: settingsOnly),
             ],
           ),
         ),
@@ -161,6 +173,7 @@ class TabHeaderFrame extends StatelessWidget {
     required this.color,
     required this.child,
     this.onSettings,
+    this.settingsOnly = false,
   });
 
   final String title;
@@ -168,6 +181,7 @@ class TabHeaderFrame extends StatelessWidget {
   final Color color;
   final Widget child;
   final VoidCallback? onSettings;
+  final bool settingsOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -175,7 +189,7 @@ class TabHeaderFrame extends StatelessWidget {
       lightIcons: false,
       child: Column(
         children: [
-          TabHeader(title: title, subtitle: subtitle, color: color, onSettings: onSettings),
+          TabHeader(title: title, subtitle: subtitle, color: color, onSettings: onSettings, settingsOnly: settingsOnly),
           Expanded(child: MediaQuery.removePadding(context: context, removeTop: true, child: child)),
         ],
       ),

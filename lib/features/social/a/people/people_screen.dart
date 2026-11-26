@@ -119,7 +119,7 @@ class _PeopleScreenState extends State<PeopleScreen> {
         if (total <= 0 || items.isEmpty) return const SizedBox.shrink();
         final first = items.first.person.shortName;
         return Padding(
-          padding: DS.gapInsets(l: 18, t: 4, r: 18),
+          padding: DS.gapInsets(l: 18, t: 16, r: 18),
           child: Tap3D(
             tapKey: PeopleScreen.requestsRowKey,
             onTap: () => SocialNav.openPeople(tab: PeopleController.tabRequests),
@@ -127,7 +127,7 @@ class _PeopleScreenState extends State<PeopleScreen> {
             exclude: true,
             child: Container(
               padding: DS.sym(h: 16, v: 14),
-              decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(20), boxShadow: BuddyLook.cardShadows(DS.size)),
+              decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.card), boxShadow: BuddyLook.cardShadows(DS.size)),
               child: Row(
                 children: [
                   BuddyAvatarStack(
@@ -247,7 +247,7 @@ class _PeopleScreenState extends State<PeopleScreen> {
           exclude: true,
           child: Container(
             padding: DS.sym(h: 16, v: 14),
-            decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(20), boxShadow: BuddyLook.cardShadows(DS.size)),
+            decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.card), boxShadow: BuddyLook.cardShadows(DS.size)),
             child: Row(
               children: [
                 Container(

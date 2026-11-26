@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
+import '../tokens/card_tokens.dart';
 
 enum StateLayout { wide, tall, plain }
 
@@ -40,8 +41,8 @@ class StateCard3D extends StatelessWidget {
   final EdgeInsets? margin;
   final bool artInside;
 
-  static const BorderRadius wideRadius = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(36), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
-  static const BorderRadius tallRadius = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(36), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
+  static const BorderRadius wideRadius = CardRadius.hero;
+  static const BorderRadius tallRadius = CardRadius.hero;
 
   static const double _tallOverhang = 80;
 

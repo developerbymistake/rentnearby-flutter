@@ -1,7 +1,10 @@
 import 'package:bakhli/config/app_routes.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/features/buddy/shared/buddy_look.dart';
 import 'package:bakhli/features/social/b/post/join_request_sheet.dart';
 import 'package:bakhli/features/social/b/post/trip_post_screen.dart';
 import 'package:bakhli/features/social/b/social_strings_b.dart';
+import 'package:bakhli/features/social/shared/widgets/follow_button.dart';
 import 'package:bakhli/features/social/shared/social_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -64,6 +67,8 @@ void main() {
     await t.tap(find.byKey(JoinRequestSheet.sendKey));
     await settle(t);
     expect(find.text(SocialStringsB.requested), findsOneWidget);
+    final pill = t.widget<GradientPillButton>(find.ancestor(of: find.text(SocialStringsB.requested), matching: find.byType(GradientPillButton)));
+    expect(pill.offLabelColor, BuddyLook.subText);
     expect(find.byKey(TripPostScreen.cancelKey), findsOneWidget);
     server.on('GET', _path, publicTripJson());
     await t.tap(find.byKey(TripPostScreen.cancelKey));
@@ -88,20 +93,47 @@ void main() {
     await drain(t);
   });
 
-  testWidgets('a trip for the other gender: not open, no Request button, See trips', (t) async {
+  testWidgets('a Women-only trip seen by a man: the full post shows and the bar says This trip is for women only (spec 22)', (t) async {
     final server = installServer();
-    putSocialMe(server, socialMeWith());
-    server.on('GET', _path, publicTripJson(joinGender: 'F', notOpen: true, text: '', seats: 0, seatsLeft: 0, when: {'kind': 'within', 'months': 0}));
+    putSocialMe(server, socialMeWith(gender: 'Male'));
+    server.on('GET', _path, publicTripJson(joinGender: 'F', notOpen: true));
     await pumpSocial(t, const TripPostScreen(tripId: 'trip-1'), pages: _pages);
-    expect(find.text(SocialStringsB.notOpenTitle), findsOneWidget);
-    expect(find.text('It is for women only. Find trips you can join.'), findsOneWidget);
-    expect(find.byKey(TripPostScreen.requestKey), findsNothing);
-    expect(find.text(SocialStrings.safetyMeet), findsNothing);
-    expect(find.text('Dehradun'), findsOneWidget);
+    expect(find.text(SocialStrings.safetyMeet), findsOneWidget);
+    expect(find.textContaining('Dehradun'), findsWidgets);
+    expect(find.byType(FollowButton), findsOneWidget);
     expect(find.byKey(TripPostScreen.menuKey), findsOneWidget);
-    await t.tap(find.byKey(TripPostScreen.seeTripsKey));
+    expect(find.byKey(TripPostScreen.requestKey), findsNothing);
+    final only = t.widget<GradientPillButton>(find.byKey(TripPostScreen.onlyForKey));
+    expect(only.label, 'This trip is for women only');
+    expect(only.enabled, isFalse);
+    expect(only.onTap, isNull);
+    expect(only.offLabelColor, BuddyLook.subText);
+    await drain(t);
+  });
+
+  testWidgets('a Women-only trip seen by a woman shows Request to join', (t) async {
+    final server = installServer();
+    putSocialMe(server, socialMeWith(gender: 'Female'));
+    server.on('GET', _path, publicTripJson(joinGender: 'F', notOpen: false));
+    await pumpSocial(t, const TripPostScreen(tripId: 'trip-1'), pages: _pages);
+    expect(find.byKey(TripPostScreen.requestKey), findsOneWidget);
+    expect(find.byKey(TripPostScreen.onlyForKey), findsNothing);
+    await drain(t);
+  });
+
+  testWidgets('a server TripGenderMismatch keeps the sheet open with the message and reloads the post', (t) async {
+    final server = installServer();
+    putSocialMe(server, socialMeWith(gender: 'Female'));
+    server.on('GET', _path, publicTripJson());
+    server.refuse('POST', '$_path/join-requests', status: 403, type: 'TripGenderMismatch', message: 'This trip is for men only.');
+    await pumpSocial(t, const TripPostScreen(tripId: 'trip-1'), pages: _pages);
+    await t.tap(find.byKey(TripPostScreen.requestKey));
     await settle(t);
-    expect(find.text('FEED'), findsOneWidget);
+    final before = server.calls('GET', _path).length;
+    await t.tap(find.byKey(JoinRequestSheet.sendKey));
+    await settle(t);
+    expect(find.text('This trip is for men only.'), findsOneWidget);
+    expect(server.calls('GET', _path).length, greaterThan(before));
     await drain(t);
   });
 

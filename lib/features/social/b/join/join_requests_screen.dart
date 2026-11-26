@@ -74,7 +74,7 @@ class _JoinRequestsScreenState extends State<JoinRequestsScreen> {
       key: ValueKey('join_card_${item.id}'),
       margin: DS.gapInsets(l: 18, r: 18, b: 12),
       padding: DS.insets(l: 16, t: 14, r: 10, b: 14),
-      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(18), boxShadow: DS.shadows(Form3D.cardShadow)),
+      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.card), boxShadow: DS.shadows(Form3D.cardShadow)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -136,7 +136,8 @@ class _JoinRequestsScreenState extends State<JoinRequestsScreen> {
               padding: DS.insets(r: 6),
               child: TickRow(
                 key: JoinRequestsScreen.buddyKey(item.id),
-                label: '${SocialStringsB.alsoAddToBuddies} ${SocialStringsB.optional}',
+                label: SocialStringsB.alsoAddToBuddies,
+                hint: SocialStringsB.optional,
                 checked: ticked,
                 onTap: () => c.toggleBuddy(item.id),
               ),

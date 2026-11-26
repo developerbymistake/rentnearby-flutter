@@ -28,7 +28,7 @@ class FindResultCard extends StatelessWidget {
   final VoidCallback? onOpenBuddy;
 
   static BorderRadius get radius =>
-      DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(54), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
+      DS.br(CardRadius.hero);
 
   Widget _action() => switch (person.relation) {
         BuddyRelation.none => Padding(

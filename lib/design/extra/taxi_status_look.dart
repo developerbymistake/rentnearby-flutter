@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import '../tokens/card_tokens.dart';
+import 'package:flutter/material.dart';
 
 class TaxiStatusLook {
   TaxiStatusLook._();
@@ -20,17 +21,7 @@ class TaxiStatusLook {
   static const List<BoxShadow> actionGlow = <BoxShadow>[BoxShadow(color: Color(0x665C5EDD), offset: Offset(1.1, 6), blurRadius: 10)];
   static const List<BoxShadow> sheetShadow = <BoxShadow>[BoxShadow(color: Color(0x4D9E9E9E), offset: Offset(0, -2), blurRadius: 16)];
 
-  static const BorderRadius chipRadius = BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(22),
-    bottomLeft: Radius.circular(8),
-    bottomRight: Radius.circular(8),
-  );
-  static const BorderRadius bannerRadius = BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(32),
-    bottomLeft: Radius.circular(8),
-    bottomRight: Radius.circular(8),
-  );
+  static const BorderRadius chipRadius = CardRadius.card;
+  static const BorderRadius bannerRadius = CardRadius.card;
   static const BorderRadius sheetRadius = BorderRadius.vertical(top: Radius.circular(32));
 }

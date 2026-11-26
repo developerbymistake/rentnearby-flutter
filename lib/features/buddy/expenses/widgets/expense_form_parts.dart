@@ -7,8 +7,7 @@ import '../expense_look.dart';
 enum FieldTone { normal, on, bad, ok }
 
 abstract final class ExpenseShape {
-  static BorderRadius corner(double tr) =>
-      DS.br(BorderRadius.only(topLeft: const Radius.circular(8), topRight: Radius.circular(tr), bottomLeft: const Radius.circular(8), bottomRight: const Radius.circular(8)));
+  static BorderRadius corner(double tr) => DS.br(tr >= 36 ? CardRadius.hero : tr >= 26 ? CardRadius.tile : CardRadius.card);
 
   static Color border(FieldTone t) => switch (t) {
         FieldTone.on => ExpenseLook.fieldOn,

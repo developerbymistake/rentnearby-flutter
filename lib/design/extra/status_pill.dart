@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'art_3d.dart';
 
-BorderRadius get _kPillRadius => DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(14), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
+BorderRadius get _kPillRadius => DS.br(const BorderRadius.all(Radius.circular(8)));
 
 enum StatusTone3D {
   shortlisted,

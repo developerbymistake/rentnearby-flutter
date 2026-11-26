@@ -7,6 +7,7 @@ import '../../shared/social_nav.dart';
 import '../../shared/widgets/public_trip_card.dart';
 import '../social_strings_a.dart';
 import '../widgets/social_chips_a.dart';
+import '../widgets/social_section_card.dart';
 
 class ProfileHeroCard extends StatelessWidget {
   const ProfileHeroCard({
@@ -17,6 +18,7 @@ class ProfileHeroCard extends StatelessWidget {
     required this.followers,
     required this.following,
     this.displayName,
+    this.about = '',
     this.photo,
     this.pill,
     this.after,
@@ -30,6 +32,7 @@ class ProfileHeroCard extends StatelessWidget {
   final int followers;
   final int following;
   final String? displayName;
+  final String about;
   final Widget? photo;
   final Widget? pill;
   final Widget? after;
@@ -37,6 +40,7 @@ class ProfileHeroCard extends StatelessWidget {
   final VoidCallback? onFollowing;
 
   static final ListingTone tone = ListingTone.indigo;
+  static const Key aboutKey = ValueKey('profile_hero_about');
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +51,7 @@ class ProfileHeroCard extends StatelessWidget {
       padding: DS.insets(l: 20, t: 22, r: 20, b: 20),
       decoration: BoxDecoration(
         gradient: tone.gradient,
-        borderRadius: DS.circular(32),
+        borderRadius: DS.br(CardRadius.hero),
         boxShadow: [BoxShadow(color: tone.haloBase.withValues(alpha: Alpha.scrim), offset: DS.shadowOffset(const Offset(0, 8)), blurRadius: DS.shadowBlur(20))],
       ),
       child: Column(
@@ -95,6 +99,11 @@ class ProfileHeroCard extends StatelessWidget {
               ),
             ],
           ),
+          if (about.trim().isNotEmpty)
+            Padding(
+              padding: EdgeInsets.only(top: DS.gv(14)),
+              child: Text(about.trim(), key: aboutKey, style: Ink3D.text(14.5, FontWeight.w400, white.withValues(alpha: Alpha.v92), height: 1.55, letterSpacing: 0)),
+            ),
           Gap.v(16),
           ProfileCounters(trips: trips, followers: followers, following: following, onFollowers: onFollowers, onFollowing: onFollowing),
           ?after,
@@ -120,7 +129,7 @@ class ProfileCounters extends StatelessWidget {
         padding: DS.sym(h: 4, v: 8),
         decoration: BoxDecoration(
           color: DesignColors.onPrimary.withValues(alpha: Alpha.v18),
-          borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(16), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
+          borderRadius: DS.br(CardRadius.card),
         ),
         child: Column(
           children: [
@@ -145,17 +154,15 @@ class ProfileCounters extends StatelessWidget {
 }
 
 class ProfileChipsSection extends StatelessWidget {
-  const ProfileChipsSection({super.key, required this.about, required this.interests, required this.places, required this.skills});
+  const ProfileChipsSection({super.key, required this.interests, required this.places, required this.skills});
 
-  final String about;
   final List<String> interests;
   final List<String> places;
   final List<String> skills;
 
-  static Widget label(String text, {double top = 20}) => Padding(
-        padding: EdgeInsets.only(top: DS.gv(top), bottom: DS.gv(10)),
-        child: Text(text.toUpperCase(), style: Ink3D.text(12, FontWeight.w700, Ink3D.grey, letterSpacing: 0.8)),
-      );
+  static const Key interestsKey = ValueKey('profile_interests_card');
+  static const Key placesKey = ValueKey('profile_places_card');
+  static const Key skillsKey = ValueKey('profile_skills_card');
 
   static Widget wrap(List<String> items, TagKind kind) => Wrap(
         spacing: DS.gh(8),
@@ -165,25 +172,15 @@ class ProfileChipsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (about.trim().isEmpty && interests.isEmpty && places.isEmpty && skills.isEmpty) return const SizedBox.shrink();
-    return WhiteCard3D(
-      padding: EdgeInsets.zero,
-      child: Padding(
-        padding: DS.insets(l: 20, t: 20, r: 20, b: 22),
-        child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (about.trim().isNotEmpty) ...[
-            label(SocialStringsA.about, top: 0),
-            Text(about, style: Ink3D.text(14.5, FontWeight.w400, Ink3D.body, height: 1.55, letterSpacing: 0)),
-          ],
-          if (interests.isNotEmpty) ...[label(SocialStringsA.interests, top: about.trim().isEmpty ? 0 : 20), wrap(interests, TagKind.interest)],
-          if (places.isNotEmpty) ...[label(SocialStringsA.placesVisited), wrap(places, TagKind.place)],
-          if (skills.isNotEmpty) ...[label(SocialStringsA.skills), wrap(skills, TagKind.skill)],
-        ],
-        ),
-      ),
-    );
+    final cards = <Widget>[
+      if (interests.isNotEmpty)
+        SocialSectionCard(key: interestsKey, art: ListingArt.mountain, title: SocialStringsA.interests, child: wrap(interests, TagKind.interest)),
+      if (places.isNotEmpty)
+        SocialSectionCard(key: placesKey, art: ListingArt.roundPushpin, title: SocialStringsA.placesVisited, child: wrap(places, TagKind.place)),
+      if (skills.isNotEmpty) SocialSectionCard(key: skillsKey, art: ListingArt.camera, title: SocialStringsA.skills, child: wrap(skills, TagKind.skill)),
+    ];
+    if (cards.isEmpty) return const SizedBox.shrink();
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: cards);
   }
 }
 

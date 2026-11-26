@@ -1,4 +1,5 @@
 import 'package:bakhli/controllers/plan_controller.dart';
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/social/c/social_strings_c.dart';
 import 'package:bakhli/features/social/shared/social_error_types.dart';
 import 'package:bakhli/features/social/shared/social_me_controller.dart';
@@ -34,6 +35,7 @@ void main() {
     expect(PlusSheets.lineFor(SocialErrorTypes.newChatLimit, l, const {'limit': 3}), SocialStringsC.chatLimitLine(3));
     expect(PlusSheets.lineFor(SocialErrorTypes.joinRequestLimit, l, const {}), SocialStringsC.joinLimitLine(1));
     expect(PlusSheets.lineFor(SocialErrorTypes.plusRequired, l, const {}), SocialStringsC.plusFeatureLine);
+    expect(SocialStringsC.plusFeatureLine, startsWith('Women-only trips'));
   });
 
   Widget host(Widget child) => Scaffold(body: SingleChildScrollView(child: child));
@@ -46,13 +48,23 @@ void main() {
         await pumpSocial(t, host(const PlusBanner()), width: w, scale: s);
         expect(find.byKey(const ValueKey('plus_banner')), findsOneWidget);
         expect(find.text(SocialStringsC.bannerTitle), findsOneWidget);
-        expect(find.text(SocialStringsC.bannerChats(15)), findsOneWidget);
+        expect(find.text(SocialStringsC.bannerChats(10)), findsOneWidget);
+        expect(find.text('Chat with 10 new people a month'), findsOneWidget);
         expect(find.text(SocialStringsC.joinRequests(5)), findsOneWidget);
         expect(t.takeException(), isNull);
         await disposeSocial(t);
       });
     }
   }
+
+  testWidgets('banner uses the moderate hero corner', (t) async {
+    Get.put<PlanController>(FakePlanController());
+    Get.put<SocialMeController>(FakeSocialMeController(freeLimits()));
+    await pumpSocial(t, host(const PlusBanner()));
+    final d = t.widget<Container>(find.byKey(const ValueKey('plus_banner'))).decoration! as BoxDecoration;
+    expect(d.borderRadius, DS.br(CardRadius.hero));
+    await disposeSocial(t);
+  });
 
   testWidgets('banner hides for Plus members and when upgrade is off', (t) async {
     Get.put<PlanController>(FakePlanController());

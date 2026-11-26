@@ -10,7 +10,10 @@ import 'art_3d.dart';
 import 'motion_kit.dart';
 import 'pill_buttons_3d.dart';
 import '../tokens/alpha_tokens.dart';
+import '../tokens/design_colors.dart';
 import '../tokens/design_scale.dart';
+import 'kit_tone.dart';
+import '../tokens/card_tokens.dart';
 
 abstract final class AuthInk {
   static const Color page = Color(0xFFF2F3F8);
@@ -30,7 +33,8 @@ abstract final class AuthInk {
   static const Color boneLine = Color(0xFFF4F5F9);
   static const String automobile = 'assets/images/design/travel3d/automobile.png';
 
-  static BorderRadius get cardRadius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
+  static BorderRadius get cardRadius => DS.br(CardRadius.hero);
+  static BorderRadius get roleRadius => DS.br(CardRadius.card);
   static List<BoxShadow> get cardShadow => [BoxShadow(color: Color(0x4D9E9E9E), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(16))];
   static List<BoxShadow> get chipShadow => [BoxShadow(color: Color(0x4D9E9E9E), offset: DS.shadowOffset(const Offset(2, 4)), blurRadius: DS.shadowBlur(8))];
   static List<BoxShadow> get artShadow => [BoxShadow(color: Color(0x40000000), offset: DS.shadowOffset(const Offset(3, 4)), blurRadius: DS.shadowBlur(6))];
@@ -610,13 +614,52 @@ class AuthTextLink extends StatelessWidget {
 }
 
 class AuthVerifiedRow extends StatelessWidget {
-  const AuthVerifiedRow({super.key, required this.text, required this.art});
+  const AuthVerifiedRow({super.key, required this.text, required this.art, this.compact = false});
+
+  static const String verifiedLabel = 'Verified';
 
   final String text;
   final String art;
+  final bool compact;
+
+  static TextStyle get compactStyle => Ink3D.text(13.5, FontWeight.w600, AuthInk.input, letterSpacing: 0);
+  static TextStyle get compactPillStyle => Ink3D.text(11.5, FontWeight.w700, DesignColors.onPrimary, letterSpacing: 0);
+
+  static double _textWidth(BuildContext context, String text, TextStyle style) {
+    final p = TextPainter(text: TextSpan(text: text, style: style), maxLines: 1, textDirection: TextDirection.ltr, textScaler: MediaQuery.textScalerOf(context))..layout();
+    final w = p.width;
+    p.dispose();
+    return w;
+  }
+
+  static double compactWidth(BuildContext context, String text) =>
+      DS.s(8) + DS.s(24) + DS.s(6) + _textWidth(context, text, compactStyle) + DS.s(6) + DS.s(16) + _textWidth(context, verifiedLabel, compactPillStyle) + DS.s(8);
+
+  Widget _compact() {
+    final ok = ListingTone.forest;
+    return Container(
+      constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch)),
+      padding: DS.insets(l: 8, t: 4, r: 8, b: 4),
+      decoration: BoxDecoration(color: AuthInk.page, borderRadius: DS.circular(22)),
+      child: Row(
+        children: [
+          ExcludeSemantics(child: Art3D(asset: art, size: 24, shadowBlur: 2, shadowOffset: const Offset(1, 2))),
+          Gap.h(6),
+          Expanded(child: FitLine3D(text: text, style: compactStyle)),
+          Gap.h(6),
+          Container(
+            padding: DS.sym(h: 8, v: 3),
+            decoration: BoxDecoration(gradient: ok.gradient, borderRadius: DS.circular(12), boxShadow: ok.glow(blur: 4, dy: 2)),
+            child: Text(verifiedLabel, maxLines: 1, style: compactPillStyle),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (compact) return _compact();
     final ok = ListingTone.forest;
     return Container(
       constraints: BoxConstraints(minHeight: DS.s(58)),
@@ -800,11 +843,11 @@ class AuthRoleCard extends StatelessWidget {
       child: Container(
         width: double.infinity,
         constraints: BoxConstraints(minHeight: DS.s(116)),
-        decoration: BoxDecoration(gradient: tone.gradient, borderRadius: AuthInk.cardRadius, boxShadow: selected ? tone.glow(blur: 16, dy: 8) : tone.glow()),
+        decoration: BoxDecoration(gradient: tone.gradient, borderRadius: AuthInk.roleRadius, boxShadow: selected ? tone.glow(blur: 16, dy: 8) : tone.glow()),
         child: text,
       ),
     );
-    final ringR = BorderRadius.only(topLeft: Radius.circular(DS.radius(12)), topRight: Radius.circular(DS.radius(58)), bottomLeft: Radius.circular(DS.radius(12)), bottomRight: Radius.circular(DS.radius(12)));
+    final ringR = DS.br(const BorderRadius.all(Radius.circular(CardRadius.uniformValue + 6)));
     return Semantics(
       button: onTap != null,
       selected: selected,
@@ -835,7 +878,7 @@ class AuthRoleCard extends StatelessWidget {
                         padding: DS.all(3),
                         child: DecoratedBox(
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(9)), topRight: Radius.circular(DS.radius(55)), bottomLeft: Radius.circular(DS.radius(9)), bottomRight: Radius.circular(DS.radius(9))),
+                            borderRadius: DS.br(const BorderRadius.all(Radius.circular(CardRadius.uniformValue + 3))),
                             border: Border.all(color: Colors.white, width: DS.s(3)),
                           ),
                         ),
@@ -920,7 +963,7 @@ class AuthRoleSkeleton extends StatelessWidget {
               padding: EdgeInsets.fromLTRB(left, DS.s(14), DS.s(50), DS.s(12)),
               decoration: BoxDecoration(
                 gradient: LinearGradient(colors: [AuthInk.bone, AuthInk.boneLight, AuthInk.bone]),
-                borderRadius: AuthInk.cardRadius,
+                borderRadius: AuthInk.roleRadius,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1011,7 +1054,7 @@ class AuthStatusStrip extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(DS.s(10), DS.s(6), DS.s(16), DS.s(6)),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        borderRadius: DS.br(CardRadius.card),
       ),
       child: Row(
         children: [

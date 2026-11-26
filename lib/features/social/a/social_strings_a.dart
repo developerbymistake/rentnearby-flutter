@@ -1,5 +1,6 @@
 abstract final class SocialStringsA {
   static const String obTitle = 'Complete your profile';
+  static const String obMenu = 'More options';
   static const String obStep1 = 'Step 1 of 3 · You';
   static const String obStep2 = 'Step 2 of 3 · Your travel style';
   static const String obStep3 = 'Step 3 of 3 · About you';
@@ -38,6 +39,10 @@ abstract final class SocialStringsA {
   static String removeTag(String text) => 'Remove $text';
 
   static String ofFive(int n) => '$n of 5';
+
+  static String picked(int n) => '$n picked';
+
+  static String placesAdded(int n) => n == 0 ? 'Add 1' : '$n added';
 
   static String step1Missing({required bool name, required bool gender, required bool birth}) {
     final parts = <String>[if (name) 'your name', if (gender) 'gender', if (birth) 'birth month and year'];
@@ -84,6 +89,9 @@ abstract final class SocialStringsA {
 
   static const String editTitle = 'Edit profile';
   static const String editSub = 'Others see everything except your birth date';
+  static const String nameRule = 'You can change your name once every 14 days';
+  static String nameAgainOn(String day) => 'You can change it again on $day';
+  static const String nameTooSoon = 'You changed your name recently.';
   static const String lockedNote = 'Gender and birth date cannot be changed. Contact support if they are wrong.';
   static const String placesCard = 'Places you have been';
   static const String addPlace = 'Add place';

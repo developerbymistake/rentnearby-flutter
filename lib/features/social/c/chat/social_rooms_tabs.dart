@@ -115,7 +115,7 @@ class SocialPersonRoomRow extends StatelessWidget {
       avatarGradient: BuddyLook.avatarGradient(peer?.userId ?? room.roomId),
       compactTop: true,
       tag: SocialStringsC.traveller,
-      title: name,
+      title: peer?.shortName ?? '',
       subtitle: subtitleOf(room),
       time: SocialChatTime.ago(room.lastMessageAt),
       unread: SocialChatTime.badge(room.unread),
@@ -182,7 +182,7 @@ class SocialTripRoomRow extends StatelessWidget {
           padding: DS.insets(l: 16, t: 14, r: 16, b: 14),
           decoration: BoxDecoration(
             color: DesignColors.surface,
-            borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(32), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
+            borderRadius: DS.br(CardRadius.card),
             boxShadow: BuddyLook.cardShadows(DS.size),
           ),
           child: Row(
@@ -295,7 +295,7 @@ class SocialRequestRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(children: [
-                    Expanded(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(15.5, FontWeight.w600, Ink3D.title, letterSpacing: 0))),
+                    Expanded(child: Text(peer?.shortName ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(15.5, FontWeight.w600, Ink3D.title, letterSpacing: 0))),
                     Text(SocialChatTime.ago(room.lastMessageAt), style: Ink3D.text(12, FontWeight.w400, BuddyLook.greyText, letterSpacing: 0)),
                   ]),
                   Gap.v(4),

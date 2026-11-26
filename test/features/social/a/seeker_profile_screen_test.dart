@@ -1,8 +1,11 @@
 import 'package:bakhli/config/app_routes.dart';
 import 'package:bakhli/config/user_roles.dart';
 import 'package:bakhli/controllers/plan_controller.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/features/social/a/profile/profile_sections.dart';
 import 'package:bakhli/features/social/a/profile/seeker_profile_screen.dart';
 import 'package:bakhli/features/social/a/social_strings_a.dart';
+import 'package:bakhli/features/social/a/widgets/social_section_card.dart';
 import 'package:bakhli/features/social/shared/social_me_controller.dart';
 import 'package:bakhli/models/my_plan_model.dart';
 import 'package:bakhli/screens/profile_screen.dart';
@@ -72,6 +75,19 @@ void main() {
     await drain(t);
   });
 
+  testWidgets('the Profile header shows only the settings gear (no bell, chat or enquiries)', (t) async {
+    final server = installServer();
+    server.on('GET', '/social/me', socialMeJson(profile: myProfileJson()));
+    putSeeker();
+    Get.put(SocialMeController(), permanent: true);
+    await pumpSocial(t, const SeekerProfileScreen(), pages: _pages);
+    expect(find.byKey(SeekerProfileScreen.settingsKey), findsOneWidget);
+    expect(find.bySemanticsLabel('Notifications'), findsNothing);
+    expect(find.bySemanticsLabel('Chats'), findsNothing);
+    expect(find.bySemanticsLabel('Enquiries'), findsNothing);
+    await drain(t);
+  });
+
   testWidgets('a load failure shows Retry', (t) async {
     final server = installServer();
     server.on('GET', '/social/me', null, status: 500);
@@ -88,6 +104,46 @@ void main() {
     Get.put(PlanController()).myPlan.value = MyPlanModel(paymentEnabled: false);
     await pumpSocial(t, const SeekerProfileScreen(), pages: _pages);
     expect(find.byType(ProfileScreen), findsOneWidget);
+    await drain(t);
+  });
+
+  testWidgets('About sits inside the header card above the counters; Interests, Places and Skills are separate section cards', (t) async {
+    final server = installServer();
+    server.on('GET', '/social/me', socialMeJson(profile: myProfileJson()));
+    putSeeker();
+    Get.put(SocialMeController(), permanent: true);
+    await pumpSocial(t, const SeekerProfileScreen(), size: const Size(392, 2400), pages: _pages);
+    final hero = find.byType(ProfileHeroCard);
+    final about = find.descendant(of: hero, matching: find.byKey(ProfileHeroCard.aboutKey));
+    expect(about, findsOneWidget);
+    expect(t.getRect(about).bottom, lessThanOrEqualTo(t.getRect(find.byType(ProfileCounters)).top));
+    expect(t.getRect(about).top, greaterThanOrEqualTo(t.getRect(find.text('Dehradun')).bottom));
+    final cards = [ProfileChipsSection.interestsKey, ProfileChipsSection.placesKey, ProfileChipsSection.skillsKey];
+    for (final k in cards) {
+      expect(find.descendant(of: find.byKey(k), matching: find.byType(SocialSectionHeader)), findsOneWidget);
+    }
+    // Visible card box (the keyed Container's rect also covers its top margin).
+    final rects = [for (final k in cards) t.getRect(find.descendant(of: find.byKey(k), matching: find.byType(DecoratedBox)).first)];
+    for (final r in rects) {
+      expect(r.left, closeTo(rects.first.left, 0.5));
+      expect(r.width, closeTo(rects.first.width, 0.5));
+    }
+    expect(rects[1].top, greaterThan(rects[0].bottom));
+    expect(rects[2].top, greaterThan(rects[1].bottom));
+    expect(t.getRect(find.byKey(SeekerProfileScreen.editKey)).bottom, lessThan(rects.first.top));
+    await drain(t);
+  });
+
+  testWidgets('the Profile avatar has no pencil badge and the gear is coral', (t) async {
+    final server = installServer();
+    server.on('GET', '/social/me', socialMeJson(profile: myProfileJson()));
+    putSeeker();
+    Get.put(SocialMeController(), permanent: true);
+    await pumpSocial(t, const SeekerProfileScreen(), pages: _pages);
+    expect(find.byIcon(Icons.edit_rounded), findsNothing);
+    expect(find.bySemanticsLabel(SocialStringsA.changePhoto), findsNothing);
+    final gear = t.widget<RoundIconButton3D>(find.descendant(of: find.byKey(SeekerProfileScreen.settingsKey), matching: find.byType(RoundIconButton3D)));
+    expect(gear.tint, ListingPalette.coral.g1);
     await drain(t);
   });
 }

@@ -1,0 +1,120 @@
+import 'package:flutter/material.dart';
+
+import '../../../../design/design.dart';
+import '../../../../navigation/traveller_gate.dart';
+import '../../a/widgets/social_chips_a.dart';
+import '../../shared/social_error_types.dart';
+import '../../shared/social_me_controller.dart';
+import '../../shared/social_nav.dart';
+import '../../shared/widgets/plus_widgets.dart';
+import '../social_strings_b.dart';
+import 'social_widgets_b.dart';
+
+// The one way into the Post your trip wizard from Home, My Trips and the feed: the public-trip and active-trip caps are checked first.
+abstract final class PostTripEntry {
+  static Future<void> open(BuildContext context) async {
+    final limits = SocialMeController.maybe?.me.value?.limits;
+    if (limits != null && limits.publicTrips.reached) {
+      await PlusSheets.limitReached(context, errorType: SocialErrorTypes.publicTripLimit, data: {'limit': limits.publicTrips.limit}, from: 'post');
+      return;
+    }
+    if (limits != null && limits.activeTrips.reached) {
+      await PlusSheets.limitReached(context, errorType: SocialErrorTypes.tripLimitReached, data: {'limit': limits.activeTrips.limit}, from: 'post');
+      return;
+    }
+    await SocialNav.openPostTrip();
+  }
+}
+
+enum FindBuddiesPostPlace { home, myTrips }
+
+// Spec 23.6/23.7: Home card right below Quick actions, built like the Home hero banner (WorkoutCard, 3D art, white action pill);
+// My Trips card on top in the compact row look; both in the coral family. Both open the Post your trip wizard.
+class FindBuddiesPostCard extends StatelessWidget {
+  const FindBuddiesPostCard({super.key, required this.place, this.margin});
+
+  final FindBuddiesPostPlace place;
+  final EdgeInsets? margin;
+
+  static const Key homeKey = ValueKey('find_buddies_post_home');
+  static const Key myTripsKey = ValueKey('find_buddies_post_my_trips');
+  static const Key postKey = ValueKey('find_buddies_post_button');
+
+  // Spec 23.10: both Post your trip cards use the coral colour family (ListingPalette.coral).
+  static final ListingTone tone = ListingTone.coral;
+
+  bool get _home => place == FindBuddiesPostPlace.home;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!TravellerGate.allowed) return const SizedBox.shrink();
+    if (_home) {
+      return KeyedSubtree(
+        key: homeKey,
+        child: WorkoutCard(
+          key: postKey,
+          tone: tone,
+          art: ListingArt.backpack,
+          eyebrow: SocialStringsB.homePostEyebrow,
+          title: SocialStringsB.homePostTitle,
+          subtitle: SocialStringsB.homePostLine,
+          actionLabel: SocialStringsB.post,
+          margin: const EdgeInsets.only(left: 18, right: 18, bottom: 4),
+          semanticsLabel: '${SocialStringsB.homePostEyebrow} ${SocialStringsB.homePostTitle}. ${SocialStringsB.homePostLine} ${SocialStringsB.post}',
+          onTap: () => PostTripEntry.open(context),
+        ),
+      );
+    }
+    const title = SocialStringsB.myTripsPostTitle;
+    const line = SocialStringsB.myTripsPostLine;
+    const art = ListingArt.backpack;
+    void open() => PostTripEntry.open(context);
+    return Padding(
+      key: myTripsKey,
+      padding: margin ?? DS.gapInsets(l: 18, t: 4, r: 18, b: 14),
+      child: Tap3D(
+        onTap: open,
+        label: '$title. $line. ${SocialStringsB.post}',
+        exclude: true,
+        child: Container(
+          padding: DS.insets(l: 12, t: 12, r: 12, b: 12),
+          decoration: BoxDecoration(color: DesignColors.surface, borderRadius: SocialLookB.cardRadius, boxShadow: DS.shadows(Form3D.cardShadow)),
+          child: Row(
+            children: [
+              Container(
+                width: DS.s(56),
+                height: DS.s(56),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(gradient: tone.gradient, borderRadius: DS.br(CardRadius.card), boxShadow: tone.glow(dy: 4, blur: 8)),
+                child: ExcludeSemantics(child: Art3D(asset: art, size: 40, shadowBlur: 3, shadowOffset: const Offset(1, 3))),
+              ),
+              Gap.h(12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(15, FontWeight.w600, Ink3D.title, letterSpacing: 0)),
+                    Gap.v(2),
+                    Text(line, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
+                  ],
+                ),
+              ),
+              Gap.h(10),
+              GradientPillButton(
+                key: postKey,
+                tone: tone,
+                icon: Icons.add_rounded,
+                label: SocialStringsB.post,
+                expand: false,
+                height: SocialButtonsA.smallHeight,
+                fontSize: SocialButtonsA.smallFont,
+                onTap: open,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -210,10 +210,9 @@ class TaxiCardSegment extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = DS.radius(18);
-    final big = DS.radius(CardRadius.heroNotch / 2);
     final radius = BorderRadius.only(
       topLeft: Radius.circular(first ? r : 0),
-      topRight: Radius.circular(first ? big : 0),
+      topRight: Radius.circular(first ? r : 0),
       bottomLeft: Radius.circular(last ? r : 0),
       bottomRight: Radius.circular(last ? r : 0),
     );

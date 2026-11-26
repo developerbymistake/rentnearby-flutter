@@ -20,7 +20,7 @@ PlanModel seekerPlus() => PlanModel.fromJson({
       'name': 'Bakhli Plus',
       'tagline': 'Join more trips',
       'isDefault': false,
-      'features': {'SeekerActiveTrips': 10, 'SeekerPublicTrips': 3, 'SeekerJoinRequestsPerMonth': 5, 'SeekerNewChatsPerMonth': 15, 'SeekerGenderOnlyTrips': 1, 'SeekerNearMe': 1},
+      'features': {'SeekerActiveTrips': 10, 'SeekerPublicTrips': 3, 'SeekerJoinRequestsPerMonth': 5, 'SeekerNewChatsPerMonth': 10, 'SeekerGenderOnlyTrips': 1, 'SeekerNearMe': 1},
       'prices': [
         {'cycleMonths': 1, 'priceInr': 200, 'perMonthInr': 200, 'playBasePlanId': 'cycle-1m'},
         {'cycleMonths': 3, 'priceInr': 500, 'perMonthInr': 166, 'playBasePlanId': 'cycle-3m'},
@@ -85,7 +85,7 @@ SocialLimits plusLimits() => const SocialLimits(
       activeTrips: LimitUse(limit: 10, used: 0),
       publicTrips: LimitUse(limit: 3, used: 0),
       joinRequests: LimitUse(limit: 5, used: 0),
-      newChats: LimitUse(limit: 15, used: 0),
+      newChats: LimitUse(limit: 10, used: 0),
       genderOnlyTrips: true,
       nearMe: true,
     );

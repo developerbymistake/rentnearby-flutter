@@ -157,8 +157,9 @@ class _SeekerPlusScreenState extends State<SeekerPlusScreen> {
         _ => ListingArt.calendar,
       };
 
-  static BorderRadius get _cardRadius =>
-      DS.br(const BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(40), bottomLeft: Radius.circular(12), bottomRight: Radius.circular(12)));
+  static BorderRadius get _cardRadius => DS.br(CardRadius.card);
+
+  static BorderRadius get _ringRadius => DS.br(const BorderRadius.all(Radius.circular(CardRadius.uniformValue + 5)));
 
   Widget _planCard(int months, bool on) {
     final c = _c.cycle(months);
@@ -166,7 +167,7 @@ class _SeekerPlusScreenState extends State<SeekerPlusScreen> {
     final ink = on ? DesignColors.onPrimary : Ink3D.title;
     final best = months == SeekerPlusController.cycleOrder.first;
     return Padding(
-      padding: DS.gapInsets(l: 18, t: best ? 12 : 0, r: 18, b: 16),
+      padding: DS.gapInsets(l: 13, t: best ? 12 : 0, r: 13, b: 11),
       child: Tap3D(
         key: ValueKey('plus_cycle_$months'),
         onTap: () => _c.select(months),
@@ -177,6 +178,13 @@ class _SeekerPlusScreenState extends State<SeekerPlusScreen> {
           clipBehavior: Clip.none,
           children: [
             Container(
+              key: ValueKey('plus_ring_$months'),
+              padding: DS.all(3),
+              decoration: BoxDecoration(
+                borderRadius: _ringRadius,
+                border: Border.all(color: on ? _tone.g2.withValues(alpha: Alpha.half) : Colors.transparent, width: DS.s(2)),
+              ),
+              child: Container(
               padding: DS.insets(l: 18, t: 16, r: 18, b: 16),
               decoration: BoxDecoration(
                 gradient: on ? _tone.gradient : null,
@@ -215,6 +223,7 @@ class _SeekerPlusScreenState extends State<SeekerPlusScreen> {
                   ),
                 ],
               ),
+            ),
             ),
             if (best)
               Positioned(

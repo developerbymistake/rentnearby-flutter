@@ -47,15 +47,10 @@ class PostTripController extends GetxController {
 
   SocialLimits? get limits => SocialMeController.maybe?.me.value?.limits;
 
-  bool get canGenderOnly => limits?.genderOnlyTrips ?? false;
+  // Spec 22: Anyone and Men only are free; Women only needs Plus.
+  bool get canWomenOnly => limits?.genderOnlyTrips ?? false;
 
-  String get myGender {
-    final p = SocialMeController.maybe?.profile;
-    if (p != null && p.gender.isNotEmpty) return p.gender;
-    return Get.isRegistered<AuthController>() ? Get.find<AuthController>().user.value?.gender ?? '' : '';
-  }
-
-  String? get myCode => SocialStringsB.genderCode(myGender);
+  bool allowedJoin(String code) => code == 'A' || code == 'M' || (code == 'F' && canWomenOnly);
 
   List<String> get postChips {
     final c = SocialMeController.maybe?.catalog.postChips ?? const <String>[];
@@ -114,8 +109,8 @@ class PostTripController extends GetxController {
       }
     }
     final d = restored ?? const PostDraft();
-    final fixed = d.joinGender != 'A' && (d.joinGender != myCode || !canGenderOnly) ? d.copyWith(joinGender: 'A') : d;
-    draft.value = fixed.textEdited ? fixed : fixed.copyWith(text: fixed.autoText(myGender));
+    final fixed = allowedJoin(d.joinGender) ? d : d.copyWith(joinGender: 'A');
+    draft.value = fixed.textEdited ? fixed : fixed.copyWith(text: fixed.autoText());
     saved.value = restored != null;
     if (fromTrip) step.value = stepWhen;
     preparing.value = false;
@@ -186,13 +181,8 @@ class PostTripController extends GetxController {
   void setSeats(int n) => _update(draft.value.copyWith(seats: n));
 
   void setJoinGender(String code) {
-    if (code == 'A') {
-      genderLocked.value = false;
-      _update(draft.value.copyWith(joinGender: 'A'));
-      return;
-    }
-    if (code != myCode) return;
-    if (!canGenderOnly) {
+    if (!SocialStringsB.joinCodes.contains(code)) return;
+    if (!allowedJoin(code)) {
       genderLocked.value = true;
       _update(draft.value.copyWith(joinGender: 'A'));
       return;
@@ -235,7 +225,7 @@ class PostTripController extends GetxController {
   }
 
   void _update(PostDraft next, {bool regenerate = true}) {
-    final d = regenerate && !next.textEdited ? next.copyWith(text: next.autoText(myGender)) : next;
+    final d = regenerate && !next.textEdited ? next.copyWith(text: next.autoText()) : next;
     draft.value = d;
     _save(d);
   }

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../config/app_routes.dart';
-import '../../../../controllers/auth_controller.dart';
 import '../../../../controllers/location_controller.dart';
 import '../../../../controllers/notification_controller.dart';
 import '../../../../design/design.dart';
@@ -12,7 +11,6 @@ import '../../../../utils/input_formatters.dart';
 import '../../../buddy/shared/buddy_look.dart';
 import '../../../buddy/shared/widgets/buddy_page.dart';
 import '../../../buddy/shared/widgets/buddy_snack.dart';
-import '../../shared/social_error_types.dart';
 import '../../shared/social_me_controller.dart';
 import '../../shared/social_models.dart';
 import '../../shared/social_nav.dart';
@@ -23,8 +21,10 @@ import '../post/join_request_sheet.dart';
 import '../post/trip_post_actions.dart';
 import '../../a/people/people_widgets.dart';
 import '../../a/widgets/social_chips_a.dart';
+import '../models/join_gender_rule.dart';
 import '../social_nav_b.dart';
 import '../social_strings_b.dart';
+import '../widgets/find_buddies_post_card.dart';
 import '../widgets/social_widgets_b.dart';
 import 'feed_filter_sheet.dart';
 import 'travel_buddies_controller.dart';
@@ -40,12 +40,6 @@ class TravelBuddiesScreen extends StatefulWidget {
   static const Key searchKey = ValueKey('feed_search');
   static const Key liveKey = ValueKey('feed_live');
   static const Key liveCloseKey = ValueKey('feed_live_close');
-
-  static String myGender() {
-    final p = SocialMeController.maybe?.profile;
-    if (p != null && p.gender.isNotEmpty) return p.gender;
-    return Get.isRegistered<AuthController>() ? Get.find<AuthController>().user.value?.gender ?? '' : '';
-  }
 
   @override
   State<TravelBuddiesScreen> createState() => _TravelBuddiesScreenState();
@@ -120,7 +114,7 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
       child: Container(
         key: TravelBuddiesScreen.liveKey,
         padding: DS.insets(l: 14, t: 12, r: 4, b: 12),
-        decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(16), boxShadow: DS.shadows(Form3D.cardShadow)),
+        decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.card), boxShadow: DS.shadows(Form3D.cardShadow)),
         child: Row(
           children: [
             Container(
@@ -176,7 +170,7 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
 
   Future<void> _openFilter() async {
     final limits = SocialMeController.maybe?.me.value?.limits;
-    final picked = await FeedFilterSheet.show(context, initial: c.filter.value.copyWith(q: _search.text.trim()), myGender: TravelBuddiesScreen.myGender(), nearMe: limits?.nearMe ?? false);
+    final picked = await FeedFilterSheet.show(context, initial: c.filter.value.copyWith(q: _search.text.trim()), nearMe: limits?.nearMe ?? false);
     if (picked == null || !mounted) return;
     var f = picked;
     if (f.near) {
@@ -192,18 +186,7 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
     await c.applyFilter(f);
   }
 
-  Future<void> _postTrip() async {
-    final limits = SocialMeController.maybe?.me.value?.limits;
-    if (limits != null && limits.publicTrips.reached) {
-      await PlusSheets.limitReached(context, errorType: SocialErrorTypes.publicTripLimit, data: {'limit': limits.publicTrips.limit}, from: 'post');
-      return;
-    }
-    if (limits != null && limits.activeTrips.reached) {
-      await PlusSheets.limitReached(context, errorType: SocialErrorTypes.tripLimitReached, data: {'limit': limits.activeTrips.limit}, from: 'post');
-      return;
-    }
-    await SocialNav.openPostTrip();
-  }
+  Future<void> _postTrip() => PostTripEntry.open(context);
 
   Future<void> _request(PublicTrip t) async {
     final ok = await JoinRequestSheet.show(context, t);
@@ -355,6 +338,19 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
         );
       case 'declined':
         return GradientPillButton(tone: teal, label: SocialStringsB.notThisTime, enabled: false, height: SocialButtonsA.midHeight, fontSize: SocialButtonsA.midFont, onTap: null);
+    }
+    if (JoinGenderRule.blocks(t)) {
+      return GradientPillButton(
+        key: ValueKey('feed_only_for_${t.tripId}'),
+        tone: teal,
+        label: SocialStringsB.onlyFor(t.joinGender),
+        enabled: false,
+        offColor: Form3D.fillOff,
+        offLabelColor: BuddyLook.subText,
+        height: SocialButtonsA.midHeight,
+        fontSize: SocialButtonsA.midFont,
+        onTap: null,
+      );
     }
     if (t.seatsLeft <= 0) {
       return GradientPillButton(tone: teal, label: SocialStringsB.full, enabled: false, height: SocialButtonsA.midHeight, fontSize: SocialButtonsA.midFont, onTap: null);

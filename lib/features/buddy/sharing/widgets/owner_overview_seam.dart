@@ -9,6 +9,7 @@ import '../../../social/shared/social_me_controller.dart';
 import '../../../social/shared/social_nav.dart';
 import '../../../social/shared/widgets/plus_widgets.dart';
 import '../../../trip/models/trip_model.dart';
+import '../../../trip/widgets/hub/hub_art.dart';
 import '../../buddy_navigation.dart';
 import '../controllers/owner_sharing_controller.dart';
 import '../models/sharing_models.dart';
@@ -19,12 +20,13 @@ import 'overview_travellers_card.dart';
 import 'trip_delete_flow.dart';
 
 class OverviewMenuItem {
-  const OverviewMenuItem({required this.label, required this.onTap, this.danger = false, this.subtitle});
+  const OverviewMenuItem({required this.label, required this.onTap, this.danger = false, this.subtitle, this.art});
 
   final String label;
   final VoidCallback onTap;
   final bool danger;
   final String? subtitle;
+  final String? art;
 }
 
 class OwnerOverviewExtras {
@@ -132,6 +134,7 @@ abstract final class OwnerOverviewSeam {
     return OverviewMenuItem(
       label: SocialStringsB.postToFindBuddies,
       subtitle: SocialStringsB.postToFindBuddiesLine,
+      art: HubArt.womanRaising,
       onTap: () {
         final limits = SocialMeController.maybe?.me.value?.limits;
         if (limits != null && limits.publicTrips.reached) {

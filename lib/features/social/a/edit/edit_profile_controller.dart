@@ -1,12 +1,16 @@
 import 'package:get/get.dart';
 
 import '../../../../controllers/auth_controller.dart';
+import '../../../buddy/shared/buddy_json.dart';
 import '../../../buddy/shared/buddy_result.dart';
 import '../../shared/data/social_me_api.dart';
+import '../../shared/social_error_types.dart';
+import '../../shared/social_formats.dart';
 import '../../shared/social_me_controller.dart';
 import '../../shared/social_models.dart';
 import '../../shared/social_strings.dart';
 import '../onboarding/onboarding_controller.dart';
+import '../social_strings_a.dart';
 
 class EditProfileController extends GetxController {
   EditProfileController({SocialMeApi api = const SocialMeApi()}) : _api = api;
@@ -21,6 +25,7 @@ class EditProfileController extends GetxController {
   final places = <String>[].obs;
   final homeCity = RxnString();
   final homeState = RxnString();
+  final nameLockedUntil = Rxn<DateTime>();
   final saving = false.obs;
   final loading = false.obs;
   final loadFailed = false.obs;
@@ -73,7 +78,16 @@ class EditProfileController extends GetxController {
     places.assignAll(p.places);
     homeCity.value = p.homeCity;
     homeState.value = p.homeState;
+    nameLockedUntil.value = p.nameLockedAt(DateTime.now()) ? p.nameChangeAllowedAt : null;
     original.value = p;
+  }
+
+  bool get nameLocked => nameLockedUntil.value != null;
+
+  void _lockName(DateTime? until) {
+    final p = original.value;
+    if (p == null) return;
+    seed(p.withNameChangeAllowedAt(until ?? DateTime.now().toUtc().add(const Duration(days: ProfileRules.nameChangeDays))));
   }
 
   static bool _sameList(List<String> a, List<String> b) {
@@ -88,7 +102,7 @@ class EditProfileController extends GetxController {
     final p = original.value;
     if (p == null) return const {};
     return {
-      if (name.value.trim() != p.name) 'name': name.value.trim(),
+      if (!nameLocked && name.value.trim() != p.name) 'name': name.value.trim(),
       if (about.value.trim() != p.about) 'about': about.value.trim(),
       if (!_sameList(interests, p.interests)) 'interests': interests.toList(),
       if (!_sameList(skills, p.skills)) 'skills': skills.toList(),
@@ -138,6 +152,17 @@ class EditProfileController extends GetxController {
     about.value = next.length > ProfileRules.aboutMax ? next.substring(0, ProfileRules.aboutMax) : next;
   }
 
+  void _restore(Map<String, dynamic> edits) {
+    if (edits['about'] is String) about.value = edits['about'] as String;
+    if (edits['interests'] is List) interests.assignAll((edits['interests'] as List).cast<String>());
+    if (edits['skills'] is List) skills.assignAll((edits['skills'] as List).cast<String>());
+    if (edits['places'] is List) places.assignAll((edits['places'] as List).cast<String>());
+    if (edits.containsKey('homeCityName')) {
+      homeCity.value = edits['homeCityName'] as String?;
+      homeState.value = edits['homeStateName'] as String?;
+    }
+  }
+
   Future<String?> save() async {
     if (!canSave) return null;
     saving.value = true;
@@ -149,6 +174,12 @@ class EditProfileController extends GetxController {
           SocialMeController.maybe?.applyProfile(value);
           if (Get.isRegistered<AuthController>()) Get.find<AuthController>().refreshProfile();
           return null;
+        case BuddyRefused(:final type, :final data) when type == SocialErrorTypes.nameChangeTooSoon:
+          final edits = changedBody()..remove('name');
+          _lockName(BuddyJson.time(data['nextAllowedAt'] ?? data['nameChangeAllowedAt']));
+          _restore(edits);
+          final until = nameLockedUntil.value;
+          return until == null ? SocialStringsA.nameTooSoon : '${SocialStringsA.nameTooSoon} ${SocialStringsA.nameAgainOn(SocialFormats.dayMonth(until))}';
         case BuddyRefused(:final message):
           return message ?? SocialStrings.failed;
         case BuddyOffline():

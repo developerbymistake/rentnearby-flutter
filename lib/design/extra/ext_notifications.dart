@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
 import '../tokens/design_scale.dart';
+import '../tokens/card_tokens.dart';
 
 abstract final class NotificationTone {
   static ListingTone of(String kind) => switch (kind) {
@@ -39,7 +40,7 @@ abstract final class NotificationTone {
   }
 }
 
-BorderRadius get _cardRadius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(44)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
+BorderRadius get _cardRadius => DS.br(CardRadius.hero);
 
 class NotificationHeader3D extends StatelessWidget {
   const NotificationHeader3D({super.key, required this.tone, required this.title, required this.art, this.onBack, this.action});

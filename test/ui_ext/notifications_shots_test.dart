@@ -9,6 +9,7 @@ import 'package:bakhli/design/extra/ext_notifications.dart';
 import 'package:bakhli/design/extra/page_header_3d.dart';
 import 'package:bakhli/design/extra/state_card_3d.dart';
 import 'package:bakhli/design/extra/toast_3d.dart';
+import 'package:bakhli/features/social/c/widgets/icon_title_header.dart';
 import 'package:bakhli/features/stay/stay_strings_fin_c1.dart';
 import 'package:bakhli/models/notification_model.dart';
 import 'package:bakhli/repositories/notification_repository.dart';
@@ -190,6 +191,24 @@ void main() {
       expect(find.text('NEW'), findsNWidgets(2));
       expect(find.text('TODAY'), findsOneWidget);
       await _snap(t, 'inbox_$tag');
+    });
+
+    testWidgets('header $tag: back, title and a small bell in one row', (t) async {
+      await _open(t, _Repo(_seeker()), size: size, scale: s);
+      expect(find.byType(IconTitleHeader), findsOneWidget);
+      expect(find.byType(NotificationHeader3D), findsNothing);
+      final back = t.getRect(find.byTooltip('Back'));
+      final title = t.getRect(find.text('Notifications'));
+      final bell = t.getRect(find.byKey(const ValueKey('icon_title_art')));
+      expect(t.widget<RoundIconButton3D>(find.byKey(const ValueKey('icon_title_art'))).asset, NotificationLook.bell);
+      expect(bell.height, closeTo(back.height, 0.5));
+      expect(title.center.dy, closeTo(back.center.dy, 1));
+      expect(bell.center.dy, closeTo(back.center.dy, 1));
+      expect(title.left, greaterThan(back.right));
+      expect(bell.left, greaterThanOrEqualTo(title.right));
+      expect(t.getRect(find.text('Mark all read')).top, greaterThan(back.bottom));
+      expect(t.takeException(), isNull);
+      debugDisableShadows = true;
     });
 
     testWidgets('allread $tag', (t) async {

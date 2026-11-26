@@ -1,4 +1,5 @@
 import 'package:bakhli/config/app_routes.dart';
+import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/features/buddy/buddies/controllers/buddy_summary_controller.dart';
 import 'package:bakhli/features/social/a/settings/settings_screen.dart';
 import 'package:bakhli/features/social/a/social_strings_a.dart';
@@ -53,6 +54,19 @@ void main() {
     await pumpSocial(t, const SettingsScreen(), size: Size(width, 3400), textScale: scale, pages: _pages);
     return server;
   }
+
+  testWidgets('a verified phone shows the Verified pill; an unverified phone shows Not verified text', (t) async {
+    Get.find<AuthController>().profilePhoneVerified.value = true;
+    await open(t);
+    expect(find.byKey(SettingsScreen.verifiedPillKey), findsOneWidget);
+    expect(find.descendant(of: find.byKey(SettingsScreen.verifiedPillKey), matching: find.text(SocialStringsA.verified)), findsOneWidget);
+    expect(find.text(SocialStringsA.notVerified), findsNothing);
+    Get.find<AuthController>().profilePhoneVerified.value = false;
+    await settle(t);
+    expect(find.byKey(SettingsScreen.verifiedPillKey), findsNothing);
+    expect(find.text(SocialStringsA.notVerified), findsOneWidget);
+    await drain(t);
+  });
 
   for (final size in socialSizes) {
     for (final scale in socialScales) {

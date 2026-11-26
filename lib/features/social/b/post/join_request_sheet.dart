@@ -46,7 +46,7 @@ class _JoinRequestSheetState extends State<JoinRequestSheet> {
     SocialErrorTypes.alreadyRequested,
     SocialErrorTypes.alreadyMember,
     SocialErrorTypes.askAgainLater,
-    SocialErrorTypes.tripNotOpen,
+    SocialErrorTypes.tripGenderMismatch,
   };
 
   @override
@@ -144,7 +144,7 @@ class _JoinRequestSheetState extends State<JoinRequestSheet> {
           Container(
             padding: DS.sym(h: 14, v: 10),
             constraints: BoxConstraints(minHeight: DS.s(84)),
-            decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(16), border: Border.all(color: Form3D.outline, width: DS.s(1.5))),
+            decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.card), border: Border.all(color: Form3D.outline, width: DS.s(1.5))),
             child: TextField(
               key: JoinRequestSheet.noteKey,
               controller: _note,

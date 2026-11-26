@@ -8,7 +8,7 @@ abstract final class SocialStringsB {
   static const String postYourTrip = 'Post your trip';
   static const String yourPost = 'Your post';
   static const String plusPill = 'Plus';
-  static const String postToFindBuddiesLine = 'Opens Find a travel buddy, filled from this trip';
+  static const String postToFindBuddiesLine = 'Opens Post your trip, filled from this trip';
   static const String noRequestsYet = 'No requests yet. They come to your bell.';
   static String requests(int n) => n == 1 ? '1 request' : '$n requests';
   static const String requestToJoin = 'Request to join';
@@ -21,7 +21,7 @@ abstract final class SocialStringsB {
   static String liveTitle(String city) => 'Your $city trip is live';
   static const String liveBody = 'Travellers can see it and ask to join';
   static const String feedEmptyTitle = 'No trips to join yet';
-  static const String feedEmptyBody = 'Post your trip and buddies can ask to join.';
+  static const String feedEmptyBody = 'Post your trip and travellers can ask to join.';
   static String noMatch(String q) => 'No trips for “$q”';
   static const String noMatchFilters = 'No trips for these filters';
   static const String clearFilters = 'Clear filters';
@@ -51,22 +51,23 @@ abstract final class SocialStringsB {
   static const List<String> popularPlaces = ['Goa', 'Manali', 'Rishikesh', 'Udaipur'];
   static const String whoCanJoinCaps = 'WHO CAN JOIN';
   static const String anyone = 'Anyone';
-  static const String onlyYouCanJoin = 'You only see trips you can join.';
+  static const String women = 'Women';
+  static const String men = 'Men';
   static const String nearMe = 'Near me';
   static const String nearMeLine = 'Only trips starting close to you';
   static const String showTrips = 'Show trips';
   static const String nearMeNoLocation = 'Turn on location to see trips near you.';
 
-  static String ownGenderOnly(String gender) => switch (gender) {
-        'Male' => 'Men only',
-        'Female' => 'Women only',
-        _ => '',
-      };
+  // Spec 22: every poster picks Anyone / Men / Women; Women only is Plus.
+  static const List<String> joinCodes = ['A', 'M', 'F'];
+  static const List<String> joinLabels = [anyone, men, women];
+  static const int womenIndex = 2;
 
-  static String? genderCode(String gender) => switch (gender) {
-        'Male' => 'M',
-        'Female' => 'F',
-        _ => null,
+  // In place of Request to join when the trip is for the other gender (spec 22).
+  static String onlyFor(String joinGender) => switch (joinGender) {
+        'F' => 'This trip is for women only',
+        'M' => 'This trip is for men only',
+        _ => '',
       };
 
   // Home rail
@@ -74,8 +75,16 @@ abstract final class SocialStringsB {
   static const String seeAll = 'See all';
   static const String findBuddies = 'Find buddies';
 
+  // Post entries (spec 23.6 + 23.7: the public-post entry never says 'buddies')
+  static const String homePostEyebrow = 'Going somewhere?';
+  static const String homePostTitle = postYourTrip;
+  static const String homePostLine = 'Travellers can ask to join you.';
+  static const String post = 'Post';
+  static const String myTripsPostTitle = postYourTrip;
+  static const String myTripsPostLine = 'Travellers can ask to join you';
+
   // Wizard
-  static const String wizardTitle = 'Find a travel buddy';
+  static const String wizardTitle = postYourTrip;
   static const String draftSaved = 'Draft saved';
   static const String stepWhere = 'Where';
   static const String stepWhen = 'When';
@@ -98,20 +107,21 @@ abstract final class SocialStringsB {
   static const String exactDate = 'Exact date';
   static const String withinTheNext = 'Within the next';
   static String monthsChip(int n) => n == 1 ? '1 month' : '$n months';
-  static const String windowNote = 'Buddies see a window, like “within 2 months”.';
+  static String withinSub(int max) => 'Up to $max months ahead';
+  static const String windowNote = 'Travellers see a window, like “within 2 months”.';
   static const String today = 'Today';
   static const String pickFromCalendar = 'Pick from calendar';
   static const String startDate = 'Start date';
   static const String howLong = 'How long?';
   static const String howLongSub = 'Up to 10 days, or 10+';
   static const String whoCanJoin = 'Who can join?';
-  static String genderLockTitle(String onlyLabel) => '${onlyLabel.replaceAll(' only', '')}-only trips are a Plus feature.';
+  static const String genderLockTitle = 'Women-only trips are a Plus feature.';
   static const String genderLockBody = 'Your post stays open to anyone for now.';
   static const String seePlus = 'See Plus';
   static const String seats = 'Seats';
   static const List<String> seatLabels = ['1', '2', '3', '4+'];
   static const List<int> seatValues = [1, 2, 3, SocialFormats.moreSeats];
-  static const String aboutTitle = 'Tell buddies about it';
+  static const String aboutTitle = 'Tell travellers about it';
   static const String aboutSub = 'We started it from your answers. Make it yours.';
   static const String whatToWrite = 'What should I write?';
   static const String writeTipsTitle = 'What to write';
@@ -170,13 +180,6 @@ abstract final class SocialStringsB {
   static const String factWho = 'Who can join';
   static const String factSeats = 'Seats';
   static String seatsFact(int left) => left <= 0 ? full : '$left left';
-  static const String notOpenTitle = 'This trip is not open to you';
-  static String notOpenBody(String joinGender) => switch (joinGender) {
-        'F' => 'It is for women only. Find trips you can join.',
-        'M' => 'It is for men only. Find trips you can join.',
-        _ => 'Find trips you can join.',
-      };
-  static const String seeTrips = 'See trips';
   static const String postGone = 'This trip is not available.';
   static const String reportTrip = 'Report this trip';
   static const String reportTripLine = 'Tell us what is wrong';
@@ -226,7 +229,7 @@ abstract final class SocialStringsB {
   static const String requestGone = 'This request is no longer waiting.';
 
   // Trip overview seam
-  static const String postToFindBuddies = 'Post to find buddies';
+  static const String postToFindBuddies = 'Post this trip';
   static const String openJoinRequests = 'Join requests';
   static const String tripChat = 'Trip chat';
   static const String detailsLocked = 'Stay, taxi and money details open when the trip starts.';

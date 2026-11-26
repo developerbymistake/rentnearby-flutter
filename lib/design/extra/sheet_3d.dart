@@ -9,6 +9,7 @@ import 'dock_inset.dart';
 import 'pill_buttons_3d.dart';
 import 'sheet_close_button.dart';
 import '../tokens/design_scale.dart';
+import '../tokens/card_tokens.dart';
 
 enum SheetSize { hug, short, confirm, list, form }
 
@@ -510,7 +511,7 @@ class SheetOptionCard extends StatelessWidget {
   final bool danger;
 
   static double get topRoom => DS.s(22);
-  static BorderRadius get radius => DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(32), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
+  static BorderRadius get radius => DS.br(CardRadius.card);
 
   @override
   Widget build(BuildContext context) {
@@ -635,7 +636,7 @@ class SummaryBar3D extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: DS.s(18), vertical: DS.s(12)),
       decoration: BoxDecoration(
         gradient: tone.gradient,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        borderRadius: DS.br(CardRadius.card),
         boxShadow: [BoxShadow(color: tone.shadow.withValues(alpha: 0.45), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(10))],
       ),
       child: Row(

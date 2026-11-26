@@ -23,12 +23,7 @@ class ScanResultCard extends StatelessWidget {
   final VoidCallback onType;
   final VoidCallback onAction;
 
-  static BorderRadius get _radius => BorderRadius.only(
-        topLeft: Radius.circular(DS.radius(8)),
-        topRight: Radius.circular(DS.radius(40)),
-        bottomLeft: Radius.circular(DS.radius(8)),
-        bottomRight: Radius.circular(DS.radius(8)),
-      );
+  static BorderRadius get _radius => DS.br(CardRadius.hero);
 
   @override
   Widget build(BuildContext context) {

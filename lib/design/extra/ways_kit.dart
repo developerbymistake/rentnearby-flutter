@@ -13,7 +13,7 @@ import 'motion_kit.dart';
 class WaysKit {
   WaysKit._();
 
-  static const BorderRadius chipRadius = CardRadius.tile;
+  static const BorderRadius chipRadius = CardRadius.chip;
   static const BorderRadius pillRadius = KitMetrics.buttonRadius;
 
   static const List<BoxShadow> topShadow = DesignShadows.top;

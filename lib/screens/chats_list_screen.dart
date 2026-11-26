@@ -11,6 +11,7 @@ import '../features/social/c/chat/models/chat_models.dart';
 import '../features/social/c/chat/rooms_controller.dart';
 import '../features/social/c/chat/social_rooms_tabs.dart';
 import '../features/social/c/social_strings_c.dart';
+import '../features/social/c/widgets/icon_title_header.dart';
 import '../features/social/shared/social_nav.dart';
 import '../models/conversation_model.dart';
 import '../utils/input_formatters.dart';
@@ -155,27 +156,21 @@ class _ChatsListScreenState extends State<ChatsListScreen>
           bottom: false,
           child: Column(
             children: [
-              Padding(
-                padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(10), DS.s(18), 0),
-                child: Row(
-                  children: [
-                    ChatRoundButton3D(icon: Icons.chevron_left_rounded, onTap: () => Get.back(), tooltip: 'Back', tone: _tone),
-                    const Spacer(),
-                    ChatRoundButton3D(
-                      icon: _searchOpen ? Icons.close_rounded : Icons.search_rounded,
-                      onTap: _toggleSearch,
-                      tooltip: _searchOpen ? 'Close search' : 'Search',
-                      tone: _tone,
-                      gradient: true,
-                      size: 46,
-                    ),
-                  ],
+              IconTitleHeader(
+                tone: _tone,
+                title: 'Messages',
+                art: ListingArt.speechBalloon,
+                onBack: () => Get.back(),
+                trailing: ChatRoundButton3D(
+                  icon: _searchOpen ? Icons.close_rounded : Icons.search_rounded,
+                  onTap: _toggleSearch,
+                  tooltip: _searchOpen ? 'Close search' : 'Search',
+                  tone: _tone,
+                  gradient: true,
+                  size: IconTitleHeader.button,
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.only(top: DS.gv(18)),
-                child: ModuleTitleBar(tone: _tone, art: ListingArt.speechBalloon, title: 'Messages'),
-              ),
+              Gap.v(14),
               SizeTransition(
                 sizeFactor: _searchSize,
                 alignment: Alignment.topCenter,

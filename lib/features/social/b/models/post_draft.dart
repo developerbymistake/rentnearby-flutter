@@ -83,9 +83,8 @@ class PostDraft {
         'text': text.trim(),
       };
 
-  String autoText(String myGender) {
-    final code = SocialStringsB.genderCode(myGender);
-    final who = joinGender == 'A' || joinGender != code ? 'A' : joinGender;
+  String autoText() {
+    final who = SocialStringsB.joinCodes.contains(joinGender) ? joinGender : 'A';
     final base = SocialStringsB.autoText(
       cities: cityLine,
       days: days,

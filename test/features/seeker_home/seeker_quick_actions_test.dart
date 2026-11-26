@@ -18,7 +18,12 @@ void main() {
     expect(on, isNot(contains('Add expense')));
   });
 
+  test('owner 2026-11-27: tile text and icon 5% smaller', () {
+    expect(SeekerQuickActions.tileContentScale, 0.95);
+  });
+
   test('no traveller features: no quick actions at all', () {
     expect(SeekerQuickActions.defaults(tripsOn: false, buddyOn: false), isEmpty);
   });
 }
+

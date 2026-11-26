@@ -93,6 +93,7 @@ class _PostWhereStepState extends State<PostWhereStep> {
               title: items[i].name,
               subtitle: items[i].spotCount > 0 ? TripStringsV2Create.cityMeta(items[i].spotCount) : items[i].placeLine,
               selected: c.isPicked(items[i]),
+              trailing: RadioMark(selected: c.isPicked(items[i]), tone: tone),
               divider: i > 0,
               onTap: () => _toggle(items[i]),
             ),

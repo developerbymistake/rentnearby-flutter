@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bakhli/design/tokens/design_scale.dart';
+import '../tokens/card_tokens.dart';
 
 const Color _kBone = Color(0xFFE8EAF0);
 const Color _kBoneLight = Color(0xFFF5F6F9);
@@ -106,7 +107,7 @@ class SkeletonSlimCard extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(DS.s(134), DS.s(22), DS.s(20), DS.s(16)),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+              borderRadius: DS.br(CardRadius.hero),
               boxShadow: [BoxShadow(color: Color(0x409E9E9E), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(10))],
             ),
             child: _Shimmer(
@@ -168,7 +169,7 @@ class SkeletonFormCard extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(18), DS.s(18), DS.s(18)),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(68)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        borderRadius: DS.br(CardRadius.hero),
         boxShadow: [BoxShadow(color: Color(0x389E9E9E), offset: DS.shadowOffset(const Offset(1.1, 1.1)), blurRadius: DS.shadowBlur(10))],
       ),
       child: _Shimmer(

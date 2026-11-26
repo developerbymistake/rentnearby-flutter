@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'art_3d.dart';
 import 'motion_kit.dart';
 import 'package:bakhli/design/tokens/design_scale.dart';
+import '../tokens/card_tokens.dart';
 
 enum TimelineState { done, current, todo }
 
@@ -179,7 +180,7 @@ class RailStop3D extends StatelessWidget {
   final Widget? trailing;
 
   static double get topRoom => DS.s(30);
-  static BorderRadius get radius => DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
+  static BorderRadius get radius => DS.br(CardRadius.card);
 
   @override
   Widget build(BuildContext context) {

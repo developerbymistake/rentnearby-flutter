@@ -166,7 +166,7 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
       return DecoratedBox(
         decoration: BoxDecoration(
           color: DesignColors.surface,
-          borderRadius: DS.br(CardRadius.tile),
+          borderRadius: DS.br(CardRadius.card),
           boxShadow: DS.shadows(ShadowTokens.elev3),
         ),
         child: SizedBox(

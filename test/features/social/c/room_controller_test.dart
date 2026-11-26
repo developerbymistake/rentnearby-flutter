@@ -268,7 +268,7 @@ void main() {
     api.preflightResult = BuddyOk(ChatPreflight.fromJson({'room': null, 'peer': personJson(peerId, 'Kavya'), 'canMessage': true, 'lock': 'limit', 'newChats': {'limit': 3, 'used': 3}}));
     final c = await open(roomId: null, userId: peerId);
     expect(c.canSend, isFalse);
-    api.preflightResult = BuddyOk(ChatPreflight.fromJson({'room': null, 'peer': personJson(peerId, 'Kavya'), 'canMessage': true, 'lock': 'none', 'newChats': {'limit': 15, 'used': 3}}));
+    api.preflightResult = BuddyOk(ChatPreflight.fromJson({'room': null, 'peer': personJson(peerId, 'Kavya'), 'canMessage': true, 'lock': 'none', 'newChats': {'limit': 10, 'used': 3}}));
     await c.refreshLock();
     expect(api.withUserCalls, 2);
     expect(c.canSend, isTrue);

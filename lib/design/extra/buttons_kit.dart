@@ -101,7 +101,7 @@ class PrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onPressed != null && !loading;
     final h = DS.s(height < KitMetrics.touch ? KitMetrics.touch : height, scaled: scaled);
-    final radius = heroCorner ? DS.br(CardRadius.hero, scaled: scaled) : DS.circular(KitMetrics.buttonRadiusValue, scaled: scaled);
+    final radius = heroCorner ? DS.br(CardRadius.card, scaled: scaled) : DS.circular(KitMetrics.buttonRadiusValue, scaled: scaled);
     final content = loading
         ? KitDots(scaled: scaled)
         : Row(

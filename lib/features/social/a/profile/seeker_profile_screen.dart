@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../../../config/app_routes.dart';
 import '../../../../config/app_tabs.dart';
+import '../../../../config/profile_photo_strings.dart';
 import '../../../../controllers/auth_controller.dart';
 import '../../../../controllers/profile_photo_controller.dart';
 import '../../../../controllers/tab_config_controller.dart';
@@ -41,6 +42,7 @@ class SeekerProfileScreen extends StatelessWidget {
             subtitle: SocialStringsA.profileSub,
             color: ListingPalette.indigo.page,
             onSettings: SocialNav.openSettings,
+            settingsOnly: true,
             child: const _ProfileBody(),
           ),
         ),
@@ -99,6 +101,7 @@ class _ProfileContent extends StatelessWidget {
         ProfileHeroCard(
           person: profile.person,
           gender: profile.gender,
+          about: profile.about,
           trips: profile.trips,
           followers: profile.followers,
           following: profile.following,
@@ -115,8 +118,7 @@ class _ProfileContent extends StatelessWidget {
             onTap: SocialNav.openEditProfile,
           ),
         ),
-        Gap.v(22),
-        ProfileChipsSection(about: profile.about, interests: profile.interests, places: profile.places, skills: profile.skills),
+        ProfileChipsSection(interests: profile.interests, places: profile.places, skills: profile.skills),
         ProfileTripsSection(title: SocialStringsA.myPublicTrips(profile.publicTrips.length), trips: profile.publicTrips),
         Gap.v(14),
       ],
@@ -129,6 +131,8 @@ class _MyPhoto extends StatelessWidget {
 
   final String initial;
 
+  static const Key retryKey = ValueKey('seeker_profile_photo_retry');
+
   @override
   Widget build(BuildContext context) {
     final auth = Get.find<AuthController>();
@@ -136,43 +140,32 @@ class _MyPhoto extends StatelessWidget {
     return Obx(() {
       final busy = photo.busy.value;
       final failed = photo.failed.value && photo.localPath.value != null;
-      return Semantics(
-        button: true,
-        label: SocialStringsA.changePhoto,
-        excludeSemantics: true,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: busy ? null : () => failed ? photo.retryChange() : photo.change(context),
-          child: SizedBox.square(
-            dimension: DS.s(76),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                ProfilePhotoCircle(
-                  size: DS.s(72),
-                  url: auth.user.value?.profilePhotoUrl,
-                  localPath: busy ? photo.localPath.value : null,
-                  placeholderPath: photo.placeholderPath,
-                  busy: busy,
-                  failed: failed,
-                  ringColor: DesignColors.onPrimary.withValues(alpha: Alpha.v60),
-                  ringWidth: DS.s(3),
-                  failColor: ListingTone.coral.g1,
-                  fallback: ColoredBox(
-                    color: DesignColors.onPrimary.withValues(alpha: Alpha.v25),
-                    child: Center(child: Text(initial, maxLines: 1, style: Ink3D.text(28, FontWeight.w700, DesignColors.onPrimary, letterSpacing: 0))),
-                  ),
-                ),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: ProfileRoundButton(icon: failed ? Icons.refresh_rounded : Icons.edit_rounded, color: failed ? ListingTone.coral.g2 : ListingTone.indigo.g2),
-                ),
-              ],
+      final circle = SizedBox.square(
+        dimension: DS.s(76),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            ProfilePhotoCircle(
+              size: DS.s(72),
+              url: auth.user.value?.profilePhotoUrl,
+              localPath: busy ? photo.localPath.value : null,
+              placeholderPath: photo.placeholderPath,
+              busy: busy,
+              failed: failed,
+              ringColor: DesignColors.onPrimary.withValues(alpha: Alpha.v60),
+              ringWidth: DS.s(3),
+              failColor: ListingTone.coral.g1,
+              fallback: ColoredBox(
+                color: DesignColors.onPrimary.withValues(alpha: Alpha.v25),
+                child: Center(child: Text(initial, maxLines: 1, style: Ink3D.text(28, FontWeight.w700, DesignColors.onPrimary, letterSpacing: 0))),
+              ),
             ),
-          ),
+            if (failed) Positioned(right: 0, bottom: 0, child: ProfileRoundButton(key: retryKey, icon: Icons.refresh_rounded, color: ListingTone.coral.g2)),
+          ],
         ),
       );
+      if (!failed) return circle;
+      return Tap3D(onTap: photo.retryChange, label: ProfilePhotoStrings.tryAgain, exclude: true, child: circle);
     });
   }
 }

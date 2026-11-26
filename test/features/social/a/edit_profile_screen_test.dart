@@ -4,6 +4,9 @@ import 'package:bakhli/controllers/profile_photo_controller.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/social/a/edit/edit_profile_screen.dart';
 import 'package:bakhli/features/social/a/social_strings_a.dart';
+import 'package:bakhli/features/social/a/widgets/social_chips_a.dart';
+import 'package:bakhli/features/social/a/widgets/social_section_card.dart';
+import 'package:bakhli/features/social/shared/social_formats.dart';
 import 'package:bakhli/features/social/shared/social_me_controller.dart';
 import 'package:bakhli/models/user_model.dart';
 import 'package:bakhli/widgets/profile_photo_circle.dart';
@@ -171,6 +174,73 @@ void main() {
   testWidgets('the photo shows the camera badge', (t) async {
     await open(t);
     expect(find.byType(ProfileRoundButton), findsOneWidget);
+    await drain(t);
+  });
+
+  TextField nameField(WidgetTester t) => t.widget<TextField>(find.byKey(EditProfileScreen.nameKey));
+
+  testWidgets('the name field shows the 14 day rule and stays editable when no lock is set', (t) async {
+    await open(t);
+    expect(find.text(SocialStringsA.nameRule), findsOneWidget);
+    expect(nameField(t).readOnly, isFalse);
+    await drain(t);
+  });
+
+  testWidgets('a future nameChangeAllowedAt makes the name read-only with the next date', (t) async {
+    final until = DateTime.now().toUtc().add(const Duration(days: 9));
+    final server = installServer();
+    server.on('GET', '/social/me', socialMeJson(profile: {...myProfileJson(), 'nameChangeAllowedAt': until.toIso8601String()}));
+    Get.put(SocialMeController(), permanent: true);
+    await pumpSocial(t, const EditProfileScreen(), size: const Size(392, 2000));
+    expect(nameField(t).readOnly, isTrue);
+    expect(find.text(SocialStringsA.nameAgainOn(SocialFormats.dayMonth(until))), findsOneWidget);
+    expect(find.text(SocialStringsA.nameRule), findsNothing);
+    await drain(t);
+  });
+
+  testWidgets('a past nameChangeAllowedAt leaves the name editable', (t) async {
+    final server = installServer();
+    server.on('GET', '/social/me', socialMeJson(profile: {...myProfileJson(), 'nameChangeAllowedAt': '2020-01-01T00:00:00Z'}));
+    Get.put(SocialMeController(), permanent: true);
+    await pumpSocial(t, const EditProfileScreen(), size: const Size(392, 2000));
+    expect(nameField(t).readOnly, isFalse);
+    expect(find.text(SocialStringsA.nameRule), findsOneWidget);
+    await drain(t);
+  });
+
+  testWidgets('NameChangeTooSoon locks the name, restores it and keeps the other edits', (t) async {
+    final server = await open(t);
+    final until = DateTime.utc(2026, 12, 11, 6);
+    server.on('PUT', '/social/me/profile', {
+      'error': {'type': 'NameChangeTooSoon', 'message': 'Too soon'},
+      'data': {'nextAllowedAt': until.toIso8601String()},
+    }, status: 409);
+    await t.enterText(find.byKey(EditProfileScreen.nameKey), 'Rahul V');
+    await t.enterText(find.byKey(const ValueKey('edit_about')), 'Weekend trekker.');
+    await settle(t);
+    await t.tap(find.byKey(EditProfileScreen.saveKey));
+    await settle(t);
+    expect(nameField(t).readOnly, isTrue);
+    expect(nameField(t).controller!.text, 'Rahul Verma');
+    expect(find.text(SocialStringsA.nameAgainOn(SocialFormats.dayMonth(until))), findsOneWidget);
+    expect((find.byKey(const ValueKey('edit_about')).evaluate().single.widget as TextField).controller!.text, 'Weekend trekker.');
+    expect(find.text(SocialStringsA.changes(1)), findsOneWidget);
+    await drain(t);
+  });
+
+  testWidgets('interests and skills are equal tiles in a grid, sections use the shared section card', (t) async {
+    await open(t);
+    expect(find.byType(SocialSectionCard), findsNWidgets(5));
+    final tiles = find.byType(ChoiceArtTile);
+    expect(tiles, findsWidgets);
+    final h = t.getSize(tiles.first).height;
+    for (final e in tiles.evaluate()) {
+      expect(t.getSize(find.byWidget(e.widget)).height, closeTo(h, 0.5));
+    }
+    final a = t.getRect(find.byKey(const ValueKey('edit_interest_Mountains')));
+    final b = t.getRect(find.byKey(const ValueKey('edit_interest_Treks')));
+    expect(b.top, closeTo(a.top, 0.5));
+    expect(b.width, closeTo(a.width, 0.5));
     await drain(t);
   });
 }
