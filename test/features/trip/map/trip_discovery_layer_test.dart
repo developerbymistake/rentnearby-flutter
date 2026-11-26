@@ -454,21 +454,23 @@ void main() {
   });
 
   test('lift: a marker under the card band moves the camera once, a clear marker does not', () async {
-    final l = layer(source: FakeSource([spot('a')]), viewSize: () => const Size(360, 760));
+    // tall enough that the unscaled (default DS) halo target stays inside the view and is not clamped
+    final l = layer(source: FakeSource([spot('a')]), viewSize: () => const Size(360, 1000));
     await l.refreshData();
     final port = FakePort()..screen = (pts) => [(x: 180.0, y: 120.0), (x: 180.0, y: 20.0), (x: 280.0, y: 120.0)];
     await l.attach(port);
     port.calls.clear();
     await l.onFeatureTap(DiscIds.layerBadge, 'a');
     expect(port.calls, ['set:disc-sel', 'screen:3', 'animate']);
-    // marker 260 px above the centre; it must land at top 100 + card 150 + two halos of its kind at the current zoom
+    // marker 380 px above the centre; it must land at top 100 + card 150 + two halos of its kind at the current zoom
     final zoom = TripDiscoveryLayer.zoomOf(10000, 30.5);
     expect(zoom, inInclusiveRange(12, 13));
     final halo = DiscTuning.trip.haloRadiusAt(l.selectedKind.value!.name, zoom,
         dotKind: DiscSelKind.dot.name, plannedKind: DiscSelKind.planned.name, photoScale: DiscPaint.selIconScale);
     expect(halo, lessThan(DiscTuning.trip.haloPhotoDp / 2));
     final target = 100 + 150 + 2 * halo;
-    expect(port.animated!.lat, closeTo(30.5 - (380 - target) / 10000, 1e-9));
+    expect(target, lessThan(1000 - halo));
+    expect(port.animated!.lat, closeTo(30.5 - (500 - target) / 10000, 1e-9));
     expect(port.animated!.lon, closeTo(78.2, 1e-9));
     port
       ..calls.clear()

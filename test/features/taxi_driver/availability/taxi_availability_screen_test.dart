@@ -89,6 +89,7 @@ void main() {
             await open(t, AvailFake(read: json), plan: OwnerPlans.plus, size: size, scale: scale);
             expect(t.takeException(), isNull);
             if (rows == 0) {
+              await t.scrollUntilVisible(find.text('No days off.'), 300, scrollable: find.byType(Scrollable).first);
               expect(find.text('No days off.'), findsOneWidget);
               expect(find.text('Your days off'), findsNothing);
             } else {
