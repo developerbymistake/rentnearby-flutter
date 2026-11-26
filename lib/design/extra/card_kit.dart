@@ -593,6 +593,7 @@ class ListRow extends StatelessWidget {
     return Padding(
       padding: _scaleMargin(margin),
       child: _Surface(
+        radius: CardRadius.card,
         shadow: ShadowTokens.elev1,
         press: false,
         child: Padding(
@@ -677,6 +678,7 @@ class ListRow extends StatelessWidget {
     return Padding(
       padding: _scaleMargin(margin),
       child: _Surface(
+        radius: CardRadius.card,
         onTap: onTap,
         shadow: rich ? ShadowTokens.tight(tone.accentDark) : (elevated ? ShadowTokens.elev3 : ShadowTokens.elev1),
         gradient: rich
@@ -793,6 +795,7 @@ class SlimBar extends StatelessWidget {
       Padding(
         padding: _scaleMargin(margin),
         child: _Surface(
+          radius: CardRadius.card,
           shadow: ShadowTokens.elev1,
           press: false,
           child: SizedBox(
@@ -829,6 +832,7 @@ class SlimBar extends StatelessWidget {
     return Padding(
       padding: _scaleMargin(margin),
       child: _Surface(
+        radius: CardRadius.card,
         onTap: onTap,
         shadow: filled ? ShadowTokens.glow(tone.glow) : (elevated ? ShadowTokens.elev3 : ShadowTokens.elev1),
         color: filled ? Colors.transparent : DesignColors.surface,

@@ -5,6 +5,7 @@ import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
 import '../tokens/design_scale.dart';
+import '../tokens/card_tokens.dart';
 
 abstract final class ChatLook3D {
   static const Color bannerFill = Color(0xFFFFF1DE);
@@ -58,18 +59,8 @@ abstract final class ChatLook3D {
   ];
 }
 
-BorderRadius get _kRow => BorderRadius.only(
-  topLeft: Radius.circular(DS.radius(8)),
-  topRight: Radius.circular(DS.radius(54)),
-  bottomLeft: Radius.circular(DS.radius(8)),
-  bottomRight: Radius.circular(DS.radius(8)),
-);
-BorderRadius get _kChip => BorderRadius.only(
-  topLeft: Radius.circular(DS.radius(8)),
-  topRight: Radius.circular(DS.radius(24)),
-  bottomLeft: Radius.circular(DS.radius(8)),
-  bottomRight: Radius.circular(DS.radius(8)),
-);
+BorderRadius get _kRow => DS.br(CardRadius.hero);
+BorderRadius get _kChip => DS.br(CardRadius.card);
 
 double _scale(BuildContext context) => MediaQuery.textScalerOf(context).scale(1);
 
@@ -146,12 +137,14 @@ class ChatThreadCard extends StatelessWidget {
     this.dimmed = false,
     this.onTap,
     this.photoUrl,
+    this.avatarGradient,
+    this.compactTop = false,
   }) : skeleton = false;
 
   const ChatThreadCard.skeleton({super.key})
     : tone = null,
       initial = '',
-      sticker = '',
+      sticker = null,
       tag = '',
       title = '',
       subtitle = '',
@@ -161,11 +154,13 @@ class ChatThreadCard extends StatelessWidget {
       dimmed = false,
       onTap = null,
       photoUrl = null,
+      avatarGradient = null,
+      compactTop = false,
       skeleton = true;
 
   final ListingTone? tone;
   final String initial;
-  final String sticker;
+  final String? sticker;
   final String tag;
   final String title;
   final String subtitle;
@@ -175,9 +170,12 @@ class ChatThreadCard extends StatelessWidget {
   final bool dimmed;
   final VoidCallback? onTap;
   final String? photoUrl;
+  final Gradient? avatarGradient;
+  final bool compactTop;
   final bool skeleton;
 
   static const double topRoom = 44;
+  static const double compactRoom = 18;
 
   Widget _bone(double w, double h) => Container(
     width: DS.s(w),
@@ -285,14 +283,14 @@ class ChatThreadCard extends StatelessWidget {
     );
     final halo = av + DS.s(16);
     final body = Padding(
-      padding: EdgeInsets.fromLTRB(DS.s(14), DS.s(topRoom), DS.s(14), 0),
+      padding: EdgeInsets.fromLTRB(DS.s(14), DS.s(compactTop ? compactRoom : topRoom), DS.s(14), compactTop ? DS.gv(4) : 0),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           card,
           Positioned(
             left: DS.s(6),
-            top: DS.s(-30),
+            top: DS.s(compactTop ? -12 : -30),
             child: ExcludeSemantics(
               child: Container(
                 width: halo,
@@ -303,7 +301,7 @@ class ChatThreadCard extends StatelessWidget {
           ),
           Positioned(
             left: DS.s(14),
-            top: DS.s(-22),
+            top: DS.s(compactTop ? -4 : -22),
             child: ExcludeSemantics(
               child: Container(
                 width: av,
@@ -312,7 +310,7 @@ class ChatThreadCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: skeleton ? ChatLook3D.skeletonBone : null,
-                  gradient: skeleton ? null : ChatLook3D.avatarGradient,
+                  gradient: skeleton ? null : (avatarGradient ?? ChatLook3D.avatarGradient),
                   border: Border.all(color: skeleton ? ChatLook3D.skeletonRing : Colors.white, width: DS.s(4)),
                   boxShadow: skeleton ? null : ChatLook3D.avatar,
                 ),
@@ -326,12 +324,12 @@ class ChatThreadCard extends StatelessWidget {
               ),
             ),
           ),
-          if (!skeleton)
+          if (!skeleton && sticker != null)
             Positioned(
               left: av * 0.6 + DS.s(13),
               top: av * 0.43,
               child: ExcludeSemantics(
-                child: Art3D(asset: sticker, size: narrow ? 44 : 52, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.3),
+                child: Art3D(asset: sticker!, size: narrow ? 44 : 52, shadowBlur: 3, shadowOffset: const Offset(2, 4), shadowAlpha: 0.3),
               ),
             ),
         ],
@@ -420,6 +418,10 @@ class ChatHeader3D extends StatelessWidget {
     required this.onMore,
     this.moreKey,
     this.photoUrl,
+    this.subtitleLead,
+    this.leading,
+    this.nameTrailing,
+    this.avatarGradient,
   });
 
   final ListingTone tone;
@@ -427,8 +429,12 @@ class ChatHeader3D extends StatelessWidget {
   final String? photoUrl;
   final String name;
   final String subtitle;
-  final String sticker;
-  final String art;
+  final Widget? subtitleLead;
+  final String? sticker;
+  final String? art;
+  final Widget? leading;
+  final Widget? nameTrailing;
+  final Gradient? avatarGradient;
   final VoidCallback? onBack;
   final ChatMenuTap? onMore;
   final Key? moreKey;
@@ -438,6 +444,19 @@ class ChatHeader3D extends StatelessWidget {
     final top = MediaQuery.paddingOf(context).top;
     final narrow = MediaQuery.sizeOf(context).width < 340;
     final artSize = narrow ? 66.0 : 82.0;
+    final art = this.art;
+    final sticker = this.sticker;
+    final lead = subtitleLead ?? (sticker == null ? null : Image.asset(sticker, width: DS.s(18), height: DS.s(18), fit: BoxFit.contain));
+    final nameText = FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Text(
+        name,
+        maxLines: 1,
+        softWrap: false,
+        style: Ink3D.text(21, FontWeight.w700, Colors.white, letterSpacing: 0.4),
+      ),
+    );
     return Container(
       width: double.infinity,
       constraints: BoxConstraints(minHeight: DS.s(158) + top),
@@ -450,13 +469,14 @@ class ChatHeader3D extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Positioned(
-            right: DS.s(-4),
-            bottom: DS.s(-14),
-            child: ExcludeSemantics(
-              child: Art3D(asset: art, size: artSize, halo: artSize + 4, haloColor: ChatLook3D.headerHalo, shadowOffset: const Offset(5, 8), shadowAlpha: 0.3),
+          if (art != null)
+            Positioned(
+              right: DS.s(-4),
+              bottom: DS.s(-14),
+              child: ExcludeSemantics(
+                child: Art3D(asset: art, size: artSize, halo: artSize + 4, haloColor: ChatLook3D.headerHalo, shadowOffset: const Offset(5, 8), shadowAlpha: 0.3),
+              ),
             ),
-          ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
@@ -479,24 +499,26 @@ class ChatHeader3D extends StatelessWidget {
               ),
               Gap.v(12),
               Padding(
-                padding: EdgeInsets.only(right: DS.s(artSize) + DS.s(2)),
+                padding: EdgeInsets.only(right: art == null ? 0 : DS.s(artSize) + DS.s(2)),
                 child: Row(
                   children: [
-                    Container(
-                      width: DS.s(54),
-                      height: DS.s(54),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: ChatLook3D.avatarFill,
-                        border: Border.all(color: ChatLook3D.avatarRing, width: DS.s(3)),
-                      ),
-                      child: ProfileAvatar(
-                        photoUrl: photoUrl,
-                        size: DS.s(54) - 2 * DS.s(3),
-                        fallback: Text(initial, textScaler: TextScaler.noScaling, style: Ink3D.text(23, FontWeight.w700, Colors.white, letterSpacing: 0)),
-                      ),
-                    ),
+                    leading ??
+                        Container(
+                          width: DS.s(54),
+                          height: DS.s(54),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: avatarGradient == null ? ChatLook3D.avatarFill : null,
+                            gradient: avatarGradient,
+                            border: Border.all(color: ChatLook3D.avatarRing, width: DS.s(3)),
+                          ),
+                          child: ProfileAvatar(
+                            photoUrl: photoUrl,
+                            size: DS.s(54) - 2 * DS.s(3),
+                            fallback: Text(initial, textScaler: TextScaler.noScaling, style: Ink3D.text(23, FontWeight.w700, Colors.white, letterSpacing: 0)),
+                          ),
+                        ),
                     Gap.h(12),
                     Expanded(
                       child: Column(
@@ -505,22 +527,17 @@ class ChatHeader3D extends StatelessWidget {
                         children: [
                           Semantics(
                             header: true,
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                name,
-                                maxLines: 1,
-                                softWrap: false,
-                                style: Ink3D.text(21, FontWeight.w700, Colors.white, letterSpacing: 0.4),
-                              ),
-                            ),
+                            child: nameTrailing == null
+                                ? nameText
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [Flexible(child: nameText), Gap.h(8), ExcludeSemantics(child: nameTrailing!)],
+                                  ),
                           ),
                           Gap.v(2),
                           Row(
                             children: [
-                              ExcludeSemantics(child: Image.asset(sticker, width: DS.s(18), height: DS.s(18), fit: BoxFit.contain)),
-                              Gap.h(5),
+                              if (lead != null) ...[ExcludeSemantics(child: lead), Gap.h(5)],
                               Expanded(
                                 child: Text(
                                   subtitle,

@@ -1,9 +1,10 @@
 import 'package:flutter/widgets.dart';
 
 abstract final class CardRadius {
-  static const double heroNotch = 54;
-  static const double tileNotch = 24;
+  static const double heroNotch = 32;
+  static const double tileNotch = 14;
   static const double corner = 8;
+  static const double uniformValue = 12;
   static const double chipValue = 8;
   static const double sheetValue = 28;
   static const double headerValue = 32;
@@ -26,6 +27,8 @@ abstract final class CardRadius {
     bottomLeft: Radius.circular(corner),
     bottomRight: Radius.circular(corner),
   );
+
+  static const BorderRadius card = BorderRadius.all(Radius.circular(uniformValue));
 
   static const BorderRadius chip = BorderRadius.all(Radius.circular(chipValue));
   static const BorderRadius pill = BorderRadius.all(Radius.circular(999));

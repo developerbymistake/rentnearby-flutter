@@ -14,6 +14,8 @@ import '../controllers/notification_controller.dart';
 import '../controllers/report_controller.dart';
 import '../features/buddy/buddy_bindings.dart';
 import '../features/buddy/buddy_live.dart';
+import '../features/social/shared/social_me_controller.dart';
+import '../features/social/social_bindings.dart';
 import '../features/map_discovery/data/map_pack_warmup.dart';
 import '../features/trip/enquiries/my_enquiry_count_controller.dart';
 import '../features/owner_core/session/shell_teardown.dart';
@@ -92,6 +94,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     final traveller = _auth.canUseTravellerFeatures;
     if (traveller) Get.put(MyEnquiryCountController());
     BuddyBindings.ensure(traveller: traveller);
+    SocialBindings.ensure(traveller: traveller);
     OwnerShellBindings.ensure(_shellKind);
     _chatCtrl = Get.put(ChatController());
     Get.put(ChatHubService());
@@ -221,6 +224,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       Get.find<NotificationController>().loadUnreadCount();
       MyEnquiryCountController.maybe?.refresh();
       BuddyLive.onResume();
+      SocialMeController.maybe?.refreshQuiet();
       // Chat badge's app-resume anchor — pushes may have been missed while backgrounded
       // (the hub reconnect above isn't guaranteed to fire if the connection quietly died).
       _chatCtrl.fetchUnreadCount();

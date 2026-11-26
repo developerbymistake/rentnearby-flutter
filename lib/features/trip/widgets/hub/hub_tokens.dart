@@ -23,12 +23,7 @@ abstract final class HubTokens {
 
   static List<BoxShadow> get cardShadow => DS.shadows(_cardShadow);
 
-  static BorderRadius cardRadius(double corner) => BorderRadius.only(
-        topLeft: Radius.circular(DS.radius(8)),
-        topRight: Radius.circular(DS.radius(corner)),
-        bottomLeft: Radius.circular(DS.radius(8)),
-        bottomRight: Radius.circular(DS.radius(8)),
-      );
+  static BorderRadius cardRadius(double corner) => DS.br(corner >= 36 ? CardRadius.hero : corner >= 26 ? CardRadius.tile : CardRadius.card);
 
   static const LinearGradient pageGradient = LinearGradient(
     begin: Alignment.topCenter,

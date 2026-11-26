@@ -24,8 +24,8 @@ abstract final class JobsLook {
   static List<BoxShadow> toneGlow(ListingTone t) => [BoxShadow(color: t.haloBase.withValues(alpha: 0.5), offset: DS.shadowOffset(const Offset(1.1, 5)), blurRadius: DS.shadowBlur(10))];
   static Color soft(ListingTone t) => t.haloBase.withValues(alpha: 0.14);
   static Color halo(ListingTone t) => t.haloBase.withValues(alpha: 0.16);
-  static BorderRadius get tileRadius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
-  static BorderRadius get infoRadius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(40)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
+  static BorderRadius get tileRadius => DS.br(CardRadius.card);
+  static BorderRadius get infoRadius => DS.br(CardRadius.hero);
 }
 
 class JobsBackButton extends StatelessWidget {

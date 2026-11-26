@@ -24,7 +24,7 @@ class _BookingExpenseLineState extends State<BookingExpenseLine> {
   MoneySummaryController? _c;
 
   static BorderRadius get _radius =>
-      DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(18), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
+      DS.br(CardRadius.card);
 
   @override
   void initState() {

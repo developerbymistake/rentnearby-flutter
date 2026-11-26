@@ -24,6 +24,9 @@ import '../features/taxi/taxi_routes.dart';
 import '../features/taxi/ways/taxi_ways_routes.dart';
 import '../features/trip/trip_routes.dart';
 import '../features/buddy/buddy_routes.dart';
+import '../features/social/a/social_pages_a.dart';
+import '../features/social/b/social_pages_b.dart';
+import '../features/social/c/social_pages_c.dart';
 import '../features/stay_owner/stay_owner_routes.dart';
 import '../features/taxi_driver/taxi_driver_routes.dart';
 import '../navigation/traveller_gate.dart';
@@ -113,6 +116,18 @@ class AppRoutes {
   static const String tripSettle = '/trip-settle';
   static const String tripMoneySummary = '/trip-money-summary';
 
+  static const String settings = '/settings';
+  static const String editProfile = '/edit-profile';
+  static const String traveller = '/traveller';
+  static const String people = '/people';
+  static const String addBuddies = '/add-buddies';
+  static const String travelBuddies = '/travel-buddies';
+  static const String tripPost = '/trip-post';
+  static const String postTrip = '/post-trip';
+  static const String joinRequests = '/join-requests';
+  static const String dmRoom = '/dm-room';
+  static const String seekerPlus = '/seeker-plus';
+
   static const String stayCalendar = '/stay-calendar';
   static const String stayCalendarEntry = '/stay-calendar-entry';
   static const String stayUpcoming = '/stay-upcoming';
@@ -184,6 +199,17 @@ class AppRoutes {
     tripMoneySummary,
     myJourneys,
     savedJourney,
+    settings,
+    editProfile,
+    traveller,
+    people,
+    addBuddies,
+    travelBuddies,
+    tripPost,
+    postTrip,
+    joinRequests,
+    dmRoom,
+    seekerPlus,
   };
 
   static const Set<String> ownerOnly = {plansBilling, planHistory};
@@ -385,6 +411,9 @@ class AppRoutes {
     ...taxiWaysPages.map(_gate),
     ...tripPages.map(_gate),
     ...buddyPages.map(_gate),
+    ...socialPagesA.map(_gate),
+    ...socialPagesB.map(_gate),
+    ...socialPagesC.map(_gate),
     ...stayOwnerPages,
     ...taxiDriverPages,
   ];

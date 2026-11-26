@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../design/tokens/card_tokens.dart';
+
 class TaxiRequestLook {
   TaxiRequestLook._();
 
@@ -10,10 +12,5 @@ class TaxiRequestLook {
   static const List<BoxShadow> thumb = <BoxShadow>[BoxShadow(color: Color(0x4D000000), offset: Offset(0, 1), blurRadius: 4)];
   static const List<BoxShadow> whitePill = <BoxShadow>[BoxShadow(color: Color(0x33000000), offset: Offset(3, 4), blurRadius: 8)];
 
-  static const BorderRadius chipRadius = BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(22),
-    bottomLeft: Radius.circular(8),
-    bottomRight: Radius.circular(8),
-  );
+  static const BorderRadius chipRadius = CardRadius.card;
 }

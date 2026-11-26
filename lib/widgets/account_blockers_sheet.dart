@@ -156,7 +156,7 @@ class _AccountBlockersSheetState extends State<AccountBlockersSheet> {
         children: [
           Gap.v(8),
           Container(
-            decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.hero), boxShadow: DS.shadows(ShadowTokens.elev1)),
+            decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.br(CardRadius.card), boxShadow: DS.shadows(ShadowTokens.elev1)),
             child: Column(
               children: [
                 for (var i = 0; i < _rows.length; i++) ...[

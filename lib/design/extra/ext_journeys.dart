@@ -6,6 +6,7 @@ import 'meals_card_v.dart';
 import 'motion_kit.dart';
 import 'pill_buttons_3d.dart';
 import '../tokens/design_scale.dart';
+import '../tokens/card_tokens.dart';
 
 abstract final class JourneyArt {
   static const String automobile = 'assets/images/design/travel3d/automobile.png';
@@ -610,7 +611,7 @@ class JourneyStop3D extends StatelessWidget {
         decoration: BoxDecoration(
           color: change ? null : Colors.white,
           gradient: change ? const LinearGradient(colors: [Color(0xFFFFE7C2), Color(0xFFFFD59A)], begin: Alignment.topLeft, end: Alignment.bottomRight) : null,
-          borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+          borderRadius: DS.br(CardRadius.card),
           boxShadow: [
             change
                 ? BoxShadow(color: Color(0x4DF57C00), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(10))
@@ -670,7 +671,7 @@ class JourneyTripCard3D extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: DS.s(16), vertical: DS.s(12)),
         decoration: BoxDecoration(
           gradient: t.gradient,
-          borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+          borderRadius: DS.br(CardRadius.card),
           boxShadow: [BoxShadow(color: Color(0x805C5EDD), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(10))],
         ),
         child: Row(
@@ -721,7 +722,7 @@ class JourneyTotalCard3D extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: DS.s(16), vertical: DS.s(14)),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+          borderRadius: DS.br(CardRadius.card),
           boxShadow: [BoxShadow(color: Color(0x409E9E9E), offset: DS.shadowOffset(const Offset(1.1, 1.1)), blurRadius: DS.shadowBlur(10))],
         ),
         child: Column(
@@ -781,7 +782,7 @@ class JourneyBanner3D extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(DS.s(14), linkLabel == null ? DS.s(12) : DS.s(4), DS.s(14), linkLabel == null ? DS.s(12) : DS.s(4)),
       decoration: BoxDecoration(
         color: error ? JourneyInk.errFill : JourneyInk.warnFill,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        borderRadius: DS.br(CardRadius.card),
         boxShadow: [BoxShadow(color: Color(0x339E9E9E), offset: DS.shadowOffset(const Offset(1.1, 1.1)), blurRadius: DS.shadowBlur(10))],
       ),
       child: button == null
@@ -979,7 +980,7 @@ class JourneyLegTile3D extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(narrow ? DS.s(84) : DS.s(104), DS.s(12), DS.s(14), DS.s(12)),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+              borderRadius: DS.br(CardRadius.tile),
               boxShadow: [BoxShadow(color: Color(0x4D9E9E9E), offset: DS.shadowOffset(const Offset(1.1, 1.1)), blurRadius: DS.shadowBlur(10))],
             ),
             child: Column(
@@ -1121,7 +1122,7 @@ class JourneyDriverPick3D extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: DS.s(14), vertical: DS.s(8)),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+          borderRadius: DS.br(CardRadius.card),
           border: Border.all(color: current ? t.g2 : Colors.transparent, width: DS.s(2.5)),
           boxShadow: [BoxShadow(color: Color(0x479E9E9E), offset: DS.shadowOffset(const Offset(1.1, 1.1)), blurRadius: DS.shadowBlur(10))],
         ),
@@ -1184,7 +1185,7 @@ class JourneyDriverPickSkeleton extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: DS.s(14), vertical: DS.s(12)),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        borderRadius: DS.br(CardRadius.card),
         boxShadow: [BoxShadow(color: Color(0x479E9E9E), offset: DS.shadowOffset(const Offset(1.1, 1.1)), blurRadius: DS.shadowBlur(10))],
       ),
       child: Row(

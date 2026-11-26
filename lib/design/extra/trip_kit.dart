@@ -143,7 +143,7 @@ class TripKit {
 
   static const BorderRadius cardRadius = CardRadius.tile;
 
-  static const BorderRadius cardRadiusSmall = CardRadius.tile;
+  static const BorderRadius cardRadiusSmall = CardRadius.card;
 
   static const String iconDir = 'assets/images/design/fitness_app/';
 

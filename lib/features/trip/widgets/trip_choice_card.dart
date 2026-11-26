@@ -64,12 +64,7 @@ class TripChoiceCard extends StatelessWidget {
                 padding: DS.insets(l: artSize + 22, t: 12, r: 14, b: 12),
                 decoration: BoxDecoration(
                   gradient: tone.gradient,
-                  borderRadius: DS.br(const BorderRadius.only(
-                    topLeft: Radius.circular(8),
-                    topRight: Radius.circular(32),
-                    bottomLeft: Radius.circular(8),
-                    bottomRight: Radius.circular(8),
-                  )),
+                  borderRadius: DS.br(CardRadius.card),
                   boxShadow: selected ? [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1.1, 6)), blurRadius: DS.shadowBlur(12))] : null,
                 ),
                 child: Row(

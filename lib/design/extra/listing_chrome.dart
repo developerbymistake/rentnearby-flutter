@@ -4,19 +4,10 @@ import '../tokens/design_scale.dart';
 import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
 import 'motion_kit.dart';
+import '../tokens/card_tokens.dart';
 
-const BorderRadius _kChipRadius = BorderRadius.only(
-  topLeft: Radius.circular(8),
-  topRight: Radius.circular(24),
-  bottomLeft: Radius.circular(8),
-  bottomRight: Radius.circular(8),
-);
-const BorderRadius _kWhiteCardRadius = BorderRadius.only(
-  topLeft: Radius.circular(8),
-  topRight: Radius.circular(68),
-  bottomLeft: Radius.circular(8),
-  bottomRight: Radius.circular(8),
-);
+const BorderRadius _kChipRadius = CardRadius.card;
+const BorderRadius _kWhiteCardRadius = CardRadius.hero;
 const Color _kInlineHint = Color(0xFF9FA3AB);
 const Color _kChevron = Color(0xFFB0B4BD);
 const Color _kBadge = Color(0xFFFF5287);
@@ -489,6 +480,7 @@ class RoundIconButton3D extends StatelessWidget {
     this.size = 46,
     this.semanticsLabel,
     this.scaled = true,
+    this.tint,
   });
 
   final String asset;
@@ -497,6 +489,7 @@ class RoundIconButton3D extends StatelessWidget {
   final double size;
   final String? semanticsLabel;
   final bool scaled;
+  final Color? tint;
 
   static Widget count(String text, {bool scaled = true}) => Container(
     padding: EdgeInsets.symmetric(horizontal: DS.s(5, scaled: scaled), vertical: DS.s(1, scaled: scaled)),
@@ -540,6 +533,8 @@ class RoundIconButton3D extends StatelessWidget {
                     height: box * 28 / 46,
                     fit: BoxFit.contain,
                     filterQuality: FilterQuality.high,
+                    color: tint,
+                    colorBlendMode: tint == null ? null : BlendMode.modulate,
                   ),
                 ),
               ),
@@ -1203,11 +1198,13 @@ class IconRow3D extends StatelessWidget {
     this.divider = false,
     this.tile = 56,
     this.titleStyle,
+    this.subtitleChild,
   });
 
   final String art;
   final String title;
   final String? subtitle;
+  final Widget? subtitleChild;
   final Widget? trailing;
   final VoidCallback? onTap;
   final ListingTone? tone;
@@ -1278,7 +1275,9 @@ class IconRow3D extends StatelessWidget {
                         height: 1.3,
                       ),
                 ),
-                if (sub != null && sub.isNotEmpty)
+                if (subtitleChild != null)
+                  Padding(padding: EdgeInsets.only(top: DS.s(3)), child: subtitleChild)
+                else if (sub != null && sub.isNotEmpty)
                   Text(
                     sub,
                     maxLines: 2,

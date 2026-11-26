@@ -171,7 +171,7 @@ class TripJourneyCard {
     final again = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: DS.br(CardRadius.tile)),
+        shape: RoundedRectangleBorder(borderRadius: DS.br(CardRadius.card)),
         title: Text(
           TripStringsJourneyCard.startChanged,
           style: TextStyle(fontFamily: FitnessAppTheme.fontName, fontWeight: FontWeight.w600, fontSize: DS.f(17)),

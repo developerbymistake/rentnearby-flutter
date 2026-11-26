@@ -91,7 +91,7 @@ class MoneySummaryBody extends StatelessWidget {
   final ExpenseSummary summary;
 
   static BorderRadius get _cardRadius => DS.br(
-    const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(40), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)),
+    CardRadius.tile,
   );
 
   @override

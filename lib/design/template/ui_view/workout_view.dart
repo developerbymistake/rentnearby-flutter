@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../fitness_app_theme.dart';
 
 import 'package:bakhli/design/tokens/shadow_tokens.dart';
+import '../../tokens/card_tokens.dart';
 class WorkoutView extends StatelessWidget {
   final AnimationController? animationController;
   final Animation<double>? animation;
@@ -29,11 +30,7 @@ class WorkoutView extends StatelessWidget {
                     FitnessAppTheme.nearlyDarkBlue,
                     TemplateTokens.workoutPurple
                   ], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                  borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(8.0),
-                      bottomLeft: Radius.circular(8.0),
-                      bottomRight: Radius.circular(8.0),
-                      topRight: Radius.circular(68.0)),
+                  borderRadius: CardRadius.hero,
                   boxShadow: <BoxShadow>[
                     ShadowTokens.tint(FitnessAppTheme.grey, ShadowSpec.glowSpec),
                   ],

@@ -1,0 +1,37 @@
+import 'social_models.dart';
+
+abstract final class SocialStrings {
+  static const String follow = 'Follow';
+  static const String following = 'Following';
+  static const String requested = 'Requested';
+  static const String followBack = 'Follow back';
+  static const String message = 'Message';
+  static const String addToBuddies = 'Add to My Buddies';
+  static const String buddy = 'Buddy';
+  static const String report = 'Report';
+  static const String block = 'Block';
+  static const String followsYou = 'Follows you';
+  static const String followEachOther = 'You follow each other';
+  static const String safetyMeet = 'Meet in a public place first. Never send money before you meet.';
+  static const String retry = 'Retry';
+  static const String offline = 'You are offline. Check your connection.';
+  static const String gone = 'This is no longer available.';
+  static const String failed = 'Something went wrong. Try again.';
+  static const String reportSub = 'Tell us what is wrong';
+  static const String blockSub = 'They are not told';
+  static const String menOnly = 'Men only';
+  static const String womenOnly = 'Women only';
+
+  static String mutualsLine(Mutuals m) {
+    if (m.isEmpty) return '';
+    final first = m.names.isEmpty ? null : m.names.first;
+    if (first == null) return mutualCount(m.count);
+    final others = m.count - 1;
+    if (others <= 0) return 'Followed by $first';
+    return 'Followed by $first and $others ${others == 1 ? 'other' : 'others'} you know';
+  }
+
+  static String mutualCount(int n) => '$n mutual';
+
+  static String buddyLine(int tripsTogether) => tripsTogether <= 0 ? buddy : '$buddy · $tripsTogether ${tripsTogether == 1 ? 'trip' : 'trips'} together';
+}

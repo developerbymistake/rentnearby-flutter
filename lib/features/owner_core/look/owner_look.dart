@@ -47,12 +47,7 @@ class OwnerLook {
   static const Color greySoft = OwnerTokens.greySoft;
   static const Color plus = DesignColors.primary;
 
-  static BorderRadius cardRadius([double topRight = 36]) => DS.br(BorderRadius.only(
-        topLeft: const Radius.circular(8),
-        topRight: Radius.circular(topRight > 36 ? 36 : topRight),
-        bottomLeft: const Radius.circular(8),
-        bottomRight: const Radius.circular(8),
-      ));
+  static BorderRadius cardRadius([double topRight = 36]) => DS.br(topRight >= 36 ? CardRadius.hero : topRight >= 26 ? CardRadius.tile : CardRadius.card);
 
   static final OwnerLook stay = OwnerLook(
     palette: ListingPalette.forest,

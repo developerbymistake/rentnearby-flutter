@@ -37,9 +37,9 @@ abstract final class StayOwnerInk {
   static const List<BoxShadow> pill = [BoxShadow(color: Color(0x33000000), offset: Offset(0, 2), blurRadius: 8)];
 }
 
-const BorderRadius _card54Raw = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(36), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
-const BorderRadius _card68Raw = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(36), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
-const BorderRadius _tile24Raw = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
+const BorderRadius _card54Raw = CardRadius.hero;
+const BorderRadius _card68Raw = CardRadius.hero;
+const BorderRadius _tile24Raw = CardRadius.card;
 
 BorderRadius get _card54 => DS.br(_card54Raw);
 BorderRadius get _card68 => DS.br(_card68Raw);
@@ -132,7 +132,7 @@ class RoomCard3D extends StatelessWidget {
           Container(
             constraints: BoxConstraints(minHeight: DS.s(108)),
             padding: EdgeInsets.fromLTRB(DS.s(left), DS.s(12), DS.s(8), DS.s(14)),
-            decoration: BoxDecoration(borderRadius: _card54, gradient: tone.gradient, boxShadow: [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(10))]),
+            decoration: BoxDecoration(borderRadius: DS.br(CardRadius.card), gradient: tone.gradient, boxShadow: [BoxShadow(color: tone.shadow, offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(10))]),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -653,7 +653,7 @@ class PhotoTile3D extends StatelessWidget {
                 child: Container(
                   padding: EdgeInsets.fromLTRB(0, DS.s(14), 0, DS.s(4)),
                   decoration: BoxDecoration(
-                    borderRadius: DS.br(const BorderRadius.only(bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
+                    borderRadius: DS.br(const BorderRadius.vertical(bottom: Radius.circular(CardRadius.uniformValue))),
                     gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black.withValues(alpha: 0), Colors.black.withValues(alpha: 0.55)]),
                   ),
                   child: Text(coverLabel!, textAlign: TextAlign.center, maxLines: 1, style: Ink3D.text(11, FontWeight.w700, Colors.white)),
@@ -779,7 +779,7 @@ class _DashedRect extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rrect = RRect.fromRectAndCorners(Offset.zero & size, topLeft: Radius.circular(DS.s(8)), topRight: Radius.circular(DS.s(30)), bottomLeft: Radius.circular(DS.s(8)), bottomRight: Radius.circular(DS.s(8)));
+    final rrect = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(DS.s(CardRadius.uniformValue)));
     canvas.drawRRect(rrect, Paint()..color = fill);
     final path = Path()..addRRect(rrect.deflate(1));
     final paint = Paint()

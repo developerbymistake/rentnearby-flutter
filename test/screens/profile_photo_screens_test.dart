@@ -10,6 +10,8 @@ import 'package:bakhli/controllers/profile_photo_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/ext_auth.dart';
+import 'package:bakhli/features/social/a/onboarding/onboarding_steps.dart';
+import 'package:bakhli/features/social/a/social_strings_a.dart';
 import 'package:bakhli/features/taxi_driver/home/taxi_driver_home_controller.dart';
 import 'package:bakhli/models/my_plan_model.dart';
 import 'package:bakhli/models/user_model.dart';
@@ -23,6 +25,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart' hide Response;
 
+import '../support/onboarding_walk.dart';
 import '../support/owner_fakes.dart';
 import '../support/real_phone.dart';
 
@@ -50,7 +53,19 @@ class _Auth extends AuthController {
   }
 
   @override
-  Future<bool> createOnboardingAccount({required String phone, required String name}) async {
+  Future<bool> createOnboardingAccount({
+    required String phone,
+    required String name,
+    String? gender,
+    int? birthMonth,
+    int? birthYear,
+    List<String>? interests,
+    List<String>? skills,
+    List<String>? places,
+    String? about,
+    String? homeCityName,
+    String? homeStateName,
+  }) async {
     created.add(name);
     return createOk;
   }
@@ -210,61 +225,64 @@ void main() {
   tearDown(Get.reset);
 
   group('onboarding', () {
-    testWidgets('the photo block is the first child of the card, above the phone row', (t) async {
+    testWidgets('the photo block is the first child of the step 1 card, above the phone row', (t) async {
       _setup();
       _Photo().put();
       await _openOnboarding(t);
-      final card = t.widget<AuthCard>(find.byType(AuthCard));
-      expect(card.children.first, isA<ProfilePhotoBlock>());
-      expect(t.getTopLeft(find.byType(ProfilePhotoBlock)).dy, lessThan(t.getTopLeft(find.byType(AuthVerifiedRow)).dy));
-      expect(find.text(ProfilePhotoStrings.label), findsOneWidget);
-      expect(find.text(ProfilePhotoStrings.optionalHint), findsOneWidget);
+      final card = t.widget<OnboardingCard>(find.byType(OnboardingCard));
+      expect(card.children.first, isA<OnboardingPhotoRow>());
+      expect(t.getTopLeft(find.byType(OnboardingPhotoRow)).dy, lessThan(t.getTopLeft(find.byType(AuthVerifiedRow)).dy));
+      expect(find.text(SocialStringsA.addPhoto), findsOneWidget);
+      expect(find.text(SocialStringsA.addPhotoWhy), findsOneWidget);
+      final circle = t.getRect(find.byType(ProfilePhotoCircle));
+      expect(t.getTopLeft(find.text(SocialStringsA.addPhoto)).dx, greaterThan(circle.right), reason: 'copy sits right of the circle');
     });
 
-    testWidgets('Get Started without a photo: account created, no upload, no red ring', (t) async {
+    testWidgets('Finish without a photo: account created, no upload, no red ring', (t) async {
       _setup();
       final p = _Photo()..put();
       await _openOnboarding(t);
-      await t.enterText(find.byType(TextFormField), 'Rahul Mehra');
-      await _tap(t, find.text('Get Started'));
+      await OnboardingWalk.toFinish(t, name: 'Rahul Mehra');
+      await _tap(t, find.text(SocialStringsA.finish));
       expect(_auth.created, ['Rahul Mehra']);
       expect(p.sent, isEmpty);
       expect(find.text('done page'), findsOneWidget);
       await _drain(t);
     });
 
-    testWidgets('photo picked, no name: the existing name toast', (t) async {
+    testWidgets('photo picked, no name: Next stays off and the hint asks for the name', (t) async {
       _setup();
       final p = _Photo()..put();
       await _openOnboarding(t);
       await _tap(t, find.bySemanticsLabel(ProfilePhotoStrings.semProfilePhoto));
       expect(p.picks, 1);
       expect(find.byKey(ProfilePhotoCircle.localKey), findsOneWidget);
-      await _tap(t, find.text('Get Started'));
-      expect(find.text('Please enter your full name'), findsOneWidget);
+      final c = OnboardingWalk.controllerOf(t);
+      c.gender.value = SocialStringsA.male;
+      c.birthMonth.value = 1;
+      c.birthYear.value = DateTime.now().year - 18;
+      await t.pump();
+      expect(t.widget<GradientPillButton>(OnboardingWalk.finish).enabled, isFalse);
+      expect(find.text('Add your name'), findsOneWidget);
+      await _tap(t, OnboardingWalk.finish);
+      expect(find.text(SocialStringsA.obStep1), findsOneWidget);
       expect(_auth.created, isEmpty);
       await _drain(t);
     });
 
-    testWidgets('create ok + upload fails: name locked, Try again repeats only the upload', (t) async {
+    testWidgets('create ok + upload fails: Try again repeats only the upload', (t) async {
       _setup();
       final p = _Photo()
         ..fail = true
         ..put();
       await _openOnboarding(t);
       await _tap(t, find.bySemanticsLabel(ProfilePhotoStrings.semProfilePhoto));
-      await t.enterText(find.byType(TextFormField), 'Rahul Mehra');
-      await _tap(t, find.text('Get Started'));
+      await OnboardingWalk.toFinish(t, name: 'Rahul Mehra');
+      await _tap(t, find.text(SocialStringsA.finish));
       expect(_auth.created, ['Rahul Mehra']);
       expect(p.sent, hasLength(1));
-      expect(find.text(ProfilePhotoStrings.uploadFailed), findsOneWidget);
       expect(find.text(ProfilePhotoStrings.tryAgain), findsOneWidget);
-      expect(find.byKey(ProfilePhotoCircle.retryKey), findsOneWidget);
-      expect(t.widget<TextField>(find.byType(TextField)).readOnly, isTrue);
-      final failedCircle = t.widget<ProfilePhotoCircle>(find.byType(ProfilePhotoCircle));
-      expect((failedCircle.failed, failedCircle.ringWidth), (true, DS.s(3)));
-      expect(t.widget<AuthPillInput>(find.byType(AuthPillInput).last).locked, isTrue);
-      expect(t.widget<TextField>(find.byType(TextField)).style!.color, Ink3D.sub);
+      expect(find.text('done page'), findsNothing);
 
       p.fail = false;
       await _tap(t, find.text(ProfilePhotoStrings.tryAgain));
@@ -274,22 +292,49 @@ void main() {
       expect(find.text('done page'), findsOneWidget);
     });
 
-    testWidgets('create ok + server refuses the file (415): the circle opens the picker again', (t) async {
+    testWidgets('create ok + upload keeps failing: Skip for now leaves without the photo', (t) async {
+      _setup();
+      final p = _Photo()
+        ..fail = true
+        ..put();
+      await _openOnboarding(t);
+      await _tap(t, find.bySemanticsLabel(ProfilePhotoStrings.semProfilePhoto));
+      await OnboardingWalk.toFinish(t, name: 'Rahul Mehra');
+      expect(find.text(SocialStringsA.skipForNow), findsNothing);
+      await _tap(t, find.text(SocialStringsA.finish));
+      expect(find.text(ProfilePhotoStrings.tryAgain), findsOneWidget);
+      expect(find.text(SocialStringsA.skipForNow), findsOneWidget);
+      await _tap(t, find.text(SocialStringsA.skipForNow));
+      await t.pumpAndSettle();
+      expect(_auth.created, ['Rahul Mehra']);
+      expect(p.sent, hasLength(1));
+      expect(find.text('done page'), findsOneWidget);
+    });
+
+    testWidgets('create ok + server refuses the file (415): back on step 1 the circle opens the picker again', (t) async {
       _setup();
       final p = _Photo()
         ..error = _refused(415)
         ..put();
       await _openOnboarding(t);
       await _tap(t, find.bySemanticsLabel(ProfilePhotoStrings.semProfilePhoto));
-      await t.enterText(find.byType(TextFormField), 'Rahul Mehra');
-      await _tap(t, find.text('Get Started'));
+      await OnboardingWalk.toFinish(t, name: 'Rahul Mehra');
+      await _tap(t, find.text(SocialStringsA.finish));
       expect(p.sent, hasLength(1));
-      expect(find.byKey(ProfilePhotoCircle.retryKey), findsNothing);
+      expect(find.text(ProfilePhotoStrings.tryAgain), findsOneWidget);
       await _drain(t);
       p.error = null;
+      await t.binding.handlePopRoute();
+      await t.pump(const Duration(milliseconds: 300));
+      await t.binding.handlePopRoute();
+      await t.pump(const Duration(milliseconds: 300));
+      expect(find.text(SocialStringsA.obStep1), findsOneWidget);
+      expect(find.byKey(ProfilePhotoCircle.retryKey), findsNothing);
       await _tap(t, find.bySemanticsLabel(ProfilePhotoStrings.semProfilePhoto));
       expect(p.picks, 2);
       expect(p.sent, hasLength(1));
+      await _tap(t, OnboardingWalk.finish);
+      await _tap(t, OnboardingWalk.finish);
       await _tap(t, find.text(ProfilePhotoStrings.tryAgain));
       await t.pumpAndSettle();
       expect(_auth.created, ['Rahul Mehra']);
@@ -297,21 +342,22 @@ void main() {
       expect(find.text('done page'), findsOneWidget);
     });
 
-    testWidgets('create ok + time-out: the circle retries the same file (no picker)', (t) async {
+    testWidgets('create ok + time-out: Try again sends the same file (no picker)', (t) async {
       _setup();
       final p = _Photo()
         ..error = _timeout()
         ..put();
       await _openOnboarding(t);
       await _tap(t, find.bySemanticsLabel(ProfilePhotoStrings.semProfilePhoto));
-      await t.enterText(find.byType(TextFormField), 'Rahul Mehra');
-      await _tap(t, find.text('Get Started'));
-      expect(find.byKey(ProfilePhotoCircle.retryKey), findsOneWidget);
+      await OnboardingWalk.toFinish(t, name: 'Rahul Mehra');
+      await _tap(t, find.text(SocialStringsA.finish));
+      expect(find.text(ProfilePhotoStrings.tryAgain), findsOneWidget);
       p.error = null;
-      await _tap(t, find.bySemanticsLabel(ProfilePhotoStrings.semRetryUpload));
+      await _tap(t, find.text(ProfilePhotoStrings.tryAgain));
       await t.pumpAndSettle();
       expect(p.picks, 1);
       expect(p.sent, hasLength(2));
+      expect(_auth.created, ['Rahul Mehra']);
       expect(find.text('done page'), findsOneWidget);
     });
 
@@ -320,11 +366,11 @@ void main() {
       final p = _Photo()..put();
       await _openOnboarding(t);
       await _tap(t, find.bySemanticsLabel(ProfilePhotoStrings.semProfilePhoto));
-      await t.enterText(find.byType(TextFormField), 'Rahul Mehra');
-      await _tap(t, find.text('Get Started'));
+      await OnboardingWalk.toFinish(t, name: 'Rahul Mehra');
+      await _tap(t, find.text(SocialStringsA.finish));
       expect(_auth.created, ['Rahul Mehra']);
       expect(p.sent, isEmpty);
-      expect(find.text('Get Started'), findsOneWidget);
+      expect(find.text(SocialStringsA.finish), findsOneWidget);
     });
 
     testWidgets('both ok: leaves through postLoginRoute', (t) async {
@@ -332,38 +378,37 @@ void main() {
       final p = _Photo()..put();
       await _openOnboarding(t);
       await _tap(t, find.bySemanticsLabel(ProfilePhotoStrings.semProfilePhoto));
-      await t.enterText(find.byType(TextFormField), 'Rahul Mehra');
-      await _tap(t, find.text('Get Started'));
+      await OnboardingWalk.toFinish(t, name: 'Rahul Mehra');
+      await _tap(t, find.text(SocialStringsA.finish));
       await t.pumpAndSettle();
       expect(p.sent, hasLength(1));
       expect(find.text('done page'), findsOneWidget);
     });
 
-    testWidgets('offline on Get Started: toast only, nothing sent', (t) async {
+    testWidgets('offline on Finish: toast only, nothing sent', (t) async {
       _setup();
       final p = _Photo()..put();
       await _openOnboarding(t);
       await _tap(t, find.bySemanticsLabel(ProfilePhotoStrings.semProfilePhoto));
-      await t.enterText(find.byType(TextFormField), 'Rahul Mehra');
+      await OnboardingWalk.toFinish(t, name: 'Rahul Mehra');
       p.offline = true;
-      await _tap(t, find.text('Get Started'));
+      await _tap(t, find.text(SocialStringsA.finish));
       expect(find.text(ProfilePhotoStrings.offline), findsOneWidget);
       expect(_auth.created, isEmpty);
       expect(p.sent, isEmpty);
       await _drain(t);
     });
 
-    testWidgets('uploading shows the percent ring and a loading button', (t) async {
+    testWidgets('uploading shows a loading button and no Try again', (t) async {
       _setup();
       final p = _Photo()
         ..hold = Completer()
         ..put();
       await _openOnboarding(t);
       await _tap(t, find.bySemanticsLabel(ProfilePhotoStrings.semProfilePhoto));
-      await t.enterText(find.byType(TextFormField), 'Rahul Mehra');
-      await _tap(t, find.text('Get Started'));
-      expect(find.text('0%'), findsOneWidget);
-      expect(find.byType(CircularProgressIndicator), findsNWidgets(2));
+      await OnboardingWalk.toFinish(t, name: 'Rahul Mehra');
+      await _tap(t, find.text(SocialStringsA.finish));
+      expect(t.widget<GradientPillButton>(OnboardingWalk.finish).loading, isTrue);
       expect(find.text(ProfilePhotoStrings.tryAgain), findsNothing);
       p.hold!.complete({
         'data': {'id': 'u1', 'phoneNumber': '1', 'createdAt': '2026-11-22T10:00:00Z', 'profilePhotoUrl': 'https://x/a.jpg'},

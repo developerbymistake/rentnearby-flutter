@@ -9,12 +9,7 @@ class HubStateChip extends StatelessWidget {
   final List<Color> colors;
   final VoidCallback? onTap;
 
-  static const BorderRadius _radius = BorderRadius.only(
-    topLeft: Radius.circular(14),
-    topRight: Radius.circular(22),
-    bottomLeft: Radius.circular(14),
-    bottomRight: Radius.circular(14),
-  );
+  static const BorderRadius _radius = BorderRadius.all(Radius.circular(14));
 
   static BorderRadius get _scaledRadius => DS.br(_radius);
 

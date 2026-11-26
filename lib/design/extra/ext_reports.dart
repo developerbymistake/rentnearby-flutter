@@ -5,6 +5,7 @@ import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
 import 'skeleton_3d.dart';
 import '../tokens/design_scale.dart';
+import '../tokens/card_tokens.dart';
 
 abstract final class Report3D {
   static ListingTone tone(String listingType) => switch (listingType) {
@@ -45,8 +46,8 @@ abstract final class Report3D {
     boxShadow: [BoxShadow(color: menuShadow, offset: DS.shadowOffset(const Offset(0, -4)), blurRadius: DS.shadowBlur(24))],
   );
 
-  static BorderRadius get wideRadius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
-  static BorderRadius get noteRadius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
+  static BorderRadius get wideRadius => DS.br(CardRadius.hero);
+  static BorderRadius get noteRadius => DS.br(CardRadius.card);
 
   static bool pending(String status) => status == 'Pending';
   static Color statusText(String status) => pending(status) ? pendingText : resolvedText;

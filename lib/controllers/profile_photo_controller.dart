@@ -18,12 +18,14 @@ import 'auth_controller.dart';
 typedef ProfilePhotoPicker = Future<File?> Function(BuildContext context);
 typedef ProfilePhotoSender = Future<Map<String, dynamic>> Function(String path, void Function(int sent, int total) onProgress);
 typedef OfflineCheck = Future<bool> Function();
+typedef ProfilePhotoRemover = Future<Map<String, dynamic>> Function();
 
 class ProfilePhotoController extends GetxController {
-  ProfilePhotoController({ProfilePhotoPicker? pick, ProfilePhotoSender? send, OfflineCheck? offline})
+  ProfilePhotoController({ProfilePhotoPicker? pick, ProfilePhotoSender? send, OfflineCheck? offline, ProfilePhotoRemover? remove})
       : _pick = pick ?? ProfilePhotoPick.pick,
         _send = send ?? _put,
-        _offline = offline ?? _connectivityOffline;
+        _offline = offline ?? _connectivityOffline,
+        _remove = remove ?? _delete;
 
   @visibleForTesting
   static ProfilePhotoController Function() create = ProfilePhotoController.new;
@@ -38,6 +40,7 @@ class ProfilePhotoController extends GetxController {
   final ProfilePhotoPicker _pick;
   final ProfilePhotoSender _send;
   final OfflineCheck _offline;
+  final ProfilePhotoRemover _remove;
 
   final busy = false.obs;
   final failed = false.obs;
@@ -122,6 +125,36 @@ class ProfilePhotoController extends GetxController {
 
   Future<bool> retry() => upload();
 
+  Future<bool> remove() async {
+    if (active || isClosed) return false;
+    if (!await online()) return false;
+    final auth = Get.find<AuthController>();
+    final userId = auth.user.value?.id;
+    final my = ++_seq;
+    busy.value = true;
+    try {
+      final res = await _remove();
+      if (my != _seq || auth.user.value?.id != userId) return false;
+      final data = res['data'];
+      if (data is! Map<String, dynamic>) throw const FormatException('no user');
+      final oldUrl = auth.user.value?.profilePhotoUrl;
+      auth.applyUser(UserModel.fromJson(data));
+      if (oldUrl != null) _evict(oldUrl);
+      _dropTemp(localPath.value);
+      _dropTemp(_settled);
+      _settled = null;
+      localPath.value = null;
+      failed.value = false;
+      AppToast.success(ProfilePhotoStrings.removed);
+      return true;
+    } catch (_) {
+      if (my == _seq && !isClosed) AppToast.error(ProfilePhotoStrings.removeFailed);
+      return false;
+    } finally {
+      if (my == _seq) busy.value = false;
+    }
+  }
+
   // The file cannot be sent again (gone or refused by the server): back to the picker.
   void _forget(String message) {
     _dropTemp(localPath.value);
@@ -191,6 +224,8 @@ class ProfilePhotoController extends GetxController {
     final form = FormData.fromMap({'photo': await AppPhotoPick.multipart(file)});
     return ApiService.putFormData(path, form, onSendProgress: onProgress);
   }
+
+  static Future<Map<String, dynamic>> _delete() => ApiService.deleteJson(path);
 
   static Future<bool> _connectivityOffline() async {
     try {

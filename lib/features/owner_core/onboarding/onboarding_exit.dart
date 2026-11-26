@@ -15,12 +15,12 @@ abstract final class OnboardingExit {
     await Get.toNamed(AppRoutes.roleSelect, arguments: {'correction': true, 'hasDraft': hasDraft});
   }
 
-  static void openMenu(BuildContext context, {required bool isDraft, required bool hasDraft}) {
+  static void openMenu(BuildContext context, {required bool isDraft, required bool hasDraft, Rect? anchor}) {
     final top = MediaQuery.paddingOf(context).top + DS.s(8);
     final auth = Get.find<AuthController>();
     showMenu3D(
       context,
-      anchor: Rect.fromLTWH(DS.s(18), top, PageHeader3D.buttonSize, PageHeader3D.buttonSize),
+      anchor: anchor ?? Rect.fromLTWH(DS.s(18), top, PageHeader3D.buttonSize, PageHeader3D.buttonSize),
       items: [
         MenuItem3D(
           label: 'Change role',

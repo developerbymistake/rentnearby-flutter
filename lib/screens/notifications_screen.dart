@@ -16,6 +16,7 @@ import '../features/buddy/notices/models/notice_models.dart';
 import '../features/buddy/notices/widgets/inbox_feed.dart';
 import '../features/buddy/notices/widgets/notice_row.dart';
 import '../features/owner_core/session/owner_notice_registry.dart';
+import '../features/social/c/widgets/icon_title_header.dart';
 import '../models/notification_model.dart';
 import '../services/notification_service.dart';
 import '../features/owner_core/plan/plan_expired_tap.dart';
@@ -128,7 +129,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           return RefreshIndicator(
             color: _tone.g2,
             backgroundColor: DesignColors.surface,
-            edgeOffset: NotificationHeader3D.heightFor(context),
+            edgeOffset: IconTitleHeader.heightFor(context),
             displacement: DS.s(30),
             onRefresh: _refresh,
             child: ListView.builder(
@@ -167,22 +168,31 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget _withHeader(Widget body) => Column(children: [_buildHeader(), Expanded(child: body)]);
 
   Widget _buildHeader() {
-    return NotificationHeader3D(
-      tone: _tone,
-      title: 'Notifications',
-      art: NotificationLook.bell,
-      onBack: () => Get.back(),
-      action: Obx(() => _ctrl.notifications.any((n) => !n.isRead) || (_notices?.notices.any((n) => !n.isRead) ?? false) || _ctrl.unreadCount.value > 0
-          ? GradientPillButton(
-              tone: _tone,
-              label: 'Mark all read',
-              onTap: _ctrl.markAllRead,
-              icon: _roomy(context) ? Icons.check_rounded : null,
-              height: 40,
-              fontSize: 14,
-              expand: false,
-            )
-          : const SizedBox.shrink()),
+    return Padding(
+      padding: EdgeInsets.only(bottom: DS.gv(6)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          IconTitleHeader(tone: _tone, title: 'Notifications', art: NotificationLook.bell, onBack: () => Get.back()),
+          Obx(() => _ctrl.notifications.any((n) => !n.isRead) || (_notices?.notices.any((n) => !n.isRead) ?? false) || _ctrl.unreadCount.value > 0
+              ? Padding(
+                  padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(12), DS.s(18), 0),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: GradientPillButton(
+                      tone: _tone,
+                      label: 'Mark all read',
+                      onTap: _ctrl.markAllRead,
+                      icon: _roomy(context) ? Icons.check_rounded : null,
+                      height: 40,
+                      fontSize: 14,
+                      expand: false,
+                    ),
+                  ),
+                )
+              : const SizedBox.shrink()),
+        ],
+      ),
     );
   }
 

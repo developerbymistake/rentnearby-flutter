@@ -55,7 +55,10 @@ Widget _locks() => Scaffold(
     );
 
 void main() {
-  tearDown(() => PlanGate.debugPlan = null);
+  tearDown(() {
+    PlanGate.debugPlan = null;
+    PlanGate.debugTrialDays = null;
+  });
 
   group('rules', () {
     test('payment OFF: no upgrade, limits are the server numbers', () {
@@ -78,12 +81,22 @@ void main() {
       expect(PlanGate.on(PlanKey.reminders), isTrue);
     });
 
-    test('price line adds the trial words only while the trial is unused', () {
+    test('price line: Play prices, no trial words while no plan carries a trial (2026-11-27)', () {
       PlanGate.debugPlan = OwnerPlans.free;
-      expect(PlanGate.priceLine(taxi: false), '₹400 / month · 7 days free');
-      expect(PlanGate.priceLine(taxi: true), '₹150 / month · 7 days free');
+      expect(PlanGate.priceLine(taxi: false), '₹500 / month');
+      expect(PlanGate.priceLine(taxi: true), '₹300 / month');
+      PlanGate.debugTrialDays = 0;
+      expect(PlanGate.priceLine(taxi: false), '₹500 / month');
+      expect(PlanGate.trialDays(), isNull);
+    });
+
+    test('trial machinery: words only while the catalog has a trial and it is unused', () {
+      PlanGate.debugTrialDays = 7;
+      PlanGate.debugPlan = OwnerPlans.free;
+      expect(PlanGate.priceLine(taxi: false), '₹500 / month · 7 days free');
+      expect(PlanGate.priceLine(taxi: true), '₹300 / month · 7 days free');
       PlanGate.debugPlan = OwnerPlans.freeNoTrial;
-      expect(PlanGate.priceLine(taxi: false), '₹400 / month');
+      expect(PlanGate.priceLine(taxi: false), '₹500 / month');
     });
 
     test('fromRefusal: gate only for a limit type that can upgrade', () {
@@ -130,7 +143,8 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byKey(GateKeys.sheet), findsOneWidget);
         expect(find.text('You have 4 active entries'), findsOneWidget);
-        expect(find.text('₹400 / month · 7 days free'), findsOneWidget);
+        expect(find.text('₹500 / month'), findsOneWidget);
+        expect(find.textContaining('days free'), findsNothing);
         expect(find.text(_spec.tip!), findsOneWidget);
         await tester.tap(find.text(OwnerSharedStrings.notNow));
         await tester.pumpAndSettle();

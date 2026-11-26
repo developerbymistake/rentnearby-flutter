@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../config/app_routes.dart';
 import '../../config/app_tabs.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/tab_config_controller.dart';
 import '../../design/design.dart';
 import '../../navigation/traveller_gate.dart';
+import '../social/shared/social_nav.dart';
 import 'seeker_trip_card.dart';
 import 'strings/seeker_home_strings.dart';
 
@@ -22,7 +22,7 @@ class SeekerQuickAction {
 }
 
 abstract final class SeekerQuickActionTargets {
-  static void findBuddy() => Get.toNamed(AppRoutes.buddies);
+  static void findBuddy() => SocialNav.openTravelBuddies();
 }
 
 class SeekerQuickActions extends StatelessWidget {
@@ -97,6 +97,7 @@ class SeekerQuickActions extends StatelessWidget {
                     art: a.art,
                     title: a.title,
                     minCardHeight: 0,
+                    contentScale: tileContentScale,
                     goIcon: a.add ? Icons.add : Icons.arrow_forward,
                     onTap: a.onTap,
                     semanticsLabel: '${a.title}, ${a.body}',
@@ -108,6 +109,8 @@ class SeekerQuickActions extends StatelessWidget {
       ],
     );
   }
+
+  static const double tileContentScale = 0.95;
 
   static double tileWidth(double maxWidth) {
     final w = (maxWidth - DS.s(20)) / 3.1;

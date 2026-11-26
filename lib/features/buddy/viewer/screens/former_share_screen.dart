@@ -137,7 +137,7 @@ class _FormerShareScreenState extends State<FormerShareScreen> {
               margin: DS.insets(l: 18, t: 16, r: 18),
               decoration: BoxDecoration(
                 color: DesignColors.surface,
-                borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(28), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
+                borderRadius: DS.br(CardRadius.tile),
                 boxShadow: BuddyLook.cardShadows(DS.size),
               ),
               child: Column(children: [for (var i = 0; i < shared.length; i++) _ExpenseLine(item: shared[i], payer: _name(shared[i].paidByUserId), first: i == 0)]),
@@ -239,7 +239,7 @@ class _GoneBanner extends StatelessWidget {
         constraints: BoxConstraints(minHeight: DS.s(64)),
         decoration: BoxDecoration(
           color: ViewerLook.greyBadgeBg,
-          borderRadius: DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(32), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))),
+          borderRadius: DS.br(CardRadius.card),
         ),
         child: Stack(
           clipBehavior: Clip.none,

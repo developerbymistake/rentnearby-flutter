@@ -454,7 +454,7 @@ void main() {
       await _drain(t);
     });
 
-    testWidgets('no buddies: empty state, Find a buddy opens Buddies on Find', (t) async {
+    testWidgets('no buddies: empty state, Find a buddy opens People on My Buddies', (t) async {
       registerFakes(members: FakeMembersApi(membersResult: BuddyOk(membersSample())), buddies: FakeBuddiesApi({}));
       await open(t);
       expect(find.text('No buddies yet'), findsOneWidget);
@@ -462,8 +462,8 @@ void main() {
       expect(find.byKey(const ValueKey('invite_send')), findsNothing);
       await _tapText(t, 'Find a buddy');
       expect(find.text('Invite to this trip'), findsNothing);
-      expect(opened.last.$1, AppRoutes.buddies);
-      expect((opened.last.$2 as Map)['tab'], 'find');
+      expect(opened.last.$1, AppRoutes.people);
+      expect((opened.last.$2 as Map)['tab'], 'buddies');
     });
 
     testWidgets('few seats: seats line, a tick past the last seat is refused', (t) async {

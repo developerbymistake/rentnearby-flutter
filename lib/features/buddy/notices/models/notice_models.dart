@@ -15,6 +15,15 @@ abstract final class NoticeKinds {
   static const String planUpdated = 'PlanUpdated';
   static const String expenseAdded = 'ExpenseAdded';
   static const String shareChanged = 'ShareChanged';
+  static const String followRequest = 'FollowRequest';
+  static const String newFollower = 'NewFollower';
+  static const String followAccepted = 'FollowAccepted';
+  static const String joinRequest = 'JoinRequest';
+  static const String joinAccepted = 'JoinAccepted';
+  static const String joinDeclined = 'JoinDeclined';
+  static const String followedPosted = 'FollowedPosted';
+
+  static const List<String> social = [followRequest, newFollower, followAccepted, joinRequest, joinAccepted, joinDeclined, followedPosted];
 
   static const List<String> all = [
     buddyRequest,
@@ -31,6 +40,7 @@ abstract final class NoticeKinds {
     planUpdated,
     expenseAdded,
     shareChanged,
+    ...social,
   ];
 
   static bool known(String kind) => all.contains(kind);
@@ -42,6 +52,7 @@ class Notice {
     required this.kind,
     this.tripId,
     this.tripTitle,
+    this.tripCity,
     this.actorUserId,
     this.actorName,
     this.refId,
@@ -54,12 +65,16 @@ class Notice {
     required this.isRead,
     this.route,
     this.args = const {},
+    this.actorPhotoUrl,
+    this.actorUsername,
+    this.preview,
   });
 
   final String id;
   final String kind;
   final String? tripId;
   final String? tripTitle;
+  final String? tripCity;
   final String? actorUserId;
   final String? actorName;
   final String? refId;
@@ -72,6 +87,9 @@ class Notice {
   final bool isRead;
   final String? route;
   final Map<String, dynamic> args;
+  final String? actorPhotoUrl;
+  final String? actorUsername;
+  final String? preview;
 
   bool get isKnown => NoticeKinds.known(kind);
 
@@ -80,6 +98,7 @@ class Notice {
         kind: kind,
         tripId: tripId,
         tripTitle: tripTitle,
+        tripCity: tripCity,
         actorUserId: actorUserId,
         actorName: actorName,
         refId: refId,
@@ -92,6 +111,9 @@ class Notice {
         isRead: true,
         route: route,
         args: args,
+        actorPhotoUrl: actorPhotoUrl,
+        actorUsername: actorUsername,
+        preview: preview,
       );
 
   factory Notice.fromJson(Map<String, dynamic> j) => Notice(
@@ -99,6 +121,7 @@ class Notice {
         kind: BuddyJson.str(j['kind']),
         tripId: BuddyJson.strOrNull(j['tripId']),
         tripTitle: BuddyJson.strOrNull(j['tripTitle']),
+        tripCity: BuddyJson.strOrNull(j['tripCity']),
         actorUserId: BuddyJson.strOrNull(j['actorUserId']),
         actorName: BuddyJson.strOrNull(j['actorName']),
         refId: BuddyJson.strOrNull(j['refId']),
@@ -111,6 +134,9 @@ class Notice {
         isRead: BuddyJson.boolean(j['isRead']),
         route: BuddyJson.strOrNull(j['route']),
         args: BuddyJson.map(j['args']),
+        actorPhotoUrl: BuddyJson.photo(j['actorPhotoUrl']),
+        actorUsername: BuddyJson.strOrNull(j['actorUsername']),
+        preview: BuddyJson.strOrNull(j['preview']),
       );
 }
 

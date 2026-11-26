@@ -24,7 +24,7 @@ class NumbersRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (tiles.isEmpty) return const SizedBox.shrink();
-    final radius = OwnerLook.cardRadius();
+    final radius = DS.br(CardRadius.card);
     return DecoratedBox(
       decoration: BoxDecoration(color: DesignColors.surface, borderRadius: radius, boxShadow: DS.shadows(Ink3D.softShadow)),
       child: ClipRRect(

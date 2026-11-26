@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/ext_trip_replies.dart';
 import 'package:get/get.dart';
-import '../../stay_owner/enquiries_tab/widgets/enquiry_card_parts.dart';
-import '../../stay_owner/strings/stay_work_strings.dart';
+import '../../buddy/shared/widgets/segment_tabs.dart';
 import '../controllers/trip_enquiry_controller.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
@@ -140,31 +139,22 @@ class _MyEnquiriesScreenState extends State<MyEnquiriesScreen> {
     );
   }
 
+  static const List<String> bucketKeys = [MyEnquiryBucket.waiting, MyEnquiryBucket.offers, MyEnquiryBucket.booked];
+  static const List<String> _labels = [TripStringsEnq.boxWaiting, TripStringsEnq.boxOffers, TripStringsEnq.boxBooked];
+
   Widget _pills() {
     return Obx(() {
-      final selected = _c.bucket.value;
+      final selected = bucketKeys.indexOf(_c.bucket.value);
       _c.counts.value;
-      const keys = [MyEnquiryBucket.waiting, MyEnquiryBucket.offers, MyEnquiryBucket.booked];
-      const labels = {
-        MyEnquiryBucket.waiting: TripStringsEnq.boxWaiting,
-        MyEnquiryBucket.offers: TripStringsEnq.boxOffers,
-        MyEnquiryBucket.booked: TripStringsEnq.boxBooked,
-      };
-      return Padding(
-        padding: DS.gapInsets(l: 14, t: 8, r: 14, b: 2),
-        child: Row(children: [
-          for (var i = 0; i < keys.length; i++) ...[
-            if (i > 0) Gap.h(12),
-            Expanded(
-              child: BucketPill(
-                label: StayWorkStrings.withCount(labels[keys[i]]!, _c.countOf(keys[i])),
-                selected: selected == keys[i],
-                semantics: '${labels[keys[i]]!}, ${_c.countOf(keys[i])}',
-                onTap: () => _c.selectBucket(keys[i]),
-              ),
-            ),
-          ],
-        ]),
+      return SegmentTabs(
+        key: const ValueKey('my_enquiries_tabs'),
+        labels: _labels,
+        selected: selected,
+        tone: ListingTone.indigo,
+        counts: {for (var i = 0; i < bucketKeys.length; i++) i: _c.countOf(bucketKeys[i])},
+        solidBadges: const {0, 1, 2},
+        margin: DS.gapInsets(l: 18, t: 8, r: 18, b: 6),
+        onTap: (i) => _c.selectBucket(bucketKeys[i]),
       );
     });
   }

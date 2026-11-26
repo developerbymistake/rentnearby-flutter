@@ -7,7 +7,20 @@ import 'notice_strings.dart';
 enum NoticeTone { teal, indigo, rose }
 
 class NoticeView {
-  const NoticeView({required this.title, required this.body, required this.tag, required this.art, required this.tone, required this.route, required this.args});
+  const NoticeView({
+    required this.title,
+    required this.body,
+    required this.tag,
+    required this.art,
+    required this.tone,
+    required this.route,
+    required this.args,
+    this.social = false,
+    this.actorName,
+    this.actorPhotoUrl,
+    this.actorSeed = '',
+    this.place,
+  });
 
   final String title;
   final String body;
@@ -16,6 +29,13 @@ class NoticeView {
   final NoticeTone tone;
   final String? route;
   final Map<String, dynamic> args;
+  // Social rows: avatar + one line (title) + grey preview (body), no buttons.
+  final bool social;
+  final String? actorName;
+  final String? actorPhotoUrl;
+  final String actorSeed;
+  // Social rows: the trip city, shown bold in the line like the actor name.
+  final String? place;
 }
 
 abstract final class NoticeCopy {
@@ -121,6 +141,21 @@ abstract final class NoticeCopy {
           tripArgs,
           BuddyArt.taxi,
         );
+      case NoticeKinds.followRequest:
+        return _social(n, NoticeStrings.followRequest(actor), null, AppRoutes.people, const {'tab': 'requests'});
+      case NoticeKinds.newFollower:
+        return _social(n, NoticeStrings.newFollower(actor), null, AppRoutes.traveller, {'userId': ?n.actorUserId});
+      case NoticeKinds.followAccepted:
+        return _social(n, NoticeStrings.followAccepted(actor), null, AppRoutes.traveller, {'userId': ?n.actorUserId});
+      case NoticeKinds.joinRequest:
+        final note = _text(n.preview);
+        return _social(n, NoticeStrings.joinRequest(actor, _text(n.tripCity)), note == null ? null : NoticeStrings.quoted(note), AppRoutes.joinRequests, tripArgs, place: _text(n.tripCity));
+      case NoticeKinds.joinAccepted:
+        return _social(n, NoticeStrings.joinAccepted(actor, _text(n.tripCity)), NoticeStrings.joinAcceptedPreview, AppRoutes.tripView, tripArgs, place: _text(n.tripCity));
+      case NoticeKinds.joinDeclined:
+        return _social(n, NoticeStrings.joinDeclined(_text(n.tripCity)), null, AppRoutes.travelBuddies, const {}, place: _text(n.tripCity));
+      case NoticeKinds.followedPosted:
+        return _social(n, NoticeStrings.followedPosted(actor, _text(n.tripCity)), null, AppRoutes.tripPost, tripArgs, place: _text(n.tripCity));
       case NoticeKinds.shareChanged:
         return _money(
           NoticeStrings.shareChangedTitle,
@@ -131,6 +166,21 @@ abstract final class NoticeCopy {
     }
     return null;
   }
+
+  static NoticeView _social(Notice n, String line, String? preview, String route, Map<String, dynamic> args, {String? place}) => NoticeView(
+        title: line,
+        body: preview ?? '',
+        tag: NoticeStrings.tagBuddies,
+        art: BuddyArt.panda,
+        tone: NoticeTone.teal,
+        route: route,
+        args: args,
+        social: true,
+        actorName: _text(n.actorName),
+        actorPhotoUrl: n.actorPhotoUrl,
+        actorSeed: n.actorUserId ?? n.id,
+        place: place,
+      );
 
   static NoticeView _buddies(String title, String body) => NoticeView(
         title: title,

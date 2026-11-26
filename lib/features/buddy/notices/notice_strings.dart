@@ -61,4 +61,14 @@ abstract final class NoticeStrings {
   static const String shareChangedTitle = 'Your share changed';
   static String shareChangedNow(String? item, String share) => '${item == null ? '' : '$item. '}Now $share.';
   static String shareChangedNoAmount(String trip) => 'Your share changed on $trip.';
+
+  static String followRequest(String actor) => '$actor wants to follow you';
+  static String newFollower(String actor) => '$actor started following you';
+  static String followAccepted(String actor) => '$actor accepted your follow request';
+  static String joinRequest(String actor, String? city) => city == null ? '$actor asked to join your trip' : '$actor asked to join your $city trip';
+  static String joinAccepted(String actor, String? city) => city == null ? '$actor accepted your request' : '$actor accepted you on $city';
+  static const String joinAcceptedPreview = 'You are in. It is in My Trips.';
+  static String joinDeclined(String? city) => city == null ? 'Not this time' : 'Not this time for $city';
+  static String followedPosted(String actor, String? city) => city == null ? '$actor posted a trip' : '$actor posted a trip to $city';
+  static String quoted(String text) => '“$text”';
 }

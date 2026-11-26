@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
 import 'package:bakhli/design/tokens/design_scale.dart';
+import '../tokens/card_tokens.dart';
 
 enum StepCardState { locked, current, done }
 
@@ -89,7 +90,7 @@ class StepCard3D extends StatelessWidget {
       constraints: BoxConstraints(minHeight: DS.s(116)),
       padding: EdgeInsets.fromLTRB(DS.s(left), DS.s(10), DS.s(14), DS.s(14)),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        borderRadius: DS.br(CardRadius.hero),
         gradient: locked ? Form3D.lockGradient : tone.gradient,
         border: state == StepCardState.current ? Border.all(color: Colors.white, width: DS.s(3), strokeAlign: BorderSide.strokeAlignOutside) : null,
         boxShadow: locked

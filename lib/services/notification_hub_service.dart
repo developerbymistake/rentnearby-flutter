@@ -8,6 +8,7 @@ import '../controllers/auth_controller.dart';
 import '../controllers/notification_controller.dart';
 import '../controllers/plan_controller.dart';
 import '../features/buddy/buddy_live.dart';
+import '../features/social/shared/social_live.dart';
 import '../features/owner_core/session/owner_push_sync.dart';
 import '../features/stay/stay_status_sync.dart';
 import '../features/taxi/taxi_status_sync.dart';
@@ -167,6 +168,8 @@ class NotificationHubService extends GetxService with SingleFlightHubConnect imp
       });
     }
 
+    _connection!.on(SocialLive.hubEvent, SocialLive.onHubEvent);
+
     _connection!.onreconnected(({String? connectionId}) => taxiRequests.onConnected());
 
     try {
@@ -182,6 +185,7 @@ class NotificationHubService extends GetxService with SingleFlightHubConnect imp
     try {
       _connection?.off('NotificationReceived');
       _connection?.off(TaxiRequestSubscriptions.changedEvent);
+      _connection?.off(SocialLive.hubEvent);
       for (final event in BuddyHubEvents.all) {
         _connection?.off(event);
       }

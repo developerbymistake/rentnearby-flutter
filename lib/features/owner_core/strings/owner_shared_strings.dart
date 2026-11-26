@@ -5,7 +5,7 @@ abstract final class OwnerSharedStrings {
   static const plus = 'Plus';
   static const free = 'Free';
   static const plusPrice = 'Plus price';
-  static const trialSuffix = ' · 7 days free';
+  static String trialSuffix(int days) => ' · ${days == 1 ? '1 day' : '$days days'} free';
   static const perMonth = ' / month';
   static const fromApp = 'From app';
   static const addedByYou = 'Added by you';

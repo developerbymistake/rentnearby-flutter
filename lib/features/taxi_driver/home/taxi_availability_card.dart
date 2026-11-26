@@ -40,7 +40,7 @@ class _TaxiAvailabilityCardState extends State<TaxiAvailabilityCard> {
     final monthText = OwnerSharedStrings.monthTitle(month);
     final bookings = NumberTile.of(info?.bookings);
     final daysOff = NumberTile.of(info?.daysOff);
-    final radius = TaxiLook.cardRadius(68);
+    final radius = DS.br(CardRadius.tile);
     return Padding(
       padding: DS.insets(l: 18, t: 8, r: 18),
       child: DecoratedBox(

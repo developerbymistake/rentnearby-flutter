@@ -21,7 +21,7 @@ class HomePlanCard extends StatelessWidget {
   final PlanValues values;
 
   static void onAction(PlanHomeAction a) {
-    switch (a) {
+    switch (resolve(a)) {
       case PlanHomeAction.tryFree:
         Get.toNamed(AppRoutes.plansBilling, arguments: const {'trial': true});
       case PlanHomeAction.seePlus:
@@ -36,22 +36,12 @@ class HomePlanCard extends StatelessWidget {
     }
   }
 
-  static const int defaultTrialDays = 7;
+  /// Try free only while the catalog really carries a trial; otherwise the normal Plus action.
+  static PlanHomeAction resolve(PlanHomeAction a) =>
+      a == PlanHomeAction.tryFree && PlanGate.trialDays() == null ? PlanHomeAction.seePlus : a;
 
-  static int trialDays() {
-    if (!Get.isRegistered<PlanController>()) return defaultTrialDays;
-    final c = Get.find<PlanController>();
-    for (final p in c.plans) {
-      if (p.isDefault) continue;
-      final offer = c.trialOfferFor(p);
-      if (offer != null && offer.trialDays > 0) return offer.trialDays;
-      if (p.trialDays > 0) return p.trialDays;
-    }
-    return defaultTrialDays;
-  }
-
-  static String? label(PlanHomeAction a) => switch (a) {
-        PlanHomeAction.tryFree => PlanWords.tryFree(trialDays()),
+  static String? label(PlanHomeAction a) => switch (resolve(a)) {
+        PlanHomeAction.tryFree => PlanWords.tryFree(PlanGate.trialDays()!),
         PlanHomeAction.seePlus => PlanWords.seePlus,
         PlanHomeAction.manage => PlanWords.manageInPlay,
         PlanHomeAction.fix => PlanWords.fix,
@@ -69,7 +59,8 @@ class HomePlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final v = copy.homeCard(card, city: city, v: values);
-    final upsell = v.action == PlanHomeAction.seePlus || v.action == PlanHomeAction.tryFree;
+    final action = resolve(v.action);
+    final upsell = action == PlanHomeAction.seePlus || action == PlanHomeAction.tryFree;
     return PlanHomeCard3D(
       key: ValueKey('home_plan_card_${v.state.name}'),
       tone: _tone(v.look),
@@ -77,8 +68,8 @@ class HomePlanCard extends StatelessWidget {
       title: v.title,
       pill: v.pill,
       line: v.line,
-      actionLabel: label(v.action),
-      onAction: () => onAction(v.action),
+      actionLabel: label(action),
+      onAction: () => onAction(action),
       actionKey: upsell ? GateKeys.seePlus : null,
     );
   }

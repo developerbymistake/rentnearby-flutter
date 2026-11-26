@@ -2,6 +2,7 @@ import 'package:bakhli/design/template/fitness_app_theme.dart';
 import 'package:flutter/material.dart';
 
 import 'package:bakhli/design/tokens/shadow_tokens.dart';
+import '../../tokens/card_tokens.dart';
 class BodyMeasurementView extends StatelessWidget {
   final AnimationController? animationController;
   final Animation<double>? animation;
@@ -25,11 +26,7 @@ class BodyMeasurementView extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   color: FitnessAppTheme.white,
-                  borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(8.0),
-                      bottomLeft: Radius.circular(8.0),
-                      bottomRight: Radius.circular(8.0),
-                      topRight: Radius.circular(68.0)),
+                  borderRadius: CardRadius.hero,
                   boxShadow: <BoxShadow>[
                     ShadowTokens.tint(FitnessAppTheme.grey, ShadowSpec.soft),
                   ],

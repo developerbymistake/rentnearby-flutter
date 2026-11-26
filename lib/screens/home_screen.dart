@@ -11,6 +11,9 @@ import '../features/seeker_home/seeker_feed_controller.dart';
 import '../features/seeker_home/seeker_home_parts.dart';
 import '../features/seeker_home/seeker_quick_actions.dart';
 import '../features/seeker_home/strings/seeker_home_strings.dart';
+import '../features/social/b/rail/trips_to_join_rail.dart';
+import '../features/social/b/rail/trips_rail_controller.dart';
+import '../features/social/b/widgets/find_buddies_post_card.dart';
 import '../features/trip/widgets/trip_popular_rail.dart';
 import '../widgets/home_hero_carousel.dart';
 import '../widgets/tab_header.dart';
@@ -23,7 +26,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const int _sections = 4;
+  static const int _sections = 6;
   final ScrollController _scroll = ScrollController();
   final ValueNotifier<int> _replay = ValueNotifier<int>(0);
 
@@ -41,7 +44,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _refresh() async {
     final feed = _feed;
-    await Future.wait<void>([_home.reload(), if (feed != null) feed.reload()]);
+    final rail = TripsRailController.maybe;
+    await Future.wait<void>([_home.reload(), if (feed != null) feed.reload(), if (rail != null) rail.load()]);
     if (mounted) _replay.value++;
   }
 
@@ -113,8 +117,10 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 const StaggerItem(index: 0, child: HomeHeroCarousel()),
                 const StaggerItem(index: 1, child: SeekerQuickActions()),
-                StaggerItem(index: 2, child: _buildRailsArea()),
-                StaggerItem(index: 3, child: _buildInstagramCard()),
+                const StaggerItem(index: 2, child: FindBuddiesPostCard(place: FindBuddiesPostPlace.home)),
+                const StaggerItem(index: 3, child: TripsToJoinRail()),
+                StaggerItem(index: 4, child: _buildRailsArea()),
+                StaggerItem(index: 5, child: _buildInstagramCard()),
               ],
             ),
           );

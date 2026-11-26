@@ -24,6 +24,8 @@ class UserModel {
   final String? profilePhotoUrl;
   final bool photoKnown;
   final bool profilePhotoRemoved;
+  final bool profileCompleted;
+  final String? gender;
 
   UserModel({
     required this.id,
@@ -49,6 +51,8 @@ class UserModel {
     this.profilePhotoUrl,
     this.photoKnown = false,
     this.profilePhotoRemoved = false,
+    this.profileCompleted = true,
+    this.gender,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
@@ -75,6 +79,8 @@ class UserModel {
         profilePhotoUrl: usernameOf(json['profilePhotoUrl']),
         photoKnown: json.containsKey('profilePhotoUrl'),
         profilePhotoRemoved: json['profilePhotoRemoved'] == true,
+        profileCompleted: json['profileCompleted'] as bool? ?? true,
+        gender: usernameOf(json['gender']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -100,6 +106,8 @@ class UserModel {
         'listingDeleted': listingDeleted,
         if (photoKnown) 'profilePhotoUrl': profilePhotoUrl,
         'profilePhotoRemoved': profilePhotoRemoved,
+        'profileCompleted': profileCompleted,
+        'gender': gender,
       };
 
   static String? usernameOf(Object? raw) {

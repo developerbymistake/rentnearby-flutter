@@ -47,7 +47,7 @@ void main() {
 
   group('o_pl_16 sixteen states', () {
     final stay = <String, List<String>>{
-      'Free': ['Shown 140 times', 'Free plan', 'Plus stays come first when travellers plan a trip to Mukteshwar.', 'Try free for 7 days'],
+      'Free': ['Shown 140 times', 'Free plan', 'Plus stays come first when travellers plan a trip to Mukteshwar.', 'See Plus'],
       'Trial': ['Free until 28 Nov', 'Trial', '8 photos and 6 room types are open now.', 'Manage in Google Play'],
       'Plus': ['Shown 412 times', 'Plus', '9 enquiries this week. Renews on 21 Dec 2026.', 'Manage in Google Play'],
       'Cancelled': ['Plus till 21 Dec 2026', 'Plus', 'After that, you keep 2 photos and 2 room types.', 'Manage in Google Play'],
@@ -57,7 +57,7 @@ void main() {
       'PaymentOff': ['Paid plans are coming', 'Plus will put your stay first in trip plans. Not open yet.'],
     };
     final taxi = <String, List<String>>{
-      'Free': ['Free plan', '12 requests this week were for cities you have no route to.', 'Try free for 7 days'],
+      'Free': ['Free plan', '12 requests this week were for cities you have no route to.', 'See Plus'],
       'Trial': ['Free until 28 Nov', 'Trial', 'Up to 5 routes are open now.', 'Manage in Google Play'],
       'Plus': ['31 requests on your routes', 'Plus', 'You accepted 12. Renews on 21 Dec 2026.', 'Manage in Google Play'],
       'Cancelled': ['Plus till 21 Dec 2026', 'Plus', 'After that, you keep 1 route.', 'Manage in Google Play'],
@@ -78,6 +78,30 @@ void main() {
         _texts(e.value);
       });
     }
+  });
+
+  // 2026-11-27: no plan carries a trial. Even a stale trialAvailable never shows a trial: the normal Plus action is drawn.
+  for (final copy in <PlanRoleCopy>[_stay, _taxi]) {
+    testWidgets('no trial in the catalog: See Plus, never Try free (${copy.featureKey})', (t) async {
+      installPlans(Fx.free(copy.featureKey), trialOffer_: false, plusTrialDays: 0);
+      await _pump(t, copy, _card('Free', extra: {'trialAvailable': true}));
+      expect(find.text('See Plus'), findsOneWidget);
+      expect(find.textContaining('Try free'), findsNothing);
+      expect(find.textContaining('Free for'), findsNothing);
+      expect(find.byKey(GateKeys.seePlus), findsOneWidget);
+    });
+  }
+
+  testWidgets('no plan controller and no trial days known: See Plus, no invented 7 days', (t) async {
+    await _pump(t, _stay, _card('Free', extra: {'trialAvailable': true}));
+    expect(find.text('See Plus'), findsOneWidget);
+    expect(find.textContaining('Try free'), findsNothing);
+  });
+
+  testWidgets('trial machinery kept: a catalog trial still shows Try free with its own days', (t) async {
+    installPlans(Fx.free('Stay'));
+    await _pump(t, _stay, _card('Free', extra: {'trialAvailable': true}));
+    expect(find.text('Try free for 7 days'), findsOneWidget);
   });
 
   testWidgets('trial not available: See Plus', (t) async {

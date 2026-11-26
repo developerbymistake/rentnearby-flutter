@@ -188,7 +188,7 @@ class _LatestCard extends StatelessWidget {
       padding: DS.sym(h: 16, v: 6),
       decoration: BoxDecoration(
         color: DesignColors.card,
-        borderRadius: DS.br(CardRadius.hero),
+        borderRadius: DS.br(CardRadius.tile),
         boxShadow: DS.shadows(TripLook.cardShadowSoft),
       ),
       child: Column(

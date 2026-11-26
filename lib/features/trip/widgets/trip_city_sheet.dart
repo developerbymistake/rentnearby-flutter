@@ -146,6 +146,11 @@ class TripCitySheet extends StatefulWidget {
 
   const TripCitySheet({super.key, this.mode = TripCitySheetMode.start, this.afterCity, this.inTrip = const {}});
 
+  static String artOf(TripCityModel c) {
+    const arts = [ListingArt.mountain, ListingArt.camping, ListingArt.beach, ListingArt.sunrise];
+    return arts[c.cityKey.abs() % arts.length];
+  }
+
   static Future<TripCityPick?> pick(
     BuildContext context, {
     TripCitySheetMode mode = TripCitySheetMode.start,
@@ -460,12 +465,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
         margin: DS.gapInsets(l: 18, t: 0, r: 18, b: 6),
         decoration: BoxDecoration(
           color: DesignColors.surface,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(DS.radius(8)),
-            bottomLeft: Radius.circular(DS.radius(8)),
-            bottomRight: Radius.circular(DS.radius(8)),
-            topRight: Radius.circular(DS.radius(28)),
-          ),
+          borderRadius: DS.br(CardRadius.card),
           boxShadow: DS.shadows(Ink3D.softShadow),
         ),
         clipBehavior: Clip.antiAlias,
@@ -560,11 +560,6 @@ class _TripCitySheetState extends State<TripCitySheet> {
         });
   }
 
-  static String _artOf(TripCityModel c) {
-    const arts = [ListingArt.mountain, ListingArt.camping, ListingArt.beach, ListingArt.sunrise];
-    return arts[c.cityKey.abs() % arts.length];
-  }
-
   Widget _cityRow(TripCityModel city, {bool divider = false}) {
     final inTrip = _add && widget.inTrip.contains(city.cityKey);
     final enabled = !inTrip;
@@ -596,7 +591,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
       children: [
         SheetListRow(
           tone: _tone,
-          art: _artOf(city),
+          art: TripCitySheet.artOf(city),
           title: city.name,
           subtitle: place.isEmpty ? null : place,
           selected: picked,

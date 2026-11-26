@@ -72,16 +72,61 @@ class BuddySkeletonBar extends StatelessWidget {
 }
 
 class UsernameLockedPill extends StatelessWidget {
-  const UsernameLockedPill({super.key, required this.username, required this.art, required this.onCopy, required this.copyLabel, required this.loadingLabel});
+  const UsernameLockedPill({super.key, required this.username, required this.art, required this.onCopy, required this.copyLabel, required this.loadingLabel, this.compact = false});
 
   final String? username;
   final String art;
   final VoidCallback onCopy;
   final String copyLabel;
   final String loadingLabel;
+  final bool compact;
+
+  static TextStyle get compactStyle => Ink3D.text(13.5, FontWeight.w600, Ink3D.sub, letterSpacing: 0);
+
+  static double compactWidth(BuildContext context, String? username) {
+    final double text;
+    if (username == null) {
+      text = DS.s(96);
+    } else {
+      final p = TextPainter(text: TextSpan(text: username, style: compactStyle), maxLines: 1, textDirection: TextDirection.ltr, textScaler: MediaQuery.textScalerOf(context))..layout();
+      text = p.width;
+      p.dispose();
+    }
+    return DS.s(8) + DS.s(24) + DS.s(6) + text + DS.s(6) + DS.s(16) + DS.s(8) + DS.s(4);
+  }
+
+  Widget _compact() {
+    final name = username;
+    final body = Container(
+      constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch)),
+      padding: DS.insets(l: 8, t: 4, r: 8, b: 4),
+      decoration: BoxDecoration(
+        color: DesignColors.scaffold,
+        borderRadius: DS.circular(22),
+        border: Border.all(color: DesignColors.cardRing, width: DS.s(1.5)),
+      ),
+      child: Row(
+        children: [
+          ExcludeSemantics(
+            child: Opacity(opacity: Alpha.v60, child: Art3D(asset: art, size: 24, shadowBlur: 2, shadowOffset: const Offset(1, 2))),
+          ),
+          Gap.h(6),
+          Expanded(
+            child: name == null
+                ? Semantics(label: loadingLabel, child: const BuddySkeletonBar(width: 96, height: 12))
+                : FitLine3D(text: name, style: compactStyle),
+          ),
+          Gap.h(6),
+          Icon(Icons.copy_rounded, size: DS.s(16), color: name == null ? DesignColors.tealDeep.withValues(alpha: Alpha.v45) : DesignColors.tealDeep),
+        ],
+      ),
+    );
+    return Tap3D(onTap: name == null ? null : onCopy, label: copyLabel, child: body);
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (compact) return _compact();
     final name = username;
     return Container(
       constraints: BoxConstraints(minHeight: DS.s(58)),

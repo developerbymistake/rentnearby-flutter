@@ -301,14 +301,13 @@ class StayCardSegment extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = DS.radius(16);
-    final big = DS.radius(34);
     return Container(
       margin: margin ?? DS.insets(l: 18, r: 18),
       decoration: BoxDecoration(
         color: DesignColors.surface,
         borderRadius: BorderRadius.only(
           topLeft: first ? Radius.circular(r) : Radius.zero,
-          topRight: first ? Radius.circular(big) : Radius.zero,
+          topRight: first ? Radius.circular(r) : Radius.zero,
           bottomLeft: last ? Radius.circular(r) : Radius.zero,
           bottomRight: last ? Radius.circular(r) : Radius.zero,
         ),

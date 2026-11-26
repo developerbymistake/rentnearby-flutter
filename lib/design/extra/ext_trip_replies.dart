@@ -8,8 +8,9 @@ import 'pill_buttons_3d.dart';
 import 'reply_card_3d.dart';
 import 'status_pill.dart';
 import '../tokens/design_scale.dart';
+import '../tokens/card_tokens.dart';
 
-BorderRadius get _kStripRadius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
+BorderRadius get _kStripRadius => DS.br(CardRadius.card);
 
 abstract final class RepliesLook {
   static const Color stayPage = Color(0xFFD8EEDA);
@@ -368,7 +369,7 @@ class ProblemOption3D extends StatelessWidget {
   final bool selected;
   final bool busy;
 
-  static BorderRadius get _radius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(40)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
+  static BorderRadius get _radius => DS.br(CardRadius.card);
 
   @override
   Widget build(BuildContext context) {
@@ -454,7 +455,7 @@ class CandidateRow3D extends StatelessWidget {
   }
 }
 
-BorderRadius get _kChatCardRadius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
+BorderRadius get _kChatCardRadius => DS.br(CardRadius.hero);
 
 class ChatTripCard3D extends StatelessWidget {
   const ChatTripCard3D({
@@ -719,7 +720,7 @@ class BucketChip3D extends StatelessWidget {
   final bool off;
   final VoidCallback? onTap;
 
-  static BorderRadius get _radius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
+  static BorderRadius get _radius => DS.br(CardRadius.card);
 
   @override
   Widget build(BuildContext context) {

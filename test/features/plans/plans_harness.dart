@@ -137,7 +137,7 @@ PlanModel freePlan(String key) => PlanModel(
       prices: const [],
     );
 
-PlanModel plusPlan(String key, {Map<String, int>? features}) {
+PlanModel plusPlan(String key, {Map<String, int>? features, int trialDays = 7}) {
   final rupees = key == 'Taxi' ? [150, 400, 1400] : [400, 1100, 3800];
   return PlanModel(
     id: '${key}_plus',
@@ -146,7 +146,7 @@ PlanModel plusPlan(String key, {Map<String, int>? features}) {
     name: 'Plus',
     tagline: null,
     isDefault: false,
-    trialDays: 7,
+    trialDays: trialDays,
     features: features ?? (key == 'Taxi' ? taxiPlusFeatures : stayPlusFeatures),
     prices: [
       for (final (i, m) in [1, 3, 12].indexed)
@@ -299,12 +299,12 @@ abstract final class Fx {
       );
 }
 
-FakePlans installPlans(MyPlanModel me, {bool trialOffer_ = true, Map<String, int>? plusFeatures}) {
+FakePlans installPlans(MyPlanModel me, {bool trialOffer_ = true, Map<String, int>? plusFeatures, int plusTrialDays = 7}) {
   final key = me.featureKey ?? 'Taxi';
   final c = FakePlans(prices: storeOf(key), trial: trialOffer_ ? trialOffer(key) : null);
   Get.put<PlanController>(c);
   c.myPlan.value = me;
-  c.catalog.value = PlanCatalogModel({key: [freePlan(key), plusPlan(key, features: plusFeatures)]}, paymentProvider: 'Play');
+  c.catalog.value = PlanCatalogModel({key: [freePlan(key), plusPlan(key, features: plusFeatures, trialDays: plusTrialDays)]}, paymentProvider: 'Play');
   c.storeState.value = StoreState.ready;
   PlanCopies.taxi = const TaxiPlanCopy();
   PlanCopies.stay = const StayPlanCopy();
@@ -313,6 +313,7 @@ FakePlans installPlans(MyPlanModel me, {bool trialOffer_ = true, Map<String, int
 
 void resetPlans() {
   PlanGate.debugPlan = null;
+  PlanGate.debugTrialDays = null;
   PlanCopies.reset();
   Get.reset();
 }

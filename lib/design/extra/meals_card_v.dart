@@ -13,12 +13,7 @@ import 'photo_circle.dart';
 import 'template_motion.dart';
 import 'wide_card.dart';
 
-const BorderRadius kMealsRadius = BorderRadius.only(
-  topLeft: Radius.circular(8),
-  topRight: Radius.circular(54),
-  bottomLeft: Radius.circular(8),
-  bottomRight: Radius.circular(8),
-);
+const BorderRadius kMealsRadius = CardRadius.hero;
 
 class RoundGoButton extends StatelessWidget {
   const RoundGoButton({
@@ -188,6 +183,7 @@ class MealsCardV extends StatelessWidget {
     this.compact = false,
     this.rail = false,
     this.photoUrl,
+    this.contentScale = 1.0,
   });
 
   final ListingTone tone;
@@ -208,6 +204,7 @@ class MealsCardV extends StatelessWidget {
   final String? semanticsLabel;
   final bool wholeWords;
   final int titleLines;
+  final double contentScale;
   final int descriptionLines;
   final bool uniformSlots;
   final bool starBadge;
@@ -385,7 +382,7 @@ class MealsCardV extends StatelessWidget {
     final cellBottom = DS.s(this.cellBottom);
     final descMin = scaler.scale(DS.f(12)) * 1.55 * (compact ? 1 : 2);
     final hasNumber = number != null && number!.isNotEmpty;
-    final titleStyle = Ink3D.text(17, FontWeight.w700, white, height: 1.3);
+    final titleStyle = Ink3D.text(17 * contentScale, FontWeight.w700, white, height: 1.3);
     final titleRoom = width - cellPadding.horizontal - DS.s(30);
     final card = DecoratedBox(
       decoration: BoxDecoration(
@@ -570,7 +567,7 @@ class MealsCardV extends StatelessWidget {
               top: DS.s(-6),
               child: Art3D(
                 asset: art!,
-                size: 110,
+                size: 110 * contentScale,
                 shadowBlur: 5,
                 shadowOffset: const Offset(4, 6),
                 shadowAlpha: 0.22,

@@ -23,7 +23,7 @@ class LedgerMenu extends StatelessWidget {
   static Key rowKey(String label) => ValueKey('ledger_menu_$label');
 
   static BorderRadius get _radius =>
-      DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(28), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
+      DS.br(CardRadius.card);
 
   Future<void> _open(BuildContext context, Rect anchor) {
     final width = MediaQuery.sizeOf(context).width;

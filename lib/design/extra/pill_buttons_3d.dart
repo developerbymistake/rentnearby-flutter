@@ -187,6 +187,7 @@ class GradientPillButton extends StatelessWidget implements _PillSpec {
     this.semanticsLabel,
     this.scaled = true,
     this.offColor,
+    this.offLabelColor,
     this.shadows,
   });
 
@@ -196,6 +197,7 @@ class GradientPillButton extends StatelessWidget implements _PillSpec {
   final String label;
   final VoidCallback? onTap;
   final Color? offColor;
+  final Color? offLabelColor;
   final List<BoxShadow>? shadows;
   final bool loading;
   final bool enabled;
@@ -219,7 +221,7 @@ class GradientPillButton extends StatelessWidget implements _PillSpec {
         gradient: flatOff ? null : (danger ? Form3D.dangerGradient : tone.gradient),
         boxShadow: live ? DS.shadows(shadows ?? (danger ? Form3D.dangerGlow : Form3D.glow(tone)), scaled: scaled) : null,
       ),
-      child: _PillBody(label: label, color: Colors.white, height: height, fontSize: fontSize, expand: expand, scaled: scaled, icon: icon, loading: loading),
+      child: _PillBody(label: label, color: flatOff ? offLabelColor ?? Colors.white : Colors.white, height: height, fontSize: fontSize, expand: expand, scaled: scaled, icon: icon, loading: loading),
     );
     return Tap3D(
       onTap: live && !loading ? onTap : null,

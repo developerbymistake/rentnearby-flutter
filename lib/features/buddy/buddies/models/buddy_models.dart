@@ -15,6 +15,10 @@ abstract final class BuddyContext {
   static const String buddy = 'Buddy';
   static const String find = 'Find';
   static const String trip = 'Trip';
+  static const String profile = 'Profile';
+  static const String tripPost = 'TripPost';
+  static const String chat = 'Chat';
+  static const String joinReq = 'JoinReq';
 }
 
 class FoundPerson extends BuddyPerson {
@@ -133,7 +137,19 @@ abstract final class BuddyTripState {
 }
 
 class BuddyItem {
-  const BuddyItem({required this.userId, required this.name, required this.username, required this.initial, required this.isNew, this.since, this.tripState, this.photoUrl});
+  const BuddyItem({
+    required this.userId,
+    required this.name,
+    required this.username,
+    required this.initial,
+    required this.isNew,
+    this.since,
+    this.tripState,
+    this.photoUrl,
+    this.gender = '',
+    this.tripsTogether = 0,
+    this.mutualCount = 0,
+  });
 
   final String userId;
   final String name;
@@ -143,6 +159,9 @@ class BuddyItem {
   final bool isNew;
   final DateTime? since;
   final String? tripState;
+  final String gender;
+  final int tripsTogether;
+  final int mutualCount;
 
   BuddyPerson get person => BuddyPerson(userId: userId, name: name, username: username, initial: initial, photoUrl: photoUrl);
 
@@ -155,6 +174,9 @@ class BuddyItem {
         since: BuddyJson.time(j['since']),
         tripState: BuddyJson.strOrNull(j['tripState']),
         photoUrl: BuddyJson.photo(j['photoUrl']),
+        gender: BuddyJson.str(j['gender']),
+        tripsTogether: BuddyJson.integer(j['tripsTogether']),
+        mutualCount: BuddyJson.integer(j['mutualCount']),
       );
 }
 

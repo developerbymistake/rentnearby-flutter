@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/design/extra/ext_auth.dart';
+import 'package:bakhli/features/social/a/onboarding/onboarding_steps.dart';
+import 'package:bakhli/features/social/a/social_strings_a.dart';
 import 'package:bakhli/screens/login_screen.dart';
 import 'package:bakhli/screens/onboarding_screen.dart';
 import 'package:bakhli/screens/phone_verify_screen.dart';
@@ -75,17 +77,17 @@ Future<void> _toVerifyOtp(WidgetTester t) async {
   await t.pump(const Duration(milliseconds: 900));
 }
 
-Rect _snap(WidgetTester t) {
+Rect _snap(WidgetTester t, {Type card = AuthCard}) {
   final scroll = t.state<ScrollableState>(find.descendant(of: find.byType(SingleChildScrollView).first, matching: find.byType(Scrollable)).first);
   scroll.position.jumpTo(0);
-  return t.getRect(find.byType(AuthCard));
+  return t.getRect(find.byType(card));
 }
 
-Future<void> _expectStays(WidgetTester t, Size size, double kb, Rect base, String screen, String title, String subtitle) async {
+Future<void> _expectStays(WidgetTester t, Size size, double kb, Rect base, String screen, String title, String subtitle, {Type cardType = AuthCard}) async {
   final scroll = t.state<ScrollableState>(find.descendant(of: find.byType(SingleChildScrollView).first, matching: find.byType(Scrollable)).first);
   scroll.position.jumpTo(0);
   await t.pump();
-  final card = t.getRect(find.byType(AuthCard));
+  final card = t.getRect(find.byType(cardType));
   final moved = (card.top - base.top).abs();
   if (moved > (_worst[screen] ?? -1)) _worst[screen] = moved;
   expect(card.top, closeTo(base.top, 0.5), reason: 'card moved when the keyboard opened: before ${base.top}, after ${card.top}');
@@ -98,7 +100,7 @@ Future<void> _expectStays(WidgetTester t, Size size, double kb, Rect base, Strin
   if (card.bottom > visible + 0.5 && card.top + 60 <= visible) {
     scroll.position.jumpTo(scroll.position.maxScrollExtent);
     await t.pump();
-    expect(t.getRect(find.byType(AuthCard)).bottom, lessThanOrEqualTo(visible + 0.5), reason: 'card must scroll above the keyboard');
+    expect(t.getRect(find.byType(cardType)).bottom, lessThanOrEqualTo(visible + 0.5), reason: 'card must scroll above the keyboard');
   }
   expect(t.takeException(), isNull);
 }
@@ -169,10 +171,10 @@ void main() {
 
         testWidgets('onboarding card below band $tag', (t) async {
           await _open(t, const OnboardingScreen(), size, scale, args: {'phone': '9876543210'});
-          final base = _snap(t);
+          final base = _snap(t, card: OnboardingCard);
           t.view.viewInsets = FakeViewPadding(bottom: kb);
           await _settle(t);
-          await _expectStays(t, size, kb, base, 'onboarding', 'Complete your profile', 'Just one more step');
+          await _expectStays(t, size, kb, base, 'onboarding', SocialStringsA.obTitle, SocialStringsA.obStep1, cardType: OnboardingCard);
         });
       }
     }

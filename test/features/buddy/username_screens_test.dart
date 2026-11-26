@@ -7,6 +7,7 @@ import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/design/extra/ext_buddy.dart';
 import 'package:bakhli/features/buddy/buddy_strings.dart';
 import 'package:bakhli/features/buddy/widgets/username_qr_sheet.dart';
+import 'package:bakhli/features/social/a/social_strings_a.dart';
 import 'package:bakhli/models/my_plan_model.dart';
 import 'package:bakhli/models/user_model.dart';
 import 'package:bakhli/screens/onboarding_screen.dart';
@@ -18,6 +19,7 @@ import 'package:get/get.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:toastification/toastification.dart';
 
+import '../../support/onboarding_walk.dart';
 import '../../support/real_phone.dart';
 
 const _username = 'Bakhli#48291736';
@@ -43,7 +45,19 @@ class _Auth extends AuthController {
   }
 
   @override
-  Future<bool> createOnboardingAccount({required String phone, required String name}) async {
+  Future<bool> createOnboardingAccount({
+    required String phone,
+    required String name,
+    String? gender,
+    int? birthMonth,
+    int? birthYear,
+    List<String>? interests,
+    List<String>? skills,
+    List<String>? places,
+    String? about,
+    String? homeCityName,
+    String? homeStateName,
+  }) async {
     submitted.add(name);
     return false;
   }
@@ -159,16 +173,17 @@ void main() {
   tearDown(Get.reset);
 
   group('onboarding username (frame 1.1)', () {
-    testWidgets('shows the server username greyed with label and helper, above Full Name', (t) async {
+    testWidgets('shows the server username greyed in the locked pill, under the phone row at the end of step 1', (t) async {
       _setup();
       await _openOnboarding(t);
-      expect(find.text(BuddyStrings.usernameLabel), findsOneWidget);
       expect(find.text(_username), findsOneWidget);
-      expect(find.text(BuddyStrings.usernameHelper), findsOneWidget);
-      expect(find.byType(TextFormField), findsOneWidget);
+      expect(find.byType(UsernameLockedPill), findsOneWidget);
+      expect(find.text(BuddyStrings.usernameLabel), findsNothing);
+      expect(find.text(BuddyStrings.usernameHelper), findsNothing);
+      expect(find.byKey(OnboardingWalk.nameKey), findsOneWidget);
       final y = t.getTopLeft(find.text(_username)).dy;
-      expect(y, lessThan(t.getTopLeft(find.text('Full Name')).dy));
-      expect(y, greaterThan(t.getTopLeft(find.text('+91 9876543210')).dy));
+      expect(y, greaterThan(t.getTopLeft(find.text(SocialStringsA.fullName)).dy));
+      expect(y, greaterThan(t.getTopLeft(find.text('+91 98xxxxxx10')).dy));
       await _finish(t);
     });
 
@@ -183,7 +198,7 @@ void main() {
       await _finish(t);
     });
 
-    testWidgets('missing username shows a quiet loading look, Copy off, Get Started still works', (t) async {
+    testWidgets('missing username shows a quiet loading look, Copy off, Finish still works', (t) async {
       final a = _setup(username: null);
       Get.put(ProfilePhotoController(offline: () async => false));
       final copied = _clipboard(t);
@@ -193,14 +208,15 @@ void main() {
       await t.tap(find.bySemanticsLabel(BuddyStrings.copyUsername), warnIfMissed: false);
       await t.pump();
       expect(copied, isEmpty);
-      await t.enterText(find.byType(TextFormField), 'Rahul Mehra');
       Get.find<ProfilePhotoController>().localPath.value = 'missing_photo.jpg';
-      await t.pump();
-      await t.ensureVisible(find.text('Get Started'));
-      await t.pump();
-      await t.tap(find.text('Get Started'));
+      await OnboardingWalk.toFinish(t, name: 'Rahul Mehra');
+      await t.tap(find.text(SocialStringsA.finish));
       await t.pump();
       expect(a.submitted, ['Rahul Mehra']);
+      await t.binding.handlePopRoute();
+      await t.pump(const Duration(milliseconds: 300));
+      await t.binding.handlePopRoute();
+      await t.pump(const Duration(milliseconds: 300));
       a.signupUsername.value = _username;
       await t.pump();
       expect(find.text(_username), findsOneWidget);

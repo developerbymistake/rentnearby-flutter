@@ -145,8 +145,8 @@ class _LegSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final outer = DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(40), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
-    final head = DS.br(const BorderRadius.only(topLeft: Radius.circular(6), topRight: Radius.circular(36)));
+    final outer = DS.br(CardRadius.hero);
+    final head = DS.br(const BorderRadius.only(topLeft: Radius.circular(CardRadius.corner - 2), topRight: Radius.circular(CardRadius.heroNotch - 2)));
     return Container(
       key: ValueKey('viewer_leg_${leg.index}'),
       margin: DS.insets(l: 18, t: 44, r: 18),
@@ -257,7 +257,7 @@ class _DayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(54), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
+    final radius = DS.br(CardRadius.hero);
     final rows = <Widget>[];
     if (day.restDay || day.spots.isEmpty) {
       rows.add(Padding(

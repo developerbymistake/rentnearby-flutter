@@ -80,7 +80,7 @@ class _TripAddCityCardState extends State<TripAddCityCard> {
               onTap: enabled ? () => TripNavigation.addCity(context) : null,
               label: TripStringsMcaA2.addACity,
               child: CustomPaint(
-                painter: TripDashBox(DesignColors.addDayLine, DS.s(1), fill: DesignColors.addDayFill, radius: DS.br(TripCustomizeLook.addDayRadius), stroke: 2.5),
+                painter: TripDashBox(DesignColors.addDayLine, DS.s(1), fill: DesignColors.addDayFill, radius: DS.br(TripCustomizeLook.addRowRadius), stroke: 2.5),
                 child: Container(
                   constraints: BoxConstraints(minHeight: DS.s(80)),
                   padding: DS.sym(h: 16, v: 20),

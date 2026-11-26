@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
 import 'package:bakhli/design/tokens/design_scale.dart';
+import '../tokens/card_tokens.dart';
 
 class StepProgressHeader extends StatelessWidget {
   const StepProgressHeader({
@@ -58,7 +59,7 @@ class StepProgressHeader extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(DS.s(14), DS.s(14), DS.s(14), DS.s(10)),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(30)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        borderRadius: DS.br(CardRadius.card),
         boxShadow: DS.shadows(Form3D.cardShadow),
       ),
       child: LayoutBuilder(

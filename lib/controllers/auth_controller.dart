@@ -25,6 +25,7 @@ import '../services/hub_session_manager.dart';
 import '../features/stay/setup/stay_setup_controller.dart';
 import '../features/taxi/setup/taxi_setup_controller.dart';
 import '../features/buddy/buddy_session_hooks.dart';
+import '../features/social/social_session_hooks.dart';
 import '../features/owner_core/data/owner_cache.dart';
 import '../features/owner_core/plan/plan_bindings.dart';
 import '../features/owner_core/session/owner_session_hooks.dart';
@@ -237,6 +238,7 @@ class AuthController extends GetxController {
   String get postLoginRoute {
     if (user.value?.needsProfilePhoto ?? false) return AppRoutes.profilePhoto;
     if (!(user.value?.roleConfirmed ?? false)) return AppRoutes.roleSelect;
+    if (canUseTravellerFeatures && !(user.value?.profileCompleted ?? true)) return AppRoutes.onboarding;
     if (ownerShellEmpty.value && isOwner) return AppRoutes.main;
     if (staysEnabled && _setupPending(user.value?.stayStatus)) return AppRoutes.staySetup;
     if (taxisEnabled && _setupPending(user.value?.taxiStatus)) return AppRoutes.taxiSetup;
@@ -323,6 +325,15 @@ class AuthController extends GetxController {
   Future<bool> createOnboardingAccount({
     required String phone,
     required String name,
+    String? gender,
+    int? birthMonth,
+    int? birthYear,
+    List<String>? interests,
+    List<String>? skills,
+    List<String>? places,
+    String? about,
+    String? homeCityName,
+    String? homeStateName,
   }) async {
     try {
       isLoading.value = true;
@@ -331,6 +342,15 @@ class AuthController extends GetxController {
         'phoneNumber': phone,
         'name': name,
         if (username != null && username.isNotEmpty) 'username': username,
+        'gender': ?gender,
+        'birthMonth': ?birthMonth,
+        'birthYear': ?birthYear,
+        'interests': ?interests,
+        'skills': ?skills,
+        'places': ?places,
+        'about': ?about,
+        'homeCityName': ?homeCityName,
+        'homeStateName': ?homeStateName,
       });
       await _saveSession(res['data'] as Map<String, dynamic>);
       return true;
@@ -408,6 +428,14 @@ class AuthController extends GetxController {
     user.value = userModel;
     _syncProfileFields(userModel);
     signupUsername.value = null;
+  }
+
+  void markProfileCompleted({required String gender}) {
+    final u = user.value;
+    if (u == null) return;
+    final updated = UserModel.fromJson({...u.toJson(), 'profileCompleted': true, 'gender': gender});
+    StorageService.saveUser(updated);
+    user.value = updated;
   }
 
   Future<void> _saveSession(Map<String, dynamic> data) async {
@@ -492,6 +520,7 @@ class AuthController extends GetxController {
     }
     try {
       await BuddySessionHooks.onLogout(reason, buddyUserId);
+      SocialSessionHooks.onLogout();
       await OwnerSessionHooks.onLogout(reason, buddyUserId);
     } catch (_) {}
     Get.offAllNamed(AppRoutes.login);

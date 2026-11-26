@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 
 import 'package:bakhli/design/tokens/shadow_tokens.dart';
+import '../../tokens/card_tokens.dart';
 class MealsListView extends StatefulWidget {
   const MealsListView(
       {Key? key, this.mainScreenAnimationController, this.mainScreenAnimation})
@@ -122,12 +123,7 @@ class MealsView extends StatelessWidget {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        borderRadius: const BorderRadius.only(
-                          bottomRight: Radius.circular(8.0),
-                          bottomLeft: Radius.circular(8.0),
-                          topLeft: Radius.circular(8.0),
-                          topRight: Radius.circular(54.0),
-                        ),
+                        borderRadius: CardRadius.hero,
                       ),
                       child: Padding(
                         padding: const EdgeInsets.only(

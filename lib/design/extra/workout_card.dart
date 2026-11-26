@@ -5,6 +5,7 @@ import 'art_3d.dart';
 import 'meals_card_v.dart';
 import 'motion_kit.dart';
 import 'wide_card.dart';
+import '../tokens/card_tokens.dart';
 
 enum WorkoutTrailing { none, arrow, ring, dots }
 
@@ -52,12 +53,7 @@ class WorkoutCard extends StatelessWidget {
 
   static double get overhang => DS.s(30);
 
-  static const BorderRadius radius = BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(68),
-    bottomLeft: Radius.circular(8),
-    bottomRight: Radius.circular(8),
-  );
+  static const BorderRadius radius = CardRadius.hero;
 
   @override
   Widget build(BuildContext context) {

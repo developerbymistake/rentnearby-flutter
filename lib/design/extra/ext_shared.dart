@@ -4,6 +4,7 @@ import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
 import '../tokens/design_scale.dart';
+import '../tokens/card_tokens.dart';
 
 class ThinNote3D extends StatelessWidget {
   const ThinNote3D(this.text, {super.key, this.art = ListingArt.sunrise});
@@ -69,7 +70,7 @@ class BannerCard3D extends StatelessWidget {
   final VoidCallback onClose;
   final List<Widget> buttons;
 
-  static BorderRadius get _radius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
+  static BorderRadius get _radius => DS.br(CardRadius.card);
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +87,7 @@ class BannerCard3D extends StatelessWidget {
           Stack(
             children: [
               ClipRRect(
-                borderRadius: buttons.isEmpty ? _radius : BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54))),
+                borderRadius: buttons.isEmpty ? _radius : DS.br(const BorderRadius.vertical(top: Radius.circular(CardRadius.uniformValue))),
                 child: image,
               ),
               Positioned(

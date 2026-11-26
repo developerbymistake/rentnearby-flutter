@@ -159,18 +159,8 @@ class SeekerTripCardView extends StatelessWidget {
   final VoidCallback? onMyTrips;
   final VoidCallback? onStatus;
 
-  static const BorderRadius radius = BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(54),
-    bottomLeft: Radius.circular(8),
-    bottomRight: Radius.circular(8),
-  );
-  static const BorderRadius pillRadius = BorderRadius.only(
-    topLeft: Radius.circular(8),
-    topRight: Radius.circular(20),
-    bottomLeft: Radius.circular(8),
-    bottomRight: Radius.circular(8),
-  );
+  static const BorderRadius radius = CardRadius.hero;
+  static const BorderRadius pillRadius = CardRadius.card;
 
   static const double minHeight = 156;
 

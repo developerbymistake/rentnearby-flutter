@@ -105,7 +105,7 @@ class TripCard extends StatelessWidget {
         icon: Icon(Icons.more_vert_rounded, size: DS.s(22), color: DesignColors.onPrimary),
         color: DesignColors.surface,
         elevation: 8,
-        shape: RoundedRectangleBorder(borderRadius: DS.br(CardRadius.tile)),
+        shape: RoundedRectangleBorder(borderRadius: DS.br(CardRadius.card)),
         onSelected: (v) {
           if (v == 'share') onShare?.call();
           if (v == 'complete') onMarkComplete?.call();

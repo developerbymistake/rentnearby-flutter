@@ -84,7 +84,7 @@ class ViewerFootStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = HubTokens.cardRadius(30);
+    final radius = DS.br(CardRadius.card);
     return Padding(
       padding: EdgeInsets.only(top: DS.gv(top)),
       child: DecoratedBox(

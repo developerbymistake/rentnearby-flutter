@@ -3,6 +3,7 @@ import 'package:signalr_netcore/signalr_client.dart';
 import '../config/app_constants.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
+import '../features/social/c/chat/dm_hub_bridge.dart';
 import 'hub_connection_shared.dart';
 import 'hub_session_manager.dart';
 import 'storage_service.dart';
@@ -23,6 +24,7 @@ class ChatHubService extends GetxService with SingleFlightHubConnect {
   // one conversation screen open at once) — if it's ever pushed on top of another without
   // the first disposing, only the most-recently-joined one gets restored after a reconnect.
   String? _activeConversationId;
+  bool _hadSession = false;
 
   @override
   HubConnection? get currentConnection => _connection;
@@ -49,6 +51,7 @@ class ChatHubService extends GetxService with SingleFlightHubConnect {
         )
         .withAutomaticReconnect(reconnectPolicy: const HubReconnectPolicy())
         .build();
+    DmHubBridge.attach(_connection!);
 
     _connection!.on('MessageReceived', (args) {
       if (args == null || args.isEmpty) return;
@@ -119,6 +122,7 @@ class ChatHubService extends GetxService with SingleFlightHubConnect {
       // any brief network blip with no visible error.
       await _reconcileGroupMembership();
       chatCtrl.notifyHubReconnected();
+      DmHubBridge.notifyReconnected();
     });
 
     try {
@@ -129,6 +133,9 @@ class ChatHubService extends GetxService with SingleFlightHubConnect {
       // actual server-side join now that we're Connected, without waiting for some future
       // reconnect event.
       await _reconcileGroupMembership();
+      // A fresh connection after an earlier one (resume) missed every DM sent meanwhile.
+      if (_hadSession) DmHubBridge.notifyReconnected();
+      _hadSession = true;
     } catch (_) {
       // Connection failed — conversation screens still work via plain REST
       // (GetMessages on open), so there's nothing further to fall back to here.
@@ -180,6 +187,7 @@ class ChatHubService extends GetxService with SingleFlightHubConnect {
   /// Only called from logout/account-deletion now — opening/closing a conversation screen
   /// no longer tears the connection down (see joinConversation/leaveConversation above).
   Future<void> disconnect() async {
+    DmHubBridge.detach();
     try {
       _connection?.off('MessageReceived');
       _connection?.off('MessageUpdated');
@@ -191,5 +199,6 @@ class ChatHubService extends GetxService with SingleFlightHubConnect {
     _connection = null;
     resetConnecting();
     _activeConversationId = null;
+    _hadSession = false;
   }
 }

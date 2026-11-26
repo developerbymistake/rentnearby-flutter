@@ -393,7 +393,7 @@ class BucketPill extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: selected ? tone.gradient : null,
             color: selected ? null : DesignColors.surface,
-            borderRadius: DS.br(CardRadius.tile),
+            borderRadius: DS.br(CardRadius.card),
             boxShadow: selected ? tone.glow(blur: 8, dy: 4) : DS.shadows(Ink3D.softShadow),
           ),
           child: count != null

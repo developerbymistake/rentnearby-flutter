@@ -32,6 +32,8 @@ import '../features/owner_core/plan/profile_plan_card.dart';
 import '../widgets/account_blockers_sheet.dart';
 import 'profile/profile_rows.dart';
 
+part 'profile/profile_actions.dart';
+
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
   @override
@@ -62,37 +64,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _initials(String? name) {
     if (name == null || name.trim().isEmpty) return '';
     return name.trim().characters.first.toUpperCase();
-  }
-
-  Future<void> _shareApp() async {
-    await SharePlus.instance.share(
-      ShareParams(
-        text: 'Plan trips, find stays and taxis near you.\n'
-            'https://play.google.com/store/apps/details?id=com.rentnearby.rentnearby',
-        subject: 'Plan your next trip.',
-      ),
-    );
-  }
-
-  Future<void> _rateApp() async {
-    final uri = Uri.parse('market://details?id=com.rentnearby.rentnearby');
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      await launchUrl(
-        Uri.parse('https://play.google.com/store/apps/details?id=com.rentnearby.rentnearby'),
-        mode: LaunchMode.externalApplication,
-      );
-    }
-  }
-
-  Future<void> _contactSupport() async {
-    final uri = Uri(
-      scheme: 'mailto',
-      path: 'supportbakhli@gmail.com',
-      query: 'subject=Bakhli Support Request',
-    );
-    if (!await launchUrl(uri)) {
-      AppToast.error('Could not open email app. Please email supportbakhli@gmail.com');
-    }
   }
 
   @override
@@ -138,21 +109,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ]);
             })),
             item(_sectionGroup('SUPPORT', [
-              IconRow3D(art: ListingArt.speechBalloon, title: 'Contact Support', onTap: _contactSupport),
-              IconRow3D(art: ListingArt.star, title: 'Rate App', divider: true, onTap: _rateApp),
-              IconRow3D(art: ListingArt.airplane, title: 'Share App', divider: true, onTap: _shareApp),
+              IconRow3D(art: ListingArt.speechBalloon, title: 'Contact Support', onTap: ProfileActions.contactSupport),
+              IconRow3D(art: ListingArt.star, title: 'Rate App', divider: true, onTap: ProfileActions.rateApp),
+              IconRow3D(art: ListingArt.airplane, title: 'Share App', divider: true, onTap: ProfileActions.shareApp),
             ])),
             item(_sectionGroup('LEGAL', [
               IconRow3D(
                 art: ListingArt.clipboard,
                 title: 'Privacy Policy',
-                onTap: () => _openPage(const PrivacyPolicyScreen()),
+                onTap: ProfileActions.openPrivacy,
               ),
               IconRow3D(
                 art: ListingArt.clipboard,
                 title: 'Terms of Service',
                 divider: true,
-                onTap: () => _openPage(const TermsOfServiceScreen()),
+                onTap: ProfileActions.openTerms,
               ),
             ])),
             item(_logoutButton()),
@@ -161,7 +132,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Center(
                 child: Obx(() => TextLink(
                       label: 'Delete Account',
-                      onTap: _auth.isLoading.value ? null : _confirmDeleteAccount,
+                      onTap: _auth.isLoading.value ? null : () => ProfileActions.confirmDeleteAccount(context),
                     )),
               ),
             )),
@@ -184,15 +155,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
-  }
-
-  void _openPage(Widget page) {
-    Get.key.currentState?.push(PageRouteBuilder<void>(
-      transitionDuration: templateTransitionDuration,
-      reverseTransitionDuration: templateTransitionDuration,
-      pageBuilder: (_, _, _) => page,
-      transitionsBuilder: (ctx, a, s, child) => TemplateTransition().buildTransition(ctx, null, null, a, s, child),
-    ));
   }
 
   Widget _hero() {
@@ -533,7 +495,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 excludeSemantics: true,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: _openPhoneVerify,
+                  onTap: ProfileActions.changePhone,
                   child: ConstrainedBox(
                     constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch)),
                     child: Padding(
@@ -617,16 +579,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-  Future<void> _openPhoneVerify() async {
-    final result = await Get.toNamed(
-      AppRoutes.phoneVerify,
-      arguments: {'isChange': _auth.user.value?.isPhoneVerified ?? false},
-    );
-    if (result == true) {
-      await _auth.refreshProfile();
-    }
-  }
-
   static Widget _fieldBox(Widget field) => Container(
         decoration: BoxDecoration(
           color: DesignColors.onPrimary,
@@ -694,7 +646,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: PressScale(
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: _confirmLogout,
+            onTap: () => ProfileActions.confirmLogout(context),
             child: Container(
               padding: DS.all(15),
               alignment: Alignment.center,
@@ -719,76 +671,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         insetPadding: DS.sym(h: 24, v: 24),
         child: child,
       );
-
-  Future<void> _confirmLogout() async {
-    if (!await LogoutGuard.check(context)) return;
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (ctx) => _dialog(
-        RepliesEntrance(
-          child: _ProfileSheet(
-            tone: _bad,
-            art: ListingArt.airplane,
-            title: 'Logout?',
-            body: 'Are you sure you want to logout?',
-            dialog: true,
-            primaryLabel: 'Logout',
-            onPrimary: () {
-              Navigator.pop(ctx);
-              _auth.logout();
-            },
-            secondaryLabel: 'Cancel',
-            onSecondary: () => Navigator.pop(ctx),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _confirmDeleteAccount() {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) => _DeleteAccountDialog(
-        onConfirm: () {
-          Navigator.pop(ctx);
-          _doDeleteAccount();
-        },
-        onCancel: () => Navigator.pop(ctx),
-      ),
-    );
-  }
-
-  Future<void> _doDeleteAccount() async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: DesignColors.scrim,
-      builder: (_) => PopScope(
-        canPop: false,
-        child: Center(
-          child: Container(
-            padding: DS.sym(h: 36, v: 32),
-            decoration: BoxDecoration(color: DesignColors.onPrimary, borderRadius: DS.circular(32)),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              SizedBox(width: DS.s(48), height: DS.s(48), child: CircularProgressIndicator(strokeWidth: 3, color: _bad.g2)),
-              Gap.v(20),
-              Text('Deleting your account...',
-                  style: Ink3D.text(15, FontWeight.w600, Ink3D.title).copyWith(decoration: TextDecoration.none)),
-              Gap.v(6),
-              Text('Please do not close the app.',
-                  style: Ink3D.text(12, FontWeight.w500, Ink3D.grey).copyWith(decoration: TextDecoration.none)),
-            ]),
-          ),
-        ),
-      ),
-    );
-    final blocked = await _auth.deleteAccountBlocks();
-    if (!mounted) return;
-    if (Navigator.canPop(context)) Navigator.pop(context);
-    if (blocked != null && blocked.isNotEmpty) AccountBlockersSheet.show(context, blocked);
-  }
 }
 
 class AccountDeleteBlockedDialog extends StatelessWidget {
@@ -1065,8 +947,7 @@ class _ProfileSheet extends StatelessWidget {
   final bool closeEnabled;
 
   static double get _artRoom => DS.s(56);
-  static const BorderRadius _primaryRadius =
-      BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20), bottomRight: Radius.circular(20), bottomLeft: Radius.circular(8));
+  static const BorderRadius _primaryRadius = BorderRadius.all(Radius.circular(20));
 
   Widget _button(String label, VoidCallback? onTap, {required bool primary, bool loading = false}) {
     return Padding(

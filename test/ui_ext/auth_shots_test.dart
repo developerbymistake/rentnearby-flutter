@@ -7,6 +7,7 @@ import 'package:bakhli/controllers/location_controller.dart';
 import 'package:bakhli/controllers/profile_photo_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/features/social/a/social_strings_a.dart';
 import 'package:bakhli/models/role_model.dart';
 import 'package:bakhli/models/user_model.dart';
 import 'package:bakhli/screens/login_screen.dart';
@@ -26,6 +27,7 @@ import 'package:pinput/pinput.dart';
 import 'package:toastification/toastification.dart';
 
 import '../e2e_journeys/nearby/nearby_support.dart';
+import '../support/onboarding_walk.dart';
 import '../support/real_phone.dart';
 
 class _Auth extends AuthController {
@@ -62,7 +64,20 @@ class _Auth extends AuthController {
   }
 
   @override
-  Future<bool> createOnboardingAccount({required String phone, required String name}) async => false;
+  Future<bool> createOnboardingAccount({
+    required String phone,
+    required String name,
+    String? gender,
+    int? birthMonth,
+    int? birthYear,
+    List<String>? interests,
+    List<String>? skills,
+    List<String>? places,
+    String? about,
+    String? homeCityName,
+    String? homeStateName,
+  }) async =>
+      false;
 
   @override
   Future<String?> sendPhoneOtp(String phone) async {
@@ -250,7 +265,7 @@ void main() {
       testWidgets('main ${_tag(w, s)}', (t) async {
         _base();
         await _open(t, const OnboardingScreen(), w: w, s: s, args: {'phone': '9876543210'});
-        await t.enterText(find.byType(TextFormField).first, 'Rahul Sharma');
+        await t.enterText(find.byKey(OnboardingWalk.nameKey), 'Rahul Sharma');
         await _snap(t, 'onb_${_tag(w, s)}');
         await _done(t);
       });
@@ -259,15 +274,17 @@ void main() {
     testWidgets('states', (t) async {
       _base();
       await _open(t, const OnboardingScreen(), args: {'phone': '9876543210'});
-      await _tapText(t, 'Get Started');
-      await _snap(t, 'onb_photo_err');
-      await t.pump(const Duration(seconds: 5));
+      await _tapText(t, SocialStringsA.next);
+      expect(find.text(SocialStringsA.obStep1), findsOneWidget);
+      expect(find.byKey(const ValueKey('ob_hint')), findsOneWidget);
+      await _snap(t, 'onb_hint');
       Get.find<ProfilePhotoController>().localPath.value = 'missing_photo.jpg';
-      await _tapText(t, 'Get Started');
+      await OnboardingWalk.toFinish(t, name: 'Rahul Sharma');
+      FocusManager.instance.primaryFocus?.unfocus();
+      await _snap(t, 'onb_step3');
+      await _tapText(t, SocialStringsA.finish);
       await _snap(t, 'onb_err');
       await t.pump(const Duration(seconds: 5));
-      await t.enterText(find.byType(TextFormField).first, 'Rahul Sharma');
-      FocusManager.instance.primaryFocus?.unfocus();
       _auth.isLoading.value = true;
       await _snap(t, 'onb_load');
       _auth.isLoading.value = false;

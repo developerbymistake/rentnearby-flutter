@@ -8,10 +8,11 @@ import 'motion_kit.dart';
 import 'sheet_close_button.dart';
 import 'wide_card.dart';
 import 'package:bakhli/design/tokens/design_scale.dart';
+import '../tokens/card_tokens.dart';
 
 const double _kContentMax = 520;
 BorderRadius get _kSheetTop => BorderRadius.vertical(top: Radius.circular(DS.radius(32)));
-BorderRadius get _kWayRadius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(54)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
+BorderRadius get _kWayRadius => DS.br(CardRadius.hero);
 
 bool _narrow(BuildContext context) => MediaQuery.sizeOf(context).width < 340;
 double _scale(BuildContext context) => MediaQuery.textScalerOf(context).scale(1);
@@ -279,7 +280,7 @@ class OptionCard extends StatelessWidget {
   final Widget? trailing;
 
   static double get topRoom => DS.s(26);
-  static BorderRadius get radius => DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(40), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
+  static BorderRadius get radius => DS.br(CardRadius.card);
 
   @override
   Widget build(BuildContext context) {
@@ -371,7 +372,7 @@ class GuideButtons extends StatelessWidget {
   final String why;
   final ListingTone tone;
 
-  static BorderRadius get primaryRadius => DS.br(const BorderRadius.only(topLeft: Radius.circular(18), topRight: Radius.circular(18), bottomRight: Radius.circular(18), bottomLeft: Radius.circular(8)));
+  static BorderRadius get primaryRadius => DS.br(const BorderRadius.all(Radius.circular(18)));
 
   @override
   Widget build(BuildContext context) {
@@ -512,7 +513,7 @@ class SheetModalBody extends StatelessWidget {
   final Widget? extra;
 
   static double get artRoom => DS.s(78);
-  static BorderRadius get primaryRadius => DS.br(const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20), bottomRight: Radius.circular(20), bottomLeft: Radius.circular(8)));
+  static BorderRadius get primaryRadius => DS.br(const BorderRadius.all(Radius.circular(20)));
 
   Widget _button(String label, VoidCallback? onTap, Key? key, {required bool primary}) {
     return Padding(

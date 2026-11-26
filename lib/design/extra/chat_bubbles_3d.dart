@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'art_3d.dart';
 import 'motion_kit.dart';
+import '../tokens/alpha_tokens.dart';
 import '../tokens/design_scale.dart';
+import '../tokens/card_tokens.dart';
 
 double _scale(BuildContext context) => MediaQuery.textScalerOf(context).scale(1);
 
@@ -30,18 +32,88 @@ class _Ticks extends StatelessWidget {
 }
 
 class ChatBubble3D extends StatelessWidget {
-  const ChatBubble3D({super.key, required this.tone, required this.text, required this.mine, this.ticks = ChatTicks.none, this.dimmed = false});
+  const ChatBubble3D({
+    super.key,
+    required this.tone,
+    required this.text,
+    required this.mine,
+    this.ticks = ChatTicks.none,
+    this.dimmed = false,
+    this.time,
+    this.sender,
+    this.senderColor,
+    this.maxWidth,
+    this.maskToken,
+  });
 
   final ListingTone tone;
   final String text;
   final bool mine;
   final ChatTicks ticks;
   final bool dimmed;
+  final String? time;
+  final String? sender;
+  final Color? senderColor;
+  final double? maxWidth;
+  final String? maskToken;
+
+  Widget _body(TextStyle style) {
+    final token = maskToken;
+    if (token == null || token.isEmpty || !text.contains(token)) return Text(text, style: style);
+    final parts = text.split(token);
+    final spans = <InlineSpan>[];
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].isNotEmpty) spans.add(TextSpan(text: parts[i]));
+      if (i < parts.length - 1) {
+        spans.add(WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: DS.s(6)),
+            decoration: BoxDecoration(color: (mine ? Colors.white : Ink3D.sub).withValues(alpha: Alpha.v25), borderRadius: DS.circular(6)),
+            child: Text(token, style: style),
+          ),
+        ));
+      }
+    }
+    return Text.rich(TextSpan(style: style, children: spans));
+  }
+
+  Widget _content() {
+    final named = sender != null;
+    final meta = time != null
+        ? Padding(
+            padding: EdgeInsets.only(top: DS.s(2)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(time!, style: Ink3D.text(12, FontWeight.w400, mine ? Colors.white.withValues(alpha: Alpha.high) : Ink3D.grey)),
+                if (mine && ticks != ChatTicks.none) ...[SizedBox(width: DS.s(4)), _Ticks(ticks, Colors.white)],
+              ],
+            ),
+          )
+        : (mine && ticks != ChatTicks.none ? Padding(padding: EdgeInsets.only(top: DS.s(2)), child: _Ticks(ticks, Colors.white)) : null);
+    return Column(
+      crossAxisAlignment: named ? CrossAxisAlignment.stretch : CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (named) ...[
+          Text(sender!, style: Ink3D.text(12.5, FontWeight.w600, senderColor ?? Ink3D.sub)),
+          SizedBox(height: DS.s(2)),
+        ],
+        Align(
+          alignment: Alignment.centerLeft,
+          widthFactor: 1,
+          child: _body(Ink3D.text(14, FontWeight.w400, mine ? Colors.white : Ink3D.body, height: 1.4)),
+        ),
+        if (meta != null) named ? Align(alignment: Alignment.centerRight, child: meta) : meta,
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final bubble = Container(
-      constraints: BoxConstraints(maxWidth: DS.s(262)),
+      constraints: BoxConstraints(maxWidth: maxWidth ?? DS.s(262)),
       padding: EdgeInsets.symmetric(horizontal: DS.s(14), vertical: DS.s(10)),
       decoration: BoxDecoration(
         color: mine ? null : Colors.white,
@@ -56,18 +128,7 @@ class ChatBubble3D extends StatelessWidget {
             ? [BoxShadow(color: tone.shadow.withValues(alpha: 0.45), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(10))]
             : [BoxShadow(color: Color(0x4D9E9E9E), offset: DS.shadowOffset(const Offset(1.1, 3)), blurRadius: DS.shadowBlur(8))],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            widthFactor: 1,
-            child: Text(text, style: Ink3D.text(14, FontWeight.w400, mine ? Colors.white : Ink3D.body, height: 1.4)),
-          ),
-          if (mine && ticks != ChatTicks.none) Padding(padding: EdgeInsets.only(top: DS.s(2)), child: _Ticks(ticks, Colors.white)),
-        ],
-      ),
+      child: sender == null ? _content() : IntrinsicWidth(child: _content()),
     );
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
@@ -119,9 +180,10 @@ class ChatAnswerPill extends StatelessWidget {
 }
 
 class ChatSystemNote extends StatelessWidget {
-  const ChatSystemNote(this.text, {super.key});
+  const ChatSystemNote(this.text, {super.key, this.colors});
 
   final String text;
+  final (Color, Color)? colors;
 
   @override
   Widget build(BuildContext context) {
@@ -130,8 +192,8 @@ class ChatSystemNote extends StatelessWidget {
       child: Center(
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: DS.s(12), vertical: DS.s(5)),
-          decoration: BoxDecoration(color: const Color(0x17253840), borderRadius: DS.circular(14)),
-          child: Text(text, textAlign: TextAlign.center, style: Ink3D.text(12, FontWeight.w500, Ink3D.sub)),
+          decoration: BoxDecoration(color: colors?.$1 ?? const Color(0x17253840), borderRadius: DS.circular(14)),
+          child: Text(text, textAlign: TextAlign.center, style: Ink3D.text(12, FontWeight.w500, colors?.$2 ?? Ink3D.sub)),
         ),
       ),
     );
@@ -188,7 +250,7 @@ class ChatCard3D extends StatelessWidget {
   final double width;
 
   static const double topRoom = 30;
-  static BorderRadius get radius => BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(32)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8)));
+  static BorderRadius get radius => DS.br(CardRadius.tile);
 
   Widget _chip(BuildContext context, ChatChip c) {
     final ring = c.selected || c.selectable;

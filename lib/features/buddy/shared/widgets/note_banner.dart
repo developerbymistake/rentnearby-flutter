@@ -15,7 +15,7 @@ class NoteBanner extends StatelessWidget {
   final EdgeInsets? margin;
 
   static BorderRadius get radius =>
-      DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(32), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
+      DS.br(CardRadius.card);
 
   @override
   Widget build(BuildContext context) {

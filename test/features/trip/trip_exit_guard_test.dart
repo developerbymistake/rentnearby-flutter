@@ -42,6 +42,9 @@ class _Auth extends GetxController implements AuthController {
   final user = Rxn<UserModel>();
 
   @override
+  bool get canUseTravellerFeatures => true;
+
+  @override
   void switchToTab(int index) => tabs.add(index);
 
   @override

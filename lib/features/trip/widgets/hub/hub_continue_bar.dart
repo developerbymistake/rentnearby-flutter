@@ -56,11 +56,11 @@ class _HubContinueBarState extends State<HubContinueBar> {
             margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), 0),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: HubTokens.cardRadius(44),
+              borderRadius: DS.br(CardRadius.card),
               boxShadow: HubTokens.cardShadow,
             ),
             child: ClipRRect(
-              borderRadius: HubTokens.cardRadius(44),
+              borderRadius: DS.br(CardRadius.card),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,

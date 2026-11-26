@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
 import 'motion_kit.dart';
+import '../tokens/card_tokens.dart';
 
 double _scale(BuildContext context) => MediaQuery.textScalerOf(context).scale(1);
 
@@ -52,7 +53,7 @@ class InfoFieldCard extends StatelessWidget {
   final List<InfoField> fields;
   final EdgeInsets? margin;
 
-  static const BorderRadius radius = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(40), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
+  static const BorderRadius radius = CardRadius.hero;
 
   @override
   Widget build(BuildContext context) {
@@ -184,7 +185,7 @@ class Banner3D extends StatelessWidget {
   final EdgeInsets? margin;
   final ListingTone? tone;
 
-  static const BorderRadius radius = BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(24), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8));
+  static const BorderRadius radius = CardRadius.card;
 
   @override
   Widget build(BuildContext context) {

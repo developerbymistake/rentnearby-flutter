@@ -9,6 +9,7 @@ import 'dock_inset.dart';
 import 'pill_buttons_3d.dart';
 import 'sheet_close_button.dart';
 import '../tokens/design_scale.dart';
+import '../tokens/card_tokens.dart';
 
 enum SheetSize { hug, short, confirm, list, form }
 
@@ -19,6 +20,7 @@ class Sheet3D extends StatelessWidget {
     required this.child,
     this.art,
     this.title,
+    this.kicker,
     this.subtitle,
     this.centerTitle = true,
     this.onBack,
@@ -39,6 +41,8 @@ class Sheet3D extends StatelessWidget {
   final Widget child;
   final String? art;
   final String? title;
+  // Optional small caps line ABOVE a left-aligned title (e.g. 'FILTERS'); centred headers ignore it.
+  final String? kicker;
   final String? subtitle;
   final bool centerTitle;
   final VoidCallback? onBack;
@@ -165,8 +169,9 @@ class Sheet3D extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (kicker != null) Text(kicker!, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w700, tone.g2, letterSpacing: 1)),
                 Container(
-                  constraints: BoxConstraints(minHeight: DS.s(40)),
+                  constraints: BoxConstraints(minHeight: DS.s(kicker != null ? 32 : 40)),
                   padding: EdgeInsets.only(right: artRight && art != null ? DS.s(128) + artRightInset - DS.s(18) : 0),
                   child: Align(
                     alignment: Alignment.centerLeft,
@@ -510,7 +515,7 @@ class SheetOptionCard extends StatelessWidget {
   final bool danger;
 
   static double get topRoom => DS.s(22);
-  static BorderRadius get radius => DS.br(const BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(32), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8)));
+  static BorderRadius get radius => DS.br(CardRadius.card);
 
   @override
   Widget build(BuildContext context) {
@@ -635,7 +640,7 @@ class SummaryBar3D extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: DS.s(18), vertical: DS.s(12)),
       decoration: BoxDecoration(
         gradient: tone.gradient,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(DS.radius(8)), topRight: Radius.circular(DS.radius(24)), bottomLeft: Radius.circular(DS.radius(8)), bottomRight: Radius.circular(DS.radius(8))),
+        borderRadius: DS.br(CardRadius.card),
         boxShadow: [BoxShadow(color: tone.shadow.withValues(alpha: 0.45), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(10))],
       ),
       child: Row(

@@ -160,7 +160,7 @@ class _Strip extends StatelessWidget {
       padding: EdgeInsets.only(top: DS.gv(14)),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          borderRadius: HubTokens.cardRadius(30),
+          borderRadius: DS.br(CardRadius.card),
           gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [from, to]),
           boxShadow: [BoxShadow(color: shadow, offset: Offset(0, DS.s(6)), blurRadius: DS.s(14))],
         ),
@@ -168,7 +168,7 @@ class _Strip extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            borderRadius: HubTokens.cardRadius(30),
+            borderRadius: DS.br(CardRadius.card),
             child: Padding(
               padding: DS.insets(l: 16, t: 13, r: 12, b: 13),
               child: Row(
