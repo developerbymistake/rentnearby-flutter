@@ -28,6 +28,8 @@ import '../features/buddy/buddy_session_hooks.dart';
 import '../features/owner_core/data/owner_cache.dart';
 import '../features/owner_core/plan/plan_bindings.dart';
 import '../features/owner_core/session/owner_session_hooks.dart';
+import '../features/trip/traveller_session.dart';
+import '../navigation/traveller_gate.dart';
 
 /// What triggered a logout — decides whether the server-side revoke call fires and which (if
 /// any) toast is shown. Kept as a typed reason rather than booleans so each of the 3 real-world
@@ -109,6 +111,10 @@ class AuthController extends GetxController {
 
   /// [detail]: a detail screen is pushed next, so an owner shell does not push the list first.
   void openPlace(AppPlace place, {bool detail = false}) {
+    if (place == AppPlace.trips && !canUseTravellerFeatures) {
+      TravellerGate.tell();
+      return;
+    }
     if (shellKind.value == ShellKind.seeker) {
       switchToTab(switch (place) {
         AppPlace.home => AppTabs.home,
@@ -174,6 +180,8 @@ class AuthController extends GetxController {
 
   bool get isOwner => canListStays.value || canListTaxis.value;
 
+  bool get canUseTravellerFeatures => RoleCapabilities.of(roleKey.value).canUseTravellerFeatures;
+
   TabConfigController get _tabs => TabConfigController.to;
 
   // Effective capabilities = role AND tab; raw canListX stay for role change/profile/contact visibility.
@@ -182,6 +190,7 @@ class AuthController extends GetxController {
   bool get jobsEnabled => staysEnabled && _tabs.isJobsActive;
   bool get jobsBrowseEnabled => _tabs.isStaysActive && _tabs.isJobsActive;
   bool get effectiveIsOwner => staysEnabled || taxisEnabled;
+  bool get tripsEnabled => canUseTravellerFeatures && _tabs.isActiveForIndex(AppTabs.trips);
 
   bool get roleTabActive {
     final key = UserRoleKeys.tabKeyOf(roleKey.value);
@@ -195,6 +204,7 @@ class AuthController extends GetxController {
 
   bool canOpenRoute(String route) {
     if (!AppRoutes.isRegistered(route)) return false;
+    if (AppRoutes.travellerOnly.contains(route) && !canUseTravellerFeatures) return false;
     if (AppRoutes.ownerOnly.contains(route) && !isOwner) return false;
     if (AppRoutes.stayOwnerOnly.contains(route) && !canListStays.value) return false;
     if (AppRoutes.taxiDriverOnly.contains(route) && !canListTaxis.value) return false;
@@ -390,7 +400,9 @@ class AuthController extends GetxController {
     final token = data['token'] as String;
     final userData = data['user'] as Map<String, dynamic>;
     await StorageService.saveToken(token);
+    final had = canUseTravellerFeatures;
     _syncRoleFromToken(token);
+    if (had && !canUseTravellerFeatures) TravellerSession.clear();
     final userModel = UserModel.fromJson(userData);
     StorageService.saveUser(userModel);
     user.value = userModel;

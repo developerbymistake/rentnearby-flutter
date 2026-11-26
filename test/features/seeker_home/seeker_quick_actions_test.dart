@@ -17,4 +17,8 @@ void main() {
     expect(on, [SeekerHomeStrings.tilePlanTitle, SeekerHomeStrings.tileTripsTitle, SeekerHomeStrings.tileBuddyTitle]);
     expect(on, isNot(contains('Add expense')));
   });
+
+  test('no traveller features: no quick actions at all', () {
+    expect(SeekerQuickActions.defaults(tripsOn: false, buddyOn: false), isEmpty);
+  });
 }

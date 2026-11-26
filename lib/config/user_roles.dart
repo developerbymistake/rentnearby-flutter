@@ -16,16 +16,19 @@ class UserRoleKeys {
 class RoleCapabilities {
   final bool canListStays;
   final bool canListTaxis;
+  final bool canUseTravellerFeatures;
 
   const RoleCapabilities({
     this.canListStays = false,
     this.canListTaxis = false,
+    this.canUseTravellerFeatures = false,
   });
 
   static const none = RoleCapabilities();
+  static const seeker = RoleCapabilities(canUseTravellerFeatures: true);
 
   static const Map<String, RoleCapabilities> byRole = {
-    UserRoleKeys.seeker: none,
+    UserRoleKeys.seeker: seeker,
     UserRoleKeys.stayOwner: RoleCapabilities(canListStays: true),
     UserRoleKeys.taxiDriver: RoleCapabilities(canListTaxis: true),
   };

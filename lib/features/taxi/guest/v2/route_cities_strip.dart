@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../design/design.dart';
+import '../../../../navigation/traveller_gate.dart';
 import '../../../trip/widgets/trip_city_sheet.dart';
 import '../../ways/models/taxi_ways_models.dart';
 import '../../ways/taxi_ways_repository.dart';
@@ -130,7 +131,7 @@ class _RouteCitiesStripState extends State<RouteCitiesStrip> {
 
   Future<RouteCityRow> _supply(RouteCityRow r) async {
     final k = r.cityKey;
-    if (k == null) return r;
+    if (k == null || !TravellerGate.allowed) return r;
     try {
       return r.withDrivers((await TripCitySupplyCache.load(k)).drivers);
     } catch (_) {

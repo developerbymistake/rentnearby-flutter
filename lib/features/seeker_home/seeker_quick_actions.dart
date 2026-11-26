@@ -3,8 +3,10 @@ import 'package:get/get.dart';
 
 import '../../config/app_routes.dart';
 import '../../config/app_tabs.dart';
+import '../../controllers/auth_controller.dart';
 import '../../controllers/tab_config_controller.dart';
 import '../../design/design.dart';
+import '../../navigation/traveller_gate.dart';
 import 'seeker_trip_card.dart';
 import 'strings/seeker_home_strings.dart';
 
@@ -28,10 +30,15 @@ class SeekerQuickActions extends StatelessWidget {
 
   final List<SeekerQuickAction>? actions;
 
-  static bool get _tripsOn => !Get.isRegistered<TabConfigController>() || TabConfigController.to.isActiveForIndex(AppTabs.trips);
+  static bool get _tripsOn {
+    if (Get.isRegistered<AuthController>() && Get.isRegistered<TabConfigController>()) return Get.find<AuthController>().tripsEnabled;
+    return TravellerGate.allowed && (!Get.isRegistered<TabConfigController>() || TabConfigController.to.isActiveForIndex(AppTabs.trips));
+  }
+
+  static bool get _buddyOn => TravellerGate.allowed;
 
   // FX-25: Plan a trip and My trips are hidden while the Trips module is off.
-  static List<SeekerQuickAction> defaults({bool? tripsOn}) => [
+  static List<SeekerQuickAction> defaults({bool? tripsOn, bool? buddyOn}) => [
     if (tripsOn ?? _tripsOn) SeekerQuickAction(
       art: ListingArt.worldMap,
       tone: ListingTone.cB,
@@ -48,7 +55,7 @@ class SeekerQuickActions extends StatelessWidget {
       add: false,
       onTap: SeekerTripActions.openMyTrips,
     ),
-    SeekerQuickAction(
+    if (buddyOn ?? _buddyOn) SeekerQuickAction(
       art: ListingArt.panda,
       tone: ListingTone.cB,
       title: SeekerHomeStrings.tileBuddyTitle,
@@ -65,11 +72,13 @@ class SeekerQuickActions extends StatelessWidget {
     if (!Get.isRegistered<TabConfigController>()) return _build(defaults());
     return Obx(() {
       TabConfigController.to.version.value;
+      if (Get.isRegistered<AuthController>()) Get.find<AuthController>().roleKey.value;
       return _build(defaults());
     });
   }
 
   Widget _build(List<SeekerQuickAction> list) {
+    if (list.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

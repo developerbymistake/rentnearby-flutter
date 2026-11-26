@@ -26,6 +26,7 @@ import '../features/trip/trip_routes.dart';
 import '../features/buddy/buddy_routes.dart';
 import '../features/stay_owner/stay_owner_routes.dart';
 import '../features/taxi_driver/taxi_driver_routes.dart';
+import '../navigation/traveller_gate.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -155,6 +156,36 @@ class AppRoutes {
     taxiAvailability,
   };
 
+  static const Set<String> travellerOnly = {
+    tripCustomize,
+    tripOverview,
+    tripTaxiRequest,
+    tripTaxiStatus,
+    tripWhere,
+    tripSpots,
+    tripPlan,
+    tripStay,
+    tripMap,
+    myTrips,
+    tripReplies,
+    myEnquiries,
+    buddies,
+    buddiesBlocked,
+    buddyScan,
+    tripInvite,
+    tripTravellers,
+    tripView,
+    tripDayPlan,
+    tripDayMap,
+    tripMyShare,
+    tripExpenses,
+    tripExpense,
+    tripSettle,
+    tripMoneySummary,
+    myJourneys,
+    savedJourney,
+  };
+
   static const Set<String> ownerOnly = {plansBilling, planHistory};
   static const Set<String> stayOwnerOnly = {staySetup, stayBasicDetails, stayRooms, stayRules, myStays, myJobs, postJob, stayEnquiries, stayShareDetails, ...stayOwnerNewRoutes};
   static const Set<String> taxiDriverOnly = {
@@ -240,6 +271,9 @@ class AppRoutes {
     if (!retiredTripTaxiRoutes.contains(route)) return (route: route, args: args);
     return (route: tripPlan, args: {'tripId': ?tripId});
   }
+
+  static GetPage<dynamic> _gate(GetPage<dynamic> p) =>
+      travellerOnly.contains(p.name) ? p.copy(middlewares: [TravellerOnlyMiddleware()]) : p;
 
   static final routes = [
     GetPage(name: splash, page: () => const SplashScreen()),
@@ -348,9 +382,9 @@ class AppRoutes {
     ...stayPages,
     ...jobPages,
     ...taxiPages,
-    ...taxiWaysPages,
-    ...tripPages,
-    ...buddyPages,
+    ...taxiWaysPages.map(_gate),
+    ...tripPages.map(_gate),
+    ...buddyPages.map(_gate),
     ...stayOwnerPages,
     ...taxiDriverPages,
   ];

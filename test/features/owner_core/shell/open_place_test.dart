@@ -3,27 +3,48 @@ import 'package:bakhli/config/app_tabs.dart';
 import 'package:bakhli/config/user_roles.dart';
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
+import 'package:bakhli/navigation/traveller_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:toastification/toastification.dart';
 
 import '../../../support/owner_fakes.dart';
+import '../../../support/real_phone.dart';
 
-Widget _app() => GetMaterialApp(
-      initialRoute: '/home',
-      getPages: [
-        GetPage(name: '/home', page: () => const Scaffold(body: Text('home'))),
+Future<void> _pumpApp(WidgetTester t) => pumpPhone(
+      t,
+      const Scaffold(body: Text('home')),
+      toastHost: true,
+      pages: [
         GetPage(name: AppRoutes.tripWhere, page: () => const Scaffold(body: Text('where'))),
         GetPage(name: AppRoutes.taxiList, page: () => const Scaffold(body: Text('taxi list'))),
       ],
     );
 
+Future<void> _toast(WidgetTester t) async {
+  await t.pump();
+  await t.pump(const Duration(milliseconds: 100));
+  await t.pump(const Duration(milliseconds: 600));
+}
+
+Future<void> _clearToast(WidgetTester t) async {
+  await t.pump(const Duration(seconds: 5));
+  toastification.dismissAll(delayForAnimation: false);
+  await t.pump(const Duration(seconds: 1));
+  expect(t.takeException(), isNull);
+}
+
 void main() {
-  setUpAll(() => initTestStorage('open_place'));
+  setUpAll(() async {
+    await initTestStorage('open_place');
+    await loadRealFonts();
+  });
 
   late FakeAuth auth;
 
   setUp(() {
+    toastification.managers.clear();
     Get.testMode = true;
     Get.put<TabConfigController>(FakeTabs());
     auth = FakeAuth();
@@ -31,18 +52,20 @@ void main() {
   });
   tearDown(Get.reset);
 
-  testWidgets('owner shell: Plan a trip pushes the city picker and never selects slot 2', (tester) async {
+  testWidgets('owner shell: Plan a trip opens nothing and never selects slot 2', (tester) async {
     auth.signIn(role: UserRoleKeys.stayOwner, stayStatus: 'Approved');
-    await tester.pumpWidget(_app());
+    await _pumpApp(tester);
     auth.openPlace(AppPlace.trips);
-    await tester.pumpAndSettle();
-    expect(find.text('where'), findsOneWidget);
+    await _toast(tester);
+    expect(find.text(TravellerGateStrings.line), findsOneWidget);
+    expect(find.text('where'), findsNothing);
     expect(auth.tabIndex.value, AppTabs.home);
+    await _clearToast(tester);
   });
 
   testWidgets('owner shell: a taxi detail link does not push the list first', (tester) async {
     auth.signIn(role: UserRoleKeys.taxiDriver, taxiStatus: 'Approved');
-    await tester.pumpWidget(_app());
+    await _pumpApp(tester);
     auth.openPlace(AppPlace.taxi, detail: true);
     await tester.pumpAndSettle();
     expect(find.text('taxi list'), findsNothing);
@@ -51,7 +74,7 @@ void main() {
 
   testWidgets('seeker shell: places are tab switches as today', (tester) async {
     auth.signIn(role: UserRoleKeys.seeker);
-    await tester.pumpWidget(_app());
+    await _pumpApp(tester);
     auth.openPlace(AppPlace.trips);
     await tester.pump();
     expect(auth.tabIndex.value, AppTabs.trips);

@@ -131,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Visibility(visible: !failed, maintainState: true, child: TripPopularRail(revision: revision)),
+          if (_auth.canUseTravellerFeatures) Visibility(visible: !failed, maintainState: true, child: TripPopularRail(revision: revision)),
           if (failed) SeekerRailsErrorCard(onRetry: _retryRails),
         ],
       );

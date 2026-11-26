@@ -786,8 +786,10 @@ class NotificationService extends GetxService {
     final enquiryId = args?['enquiryId']?.toString();
     if (route == AppRoutes.chatConversation && enquiryId != null && enquiryId.isNotEmpty) {
       if (!ShellState.isOwner) {
-        route = AppRoutes.myEnquiries;
-        args = {'enquiryId': enquiryId};
+        if (!Get.isRegistered<AuthController>() || Get.find<AuthController>().canOpenRoute(AppRoutes.myEnquiries)) {
+          route = AppRoutes.myEnquiries;
+          args = {'enquiryId': enquiryId};
+        }
       } else if (Get.isRegistered<AuthController>() && Get.find<AuthController>().canListStays.value) {
         Get.find<AuthController>().openTab(AppTabs.centre, intent: {'enquiryId': enquiryId});
         return;

@@ -5,9 +5,10 @@ import 'notices/controllers/notices_controller.dart';
 import 'offline/offline_registration.dart';
 
 abstract final class BuddyBindings {
-  static void ensure() {
-    if (!Get.isRegistered<BuddySummaryController>()) Get.put(BuddySummaryController());
+  static void ensure({required bool traveller}) {
     if (!Get.isRegistered<NoticesController>()) Get.put(NoticesController());
+    if (!traveller) return;
+    if (!Get.isRegistered<BuddySummaryController>()) Get.put(BuddySummaryController());
     registerOfflineQueue();
   }
 }

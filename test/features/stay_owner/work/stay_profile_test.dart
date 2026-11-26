@@ -28,12 +28,12 @@ class _Auth extends AuthController {
   void onInit() {}
 }
 
-void _setUp({ShellKind kind = ShellKind.stayOwner, bool payment = true}) {
+void _setUp({ShellKind kind = ShellKind.stayOwner, bool payment = true, String role = 'STAY_OWNER'}) {
   Get.reset();
   Get.put<TabConfigController>(_Tabs());
   final a = Get.put<AuthController>(_Auth());
-  a.roleKey.value = 'STAY_OWNER';
-  a.canListStays.value = true;
+  a.roleKey.value = role;
+  a.canListStays.value = role == 'STAY_OWNER';
   a.shellKind.value = kind;
   a.profileName.value = 'Meena Bisht';
   a.profilePhone.value = '9897012345';
@@ -55,19 +55,16 @@ void main() {
   setUpAll(loadRealFonts);
   tearDown(Get.reset);
 
-  testWidgets('o_st_23 stay owner ACTIVITY: Plan a trip first, no Jobs feed row', (t) async {
+  testWidgets('o_st_23 stay owner ACTIVITY: only My Reports, no traveller rows, no Jobs feed row', (t) async {
     _setUp();
     await pumpPhone(t, const ProfileScreen(), size: const Size(392, 2400));
     await settlePhone(t);
-    final rows = _activity(t);
-    expect(rows.first, 'Plan a trip');
-    expect(rows, isNot(contains('Jobs')));
-    expect(rows, containsAll(['My Trips', 'My Reports']));
-    expect(find.text('Travel as a guest'), findsOneWidget);
+    expect(_activity(t), ['My Reports']);
+    expect(find.text('Travel as a guest'), findsNothing);
   });
 
   testWidgets('o_st_23 seeker shell keeps the Jobs feed row and has no Plan a trip row', (t) async {
-    _setUp(kind: ShellKind.seeker);
+    _setUp(kind: ShellKind.seeker, role: 'SEEKER');
     await pumpPhone(t, const ProfileScreen(), size: const Size(392, 2400));
     await settlePhone(t);
     expect(_activity(t), isNot(contains('Plan a trip')));

@@ -18,10 +18,5 @@ abstract final class ProfileRows {
     return Column(children: [rows, if (kDebugMode) MapLabEntry.row()]);
   }
 
-  static List<Widget> activityRows(ShellKind kind) => switch (kind) {
-        ShellKind.stayOwner => StayOwnerProfileRows.activityRows(),
-        _ => const [],
-      };
-
   static bool showsJobsFeed(ShellKind kind) => kind == ShellKind.seeker;
 }

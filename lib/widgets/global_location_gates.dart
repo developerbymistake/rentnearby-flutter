@@ -138,8 +138,8 @@ class GlobalLocationGates extends StatelessWidget {
       WhitePillButton(tone: ListingTone.indigo, label: label, height: 52, onTap: onTap);
 
   Widget _buildOfflineGate() {
-    final showTrips =
-        Get.isRegistered<AuthController>() && Get.find<AuthController>().postLoginRoute == AppRoutes.main;
+    final auth = Get.isRegistered<AuthController>() ? Get.find<AuthController>() : null;
+    final showTrips = auth != null && auth.postLoginRoute == AppRoutes.main && auth.canOpenRoute(AppRoutes.myTrips);
     return Positioned.fill(
       child: GateStatusPage(
         asset: TravelIcon.map,

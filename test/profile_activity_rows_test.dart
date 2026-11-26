@@ -33,6 +33,7 @@ Future<_Tabs> _open(WidgetTester t, {bool driver = false, Set<String> tabsOff = 
   Get.put<TabConfigController>(tabs);
   Get.put<AuthController>(a);
   a.canListTaxis.value = driver;
+  if (driver) a.roleKey.value = 'TAXI_DRIVER';
   Get.put(PlanController()).myPlan.value = MyPlanModel(paymentEnabled: false);
   a.profileName.value = 'Rahul Sharma';
   a.profilePhone.value = '9876543210';
@@ -71,9 +72,9 @@ void main() {
     expect(_activity(t), ['My Trips', 'My Journeys', 'My Reports']);
   });
 
-  testWidgets('Taxi driver sees the same rows', (t) async {
+  testWidgets('Taxi driver has no My Trips and no My Journeys', (t) async {
     await _open(t, driver: true);
-    expect(_activity(t), ['My Trips', 'Jobs', 'My Journeys', 'My Reports']);
+    expect(_activity(t), ['Jobs', 'My Reports']);
   });
 
   testWidgets('My Journeys follows the route guard, not the driver role', (t) async {
