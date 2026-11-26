@@ -149,6 +149,7 @@ TripDiscoveryLayer layer({
   FakeSource? source,
   Set<String> fail = const {},
   int? Function(String)? plannedDayOf,
+  bool Function(String)? plannedIsDot,
   Size Function()? viewSize,
   bool Function()? blocked,
 }) =>
@@ -157,6 +158,7 @@ TripDiscoveryLayer layer({
       host: DiscoveryHost(
         anchorLayerId: () => 'anchor',
         plannedDayOf: plannedDayOf ?? (_) => null,
+        plannedIsDot: plannedIsDot ?? (_) => false,
         topInset: () => 100,
         bottomInset: () => 0,
       ),
@@ -207,7 +209,7 @@ void main() {
     final port = FakePort();
     await l.attach(port);
     expect(port.calls.where((x) => x.startsWith('layer:')).every((x) => x.endsWith(':null')), isTrue);
-    expect(l.tuning.photoDp, DS.s(270));
+    expect(l.tuning.photoDp, DS.s(90 * DiscTuning.markerScale));
     expect(l.tuning.photoMax, DiscTuning.stay.photoMax);
   });
 
@@ -499,18 +501,70 @@ void main() {
     expect(target, lessThan(600));
   });
 
-  test('planned stop: the halo branch uses the 1x route-stop halo, not the 3x photo halo', () {
+  test('planned stop: a full-day stop takes the 1x photo halo, a stop drawn as a dot takes the dot halo', () {
     final t = DiscTuning.trip;
     final halo = t.haloRadius(DiscSelKind.dot.name, DiscPaint.selIconScale, plannedKind: DiscSelKind.planned.name) as List;
     final full = halo[halo.length - 1] as List;
     expect(full.take(5).toList(), ['match', ['get', 'kind'], 'dot', full[3], 'planned']);
-    final planned = full[5] as double;
+    final branch = full[5] as List;
+    expect(branch.take(2).toList(), ['case', ['==', ['get', DiscTuning.smallKey], true]]);
+    final dot = branch[2] as double, planned = branch[3] as double;
+    expect(dot, closeTo(full[3] as double, 1e-9), reason: 'a planned dot rings like a selected spot dot');
     expect(planned, closeTo(DiscTuning.tripStops.haloPhotoDp / 2, 1e-9));
-    expect(planned * DiscTuning.markerScale, closeTo(t.haloPhotoDp / 2, 1e-9));
+    expect(planned, closeTo(t.haloPhotoDp / 2, 1e-9));
+    expect(dot, lessThan(planned));
     expect(t.haloRadiusAt('planned', DiscTuning.zoomIn, dotKind: 'dot', plannedKind: 'planned', photoScale: DiscPaint.selIconScale),
         closeTo(planned, 1e-9));
+    expect(
+        t.haloRadiusAt('planned', DiscTuning.zoomIn, dotKind: 'dot', plannedKind: 'planned', photoScale: DiscPaint.selIconScale, small: true),
+        closeTo(dot, 1e-9));
     final paint = DiscPaint.of(DiscLayers.specs(t).firstWhere((x) => x.id == DiscIds.layerSelHalo), t) as CircleLayerProperties;
     expect(paint.circleRadius, halo);
+  });
+
+  test('planned stop drawn as a dot: the selection says small, and a day change re-sends it with the new size', () async {
+    var dot = true;
+    final l = layer(source: FakeSource([]), plannedDayOf: (_) => 1, plannedIsDot: (_) => dot);
+    final port = FakePort();
+    await l.attach(port);
+    await l.select('x', planned: true, spot: spot('x'));
+    expect(features(port.geo['disc-sel']).single['properties'][DiscTuning.smallKey], isTrue);
+    port.calls.clear();
+    await l.refreshPlanned();
+    expect(port.count('set:disc-sel'), 0, reason: 'same size: nothing sent');
+    dot = false;
+    await l.refreshPlanned();
+    expect(port.count('set:disc-sel'), 1);
+    expect(features(port.geo['disc-sel']).single['properties'].containsKey(DiscTuning.smallKey), isFalse);
+    expect(l.selectedKind.value, DiscSelKind.planned);
+    expect(port.calls, isNot(contains('animate')), reason: 'a size refresh never moves the camera');
+  });
+
+  test('refreshPlanned leaves a discovery selection alone', () async {
+    final l = layer(source: FakeSource([spot('a')]), plannedIsDot: (_) => true);
+    await l.refreshData();
+    final port = FakePort();
+    await l.attach(port);
+    await l.onFeatureTap(DiscIds.layerBadge, 'a');
+    port.calls.clear();
+    await l.refreshPlanned();
+    expect(port.count('set:disc-sel'), 0);
+    expect(features(port.geo['disc-sel']).single['properties'].containsKey(DiscTuning.smallKey), isFalse);
+  });
+
+  test('lift of a planned dot keeps room for the dot halo, not the photo halo', () async {
+    final l = layer(source: FakeSource([]), plannedDayOf: (_) => 1, plannedIsDot: (_) => true, viewSize: () => const Size(360, 760));
+    final port = FakePort()..screen = (pts) => [(x: 180.0, y: 120.0), (x: 180.0, y: 20.0), (x: 280.0, y: 120.0)];
+    await l.attach(port);
+    await l.select('x', planned: true, spot: spot('x'));
+    final zoom = TripDiscoveryLayer.zoomOf(10000, 30.5);
+    final halo = DiscTuning.trip.haloRadiusAt(DiscSelKind.planned.name, zoom,
+        dotKind: DiscSelKind.dot.name, plannedKind: DiscSelKind.planned.name, photoScale: DiscPaint.selIconScale, small: true);
+    final photo = DiscTuning.trip.haloRadiusAt(DiscSelKind.planned.name, zoom,
+        dotKind: DiscSelKind.dot.name, plannedKind: DiscSelKind.planned.name, photoScale: DiscPaint.selIconScale);
+    expect(halo, lessThan(photo));
+    final target = 100 + 150 + 2 * halo;
+    expect(port.animated!.lat, closeTo(30.5 - (380 - target) / 10000, 1e-9));
   });
 
   test('stay area: photos only within the area, eye hint false when no spot is in the area', () async {

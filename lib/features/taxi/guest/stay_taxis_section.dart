@@ -20,6 +20,7 @@ import 'taxi_browse_repository.dart';
 import 'taxi_card.dart';
 import 'taxi_navigation.dart';
 import 'traveller_city.dart';
+import 'v2/taxi_journey_date.dart';
 
 enum _Phase { hidden, locating, loading, list, empty, unavailable, error, offline, summary, noWays, citiesLoading, noCity }
 
@@ -166,7 +167,7 @@ class _StayTaxisSectionState extends State<StayTaxisSection> with SingleTickerPr
         if (mounted && myGen == _gen) setState(() => _phase = _Phase.noCity);
         return;
       }
-      final page = await _repo.browseLocal(cityKey: city.cityKey, pageSize: _previewCount);
+      final page = await _repo.browseLocal(date: TaxiJourneyDate.today(), cityKey: city.cityKey, pageSize: _previewCount);
       if (!mounted || myGen != _gen) return;
       setState(() {
         _items = page.items.take(_previewCount).toList();

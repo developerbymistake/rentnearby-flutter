@@ -5,6 +5,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../../../../design/design.dart';
 import '../../../trip/map/discovery_api.dart';
+import '../../../trip/map/map_marker_sizes.dart';
 import '../../../trip/map/trip_route_stops.dart';
 import '../data/viewer_spot_photos.dart';
 import '../models/viewer_models.dart';
@@ -81,7 +82,27 @@ class ViewerMapScene {
   static const double dimLine = 0.25;
   static const double dimStop = 0.45;
 
-  static DiscTuning get tuning => DiscTuning(photoMax: 40, photoDp: DS.s(54));
+  static const double _mid = MapMarkerSizes.photoMid / MapMarkerSizes.photoFull;
+
+  // Same size source as the trip and stay maps, drawn flat at their zoom-14 size at every zoom (the viewer halo is a fixed circle).
+  static DiscTuning get tuning => DiscTuning(
+        photoMax: 40,
+        photoMinDp: MapMarkerSizes.dp(MapMarkerSizes.photoMid),
+        photoDp: MapMarkerSizes.dp(MapMarkerSizes.photoMid),
+        stopBadgeDp: MapMarkerSizes.dp(MapMarkerSizes.stopBadge * _mid),
+        dotDp: MapMarkerSizes.dp(MapMarkerSizes.dotMid),
+        thumbPx: MapMarkerSizes.thumbPx,
+        sizeScale: MapMarkerSizes.scale,
+        ringScale: MapMarkerSizes.scale * _mid,
+      );
+
+  static double get haloStroke => DS.s(MapMarkerSizes.stopRing) * MapMarkerSizes.scale;
+
+  static double get haloRadius => haloRadiusOf(full: true);
+
+  // A stop of the picked day is a full photo stop; every other one is drawn as a dot.
+  static double haloRadiusOf({required bool full}) =>
+      (full ? tuning.photoDp : tuning.dotDp) / 2 + DS.s(MapMarkerSizes.viewerHaloGap) * MapMarkerSizes.scale;
 
   factory ViewerMapScene.of(List<ViewerDay> days, List<ViewerLeg> legs, {String? Function(String spotId) photoOf = ViewerSpotPhotos.urlFor}) {
     final cityOf = {for (final l in legs) l.index: l.cityKey};
@@ -143,6 +164,9 @@ class ViewerMapScene {
   double stopOpacity(int day, int selected) => shows(day, selected) ? 1 : dimStop;
 
   List<double> stopOpacities(int selected) => [for (final s in stops) stopOpacity(s.day, selected)];
+
+  // Full photo stops only for the picked day; All shows every stop as a dot.
+  int? fullDay(int selected) => selected == all ? null : selected;
 
   bool dashedShown(int selected) => days.any((d) => d.dashed && d.hasLine && shows(d.day, selected));
 

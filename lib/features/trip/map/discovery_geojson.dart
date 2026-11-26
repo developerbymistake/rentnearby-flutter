@@ -34,7 +34,8 @@ class DiscGeoJson {
     ]);
   }
 
-  static Map<String, dynamic> sel(MapPackSpot spot, DiscSelKind kind, {String? img, int? tier}) {
+  /// [small]: a planned stop drawn as a dot, so the halo takes the dot size.
+  static Map<String, dynamic> sel(MapPackSpot spot, DiscSelKind kind, {String? img, int? tier, bool small = false}) {
     final image = img ??
         switch (kind) {
           DiscSelKind.photo => DiscIds.photoImage(spot.id),
@@ -42,7 +43,9 @@ class DiscGeoJson {
           _ => null,
         };
     final f = _feature(spot, tier: tier ?? _tierOfKind(kind), img: image);
-    (f['properties'] as Map<String, dynamic>)['kind'] = kind.name;
+    final props = f['properties'] as Map<String, dynamic>;
+    props['kind'] = kind.name;
+    if (small && kind == DiscSelKind.planned) props[DiscTuning.smallKey] = true;
     return _collection([f]);
   }
 

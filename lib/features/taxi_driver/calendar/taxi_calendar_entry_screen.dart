@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../design/design.dart';
 import '../../../utils/app_toast.dart';
+import '../availability/taxi_availability_api.dart';
 import '../../../utils/money_format.dart';
 import '../../owner_core/calendar/models/calendar_models.dart';
 import '../../owner_core/data/owner_error_types.dart';
@@ -137,6 +138,7 @@ class _TaxiCalendarEntryScreenState extends State<TaxiCalendarEntryScreen> {
       AppToast.error(r.message ?? OwnerSharedStrings.noConnection);
       return;
     }
+    if (r is OwnerRefused<void> && TaxiHourlyLimit.toastIfLimited(r)) return;
     AppToast.error(r is OwnerRefused<void> && r.statusCode == 429 ? OwnerSharedStrings.tooManyTries : OwnerSharedStrings.noConnection);
   }
 

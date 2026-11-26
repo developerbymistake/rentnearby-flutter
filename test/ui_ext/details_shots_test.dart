@@ -13,6 +13,7 @@ import 'package:bakhli/features/stay/guest/stay_detail_screen.dart';
 import 'package:bakhli/features/stay/guest/stay_guest_controller.dart';
 import 'package:bakhli/features/stay/models/stay_detail_model.dart';
 import 'package:bakhli/features/taxi/guest/taxi_detail_screen.dart';
+import 'package:bakhli/features/taxi/guest/v2/taxi_journey_date.dart';
 import 'package:bakhli/features/taxi/taxi_option_sets.dart';
 import 'package:bakhli/models/city_model.dart';
 import 'package:bakhli/models/user_model.dart';
@@ -471,6 +472,24 @@ void main() {
           expect(find.text('Ask driver'), findsNothing);
         }
       });
+    });
+
+    _tw('s_gt_local asks for the IST day of today', (t) async {
+      final sent = <Object?>[];
+      _setup(
+        api: {
+          '/trips/cities/nearest': (_) => {'cityKey': 7, 'available': true, 'name': 'Nainital'},
+          '/taxis/browse': (o) {
+            sent.add(o.queryParameters['date']);
+            return {'items': [], 'page': 1, 'pageSize': 3, 'totalCount': 0};
+          },
+        },
+        localCity: true,
+      );
+      await _stay(t);
+      await _scrollTo(t, find.text('Getting there').first);
+      expect(t.takeException(), isNull);
+      expect(sent, [TaxiJourneyDate.apiText(TaxiJourneyDate.today())]);
     });
 
     _tw('s_gt_load', (t) async {

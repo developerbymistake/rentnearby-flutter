@@ -11,11 +11,12 @@ abstract final class OwnerCacheKeys {
   static const blocks = 'blocks';
   static const planCard = 'plan_card';
   static const seekerFeed = 'seeker_feed';
+  static const daysOff = 'days_off';
   static String calMonth(String yyyyMM) => 'cal_month:$yyyyMM';
   static String summary(String yyyyMM) => 'summary:$yyyyMM';
   static String festivals(String stateName) => 'festivals:$stateName';
 
-  static const List<String> listingScoped = [home, listing, calUpcoming, calPast, specialPrices, blocks, planCard];
+  static const List<String> listingScoped = [home, listing, calUpcoming, calPast, specialPrices, blocks, planCard, daysOff];
   static const List<String> listingScopedPrefixes = ['cal_month:', 'summary:', 'festivals:'];
 }
 

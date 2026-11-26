@@ -12,6 +12,7 @@ import '../ways/taxi_ways_availability.dart';
 import '../ways/taxi_ways_repository.dart';
 import 'taxi_browse_repository.dart';
 import 'traveller_city.dart';
+import 'v2/taxi_journey_date.dart';
 
 class TaxiPreset {
   final PlaceResult? from;
@@ -61,8 +62,10 @@ class TaxiListController extends GetxController {
     TaxiPreset? preset,
     TaxiWaysRepository waysRepo = const TaxiWaysRepository(),
     TaxiBrowseRepository browseRepo = const TaxiBrowseRepository(),
+    DateTime Function()? now,
   })  : _preset = preset,
         _repo = browseRepo,
+        _now = now ?? DateTime.now,
         waysCheck = TaxiWaysAvailabilityCheck(repo: waysRepo);
 
   final items = <TaxiBrowseItem>[].obs;
@@ -77,9 +80,11 @@ class TaxiListController extends GetxController {
   final refreshTrigger = 0.obs;
 
   final TaxiBrowseRepository _repo;
+  final DateTime Function() _now;
   final _workers = <Worker>[];
   int _page = 1;
   int _gen = 0;
+  DateTime? _day;
   bool _resetInFlight = false;
   DateTime? _loadedAt;
 
@@ -221,11 +226,20 @@ class TaxiListController extends GetxController {
 
   void retry() => _fetch(reset: true);
 
-  void retryLoadMore() => _fetch(reset: false);
+  void retryLoadMore() => _fetchMore();
 
   void loadNextPage() {
     if (!hasMore.value || isLoading.value || isLoadingMore.value || loadMoreFailed.value || _resetInFlight) return;
-    _fetch(reset: false);
+    _fetchMore();
+  }
+
+  void _fetchMore() {
+    final day = _day;
+    if (day != null && !TaxiJourneyDate.same(day, TaxiJourneyDate.today(_now()))) {
+      _fetch(reset: true, silent: true);
+    } else {
+      _fetch(reset: false);
+    }
   }
 
   void _invalidate() {
@@ -263,6 +277,7 @@ class TaxiListController extends GetxController {
     final target = to.value;
     if (reset && target != null) unawaited(waysCheck.check(from: f, to: target, fromMyLocation: fromIsCurrent.value));
     if (reset) {
+      _day = TaxiJourneyDate.today(_now());
       _resetInFlight = true;
       loadFailed.value = false;
       loadMoreFailed.value = false;
@@ -275,6 +290,7 @@ class TaxiListController extends GetxController {
 
     try {
       final page = reset ? 1 : _page + 1;
+      final day = _day ?? TaxiJourneyDate.today(_now());
       final t = to.value;
       final TaxiBrowsePage res;
       if (t != null) {
@@ -283,6 +299,7 @@ class TaxiListController extends GetxController {
           fromLng: f.latLng.longitude,
           toLat: t.latLng.latitude,
           toLng: t.latLng.longitude,
+          date: day,
           page: page,
           pageSize: _pageSize,
         );
@@ -294,6 +311,7 @@ class TaxiListController extends GetxController {
           res = (items: const <TaxiBrowseItem>[], hasMore: false);
         } else {
           res = await _repo.browseLocal(
+            date: day,
             cityKey: city.cityKey,
             page: page,
             pageSize: _pageSize,

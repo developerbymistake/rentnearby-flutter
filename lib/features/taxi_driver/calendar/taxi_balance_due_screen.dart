@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../../design/design.dart';
 import '../../../utils/app_toast.dart';
+import '../availability/taxi_availability_api.dart';
 import '../../owner_core/calendar/models/calendar_models.dart';
 import '../../owner_core/data/owner_error_types.dart';
 import '../../owner_core/data/owner_result.dart';
@@ -74,6 +75,8 @@ class _TaxiBalanceDueScreenState extends State<TaxiBalanceDueScreen> {
       if (!mounted) return;
       switch (r) {
         case OwnerOk():
+          return;
+        case OwnerRefused() when TaxiHourlyLimit.toastIfLimited(r):
           return;
         case OwnerRefused(:final statusCode) when statusCode == 429:
           AppToast.error(OwnerSharedStrings.tooManyTries);

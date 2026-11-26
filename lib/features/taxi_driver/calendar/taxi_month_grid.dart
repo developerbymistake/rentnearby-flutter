@@ -8,15 +8,20 @@ import '../../owner_core/look/owner_look.dart';
 import '../../owner_core/plan/gate_keys.dart';
 import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/strings/owner_shared_strings.dart';
+import '../strings/taxi_availability_strings.dart';
 import '../strings/taxi_calendar_strings.dart';
 import 'taxi_calendar_widgets.dart';
 
 class TaxiMonthGrid extends StatelessWidget {
-  const TaxiMonthGrid({super.key, required this.cells, this.selected, this.onTap});
+  const TaxiMonthGrid({super.key, required this.cells, this.selected, this.onTap, this.cellBuilder, this.offDays = const {}});
 
   final List<DayCell> cells;
   final DateTime? selected;
   final ValueChanged<DayCell>? onTap;
+  final Widget Function(DayCell cell)? cellBuilder;
+  final Set<String> offDays;
+
+  bool _off(DayCell c) => c.inMonth && !c.isPast && !c.hasEntries && offDays.contains(OwnerDates.dayText(c.date));
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +35,11 @@ class TaxiMonthGrid extends StatelessWidget {
           children: [
             for (var i = 0; i < 7; i++) ...[
               if (i > 0) SizedBox(width: DS.gh(6)),
-              Expanded(child: TaxiDayBox(cell: week[i], selected: _isSelected(week[i]), onTap: onTap)),
+              Expanded(
+                child: cellBuilder != null
+                    ? cellBuilder!(week[i])
+                    : TaxiDayBox(cell: week[i], selected: _isSelected(week[i]), onTap: onTap, off: _off(week[i])),
+              ),
             ],
           ],
         ),
@@ -59,14 +68,16 @@ class TaxiMonthGrid extends StatelessWidget {
 }
 
 class TaxiDayBox extends StatelessWidget {
-  const TaxiDayBox({super.key, required this.cell, required this.selected, this.onTap});
+  const TaxiDayBox({super.key, required this.cell, required this.selected, this.onTap, this.off = false});
 
   final DayCell cell;
   final bool selected;
   final ValueChanged<DayCell>? onTap;
+  final bool off;
 
-  static String semanticsOf(DayCell c) {
+  static String semanticsOf(DayCell c, {bool off = false}) {
     final parts = <String>['${c.date.day} ${OwnerSharedStrings.months[c.date.month - 1]}'];
+    if (off) parts.add(TaxiAvailabilityStrings.legendOff);
     if (c.appCount > 0) parts.add('${c.appCount} ${TaxiCalendarStrings.legendFromApp}');
     if (c.ownCount > 0) parts.add('${c.ownCount} ${TaxiCalendarStrings.legendAddedByYou}');
     if (c.festivalName != null) parts.add(c.festivalName!);
@@ -76,9 +87,9 @@ class TaxiDayBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!cell.inMonth) return SizedBox(height: DS.s(42));
-    final muted = cell.isPast || cell.outsideWindow;
-    final bar = cell.bar != BarPart.none && cell.appCount > 0;
-    final fill = selected
+    final muted = cell.isPast || cell.outsideWindow || off;
+    final bar = !off && cell.bar != BarPart.none && cell.appCount > 0;
+    final fill = selected && !off
         ? TaxiCal.tileFill
         : bar
             ? Color.alphaBlend(TaxiCal.greenFill, DesignColors.surface)
@@ -111,7 +122,16 @@ class TaxiDayBox extends StatelessWidget {
                 Text('${cell.date.day}',
                     maxLines: 1, style: Ink3D.text(12.5, cell.isToday ? FontWeight.w700 : FontWeight.w600, cell.isToday ? TaxiCal.accent : textColor, letterSpacing: 0)),
                 SizedBox(height: DS.s(2)),
-                _Dots(cell: cell, bar: bar),
+                if (off)
+                  SizedBox(
+                    height: DS.s(11),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(TaxiAvailabilityStrings.offTag, maxLines: 1, style: Ink3D.text(9, FontWeight.w700, TaxiCal.accent, letterSpacing: 0.5)),
+                    ),
+                  )
+                else
+                  _Dots(cell: cell, bar: bar),
               ],
             ),
           ),
@@ -119,7 +139,7 @@ class TaxiDayBox extends StatelessWidget {
       ),
     );
     if (onTap != null) box = InkWell(borderRadius: radius, onTap: () => onTap!(cell), child: box);
-    return Semantics(button: onTap != null, label: semanticsOf(cell), excludeSemantics: true, child: box);
+    return Semantics(button: onTap != null, label: semanticsOf(cell, off: off), excludeSemantics: true, child: box);
   }
 }
 

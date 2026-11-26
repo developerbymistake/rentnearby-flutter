@@ -4,11 +4,12 @@ import '../../../design/design.dart';
 import '../look/owner_look.dart';
 
 class NumberTile {
-  const NumberTile({required this.value, required this.label, this.onTap});
+  const NumberTile({required this.value, required this.label, this.onTap, this.dot});
 
   final String value;
   final String label;
   final VoidCallback? onTap;
+  final Color? dot;
 
   static const String missing = '-';
 
@@ -38,11 +39,12 @@ class NumbersRow extends StatelessWidget {
 }
 
 class OwnerFacts extends StatelessWidget {
-  const OwnerFacts({super.key, required this.facts, this.labelFirst = false, this.padding});
+  const OwnerFacts({super.key, required this.facts, this.labelFirst = false, this.padding, this.tight = false});
 
   final List<NumberTile> facts;
   final bool labelFirst;
   final EdgeInsets? padding;
+  final bool tight;
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +57,7 @@ class OwnerFacts extends StatelessWidget {
           children: [
             for (var i = 0; i < facts.length; i++) ...[
               if (i > 0) VerticalDivider(width: 1, thickness: 1, indent: DS.gv(10), endIndent: DS.gv(10), color: OwnerLook.greySoft),
-              Expanded(child: _Fact(fact: facts[i], labelFirst: labelFirst)),
+              Expanded(child: _Fact(fact: facts[i], labelFirst: labelFirst, tight: tight)),
             ],
           ],
         ),
@@ -65,10 +67,24 @@ class OwnerFacts extends StatelessWidget {
 }
 
 class _Fact extends StatelessWidget {
-  const _Fact({required this.fact, required this.labelFirst});
+  const _Fact({required this.fact, required this.labelFirst, this.tight = false});
 
   final NumberTile fact;
   final bool labelFirst;
+  final bool tight;
+
+  Widget _label() {
+    final text = Text(fact.label, maxLines: 2, style: Ink3D.text(11.5, FontWeight.w500, Ink3D.grey, letterSpacing: 0));
+    final dot = fact.dot;
+    if (dot == null) return text;
+    return Row(
+      children: [
+        Container(width: DS.s(8), height: DS.s(8), decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
+        Gap.h(6),
+        Flexible(child: text),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,10 +96,10 @@ class _Fact extends StatelessWidget {
           ]
         : [
             Text(fact.value, maxLines: 2, style: Ink3D.text(20, FontWeight.w700, Ink3D.title, letterSpacing: 0)),
-            Text(fact.label, maxLines: 2, style: Ink3D.text(11.5, FontWeight.w500, Ink3D.grey, letterSpacing: 0)),
+            _label(),
           ];
     final body = Padding(
-      padding: labelFirst ? DS.sym(h: 10, v: 8) : DS.sym(h: 12, v: 12),
+      padding: labelFirst ? DS.sym(h: 10, v: 8) : DS.sym(h: tight ? 8 : 12, v: 12),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: children),
     );
     if (fact.onTap == null) return body;

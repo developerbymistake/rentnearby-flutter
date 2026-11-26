@@ -1,4 +1,10 @@
+import 'package:bakhli/config/app_routes.dart';
+import 'package:bakhli/config/app_tabs.dart';
 import 'package:bakhli/features/owner_core/data/owner_cache.dart';
+import 'package:bakhli/features/owner_core/home/numbers_row.dart';
+import 'package:bakhli/features/owner_core/home/owner_home_models.dart';
+import 'package:bakhli/features/taxi_driver/home/taxi_availability_card.dart';
+import 'package:bakhli/features/taxi_driver/widgets/taxi_widgets.dart';
 import 'package:bakhli/features/taxi_driver/home/taxi_attention_screen.dart';
 import 'package:bakhli/features/taxi_driver/home/taxi_driver_home_screen.dart';
 import 'package:bakhli/features/taxi_driver/home/taxi_driver_home_controller.dart';
@@ -10,6 +16,7 @@ import 'package:get/get.dart';
 
 import '../../../support/owner_fakes.dart';
 import '../../../support/owner_render.dart';
+import '../../../support/owner_sizes.dart';
 import '../../../support/real_phone.dart';
 import 'taxi_fixtures.dart';
 
@@ -82,26 +89,154 @@ void main() {
     });
   }
 
-  testWidgets('home shows the Missed tile with its count at 320 wide, text scale 1.3', (tester) async {
+  Finder inCard(Finder f) => find.descendant(of: find.byType(TaxiStatusCard), matching: f);
+  Finder inAvail(Finder f) => find.descendant(of: find.byType(TaxiAvailabilityCard), matching: f);
+
+  for (final size in ownerSizes) {
+    for (final scale in ownerTextScales) {
+      testWidgets('home shows the four numbers inside the status card at ${ownerSizeLabel(size, scale)}', (tester) async {
+        final h = TaxiHarness.setUp(homeJson(taxi: {...nums, 'missedRequests': 7}));
+        TaxiHarnessProbe.home = h.home;
+        await pumpPhone(tester, const TaxiDriverHomeScreen(), size: size, textScale: scale);
+        await settle(tester);
+        for (final l in ['Route', 'New requests', 'Missed', 'Rating']) {
+          expect(inCard(find.text(l)), findsOneWidget, reason: l);
+        }
+        expect(inCard(find.text('7')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await finish(tester);
+      });
+    }
+  }
+
+  testWidgets('status card: New requests and Missed open the Requests tab, Rating opens the rating page', (tester) async {
     final h = TaxiHarness.setUp(homeJson(taxi: {...nums, 'missedRequests': 7}));
     TaxiHarnessProbe.home = h.home;
-    await pumpPhone(tester, const TaxiDriverHomeScreen(), size: const Size(320, 900), textScale: 1.3);
+    await pumpPhone(
+      tester,
+      const TaxiDriverHomeScreen(),
+      size: const Size(430, 1600),
+      pages: [GetPage(name: AppRoutes.taxiRating, page: () => const Scaffold(body: Text('rating page')))],
+    );
     await settle(tester);
-    expect(find.text('Missed'), findsOneWidget);
-    expect(find.text('7'), findsOneWidget);
-    expect(tester.takeException(), isNull);
+    expect(h.auth.tabIndex.value, AppTabs.home);
+    await tester.tap(inCard(find.text('New requests')));
+    await tester.pump();
+    expect(h.auth.tabIndex.value, AppTabs.centre);
+    h.auth.tabIndex.value = AppTabs.home;
+    await tester.tap(inCard(find.text('Missed')));
+    await tester.pump();
+    expect(h.auth.tabIndex.value, AppTabs.centre);
+    await tester.tap(inCard(find.text('Rating')));
+    await tester.pumpAndSettle();
+    expect(find.text('rating page'), findsOneWidget);
     await finish(tester);
   });
 
-  testWidgets('B1 hero shows the local day rate from the home feed on a cold start', (tester) async {
+  testWidgets('no Local day rate even when the feed has one', (tester) async {
     final json = homeJson(taxi: nums);
     (json['listing'] as Map<String, dynamic>)['localDayRate'] = 2500;
     final h = TaxiHarness.setUp(json);
     TaxiHarnessProbe.home = h.home;
     await pumpPhone(tester, const TaxiDriverHomeScreen(), size: const Size(430, 1600));
     await settle(tester);
-    expect(find.text('Local day rate'), findsOneWidget);
-    expect(find.textContaining('2,500'), findsOneWidget);
+    expect(find.text('Local day rate'), findsNothing);
+    expect(find.textContaining('2,500'), findsNothing);
+    await finish(tester);
+  });
+
+  testWidgets('no separate numbers row below the status card', (tester) async {
+    final h = TaxiHarness.setUp(homeJson(taxi: nums));
+    TaxiHarnessProbe.home = h.home;
+    await pumpPhone(tester, const TaxiDriverHomeScreen(), size: const Size(430, 1600));
+    await settle(tester);
+    expect(find.byType(NumbersRow), findsNothing);
+    expect(find.text('New requests'), findsOneWidget);
+    await finish(tester);
+  });
+
+  testWidgets('Availability card shows this month Bookings and Days off', (tester) async {
+    final h = TaxiHarness.setUp(homeJson(taxi: nums, availability: const {'month': '2026-11', 'bookings': 3, 'daysOff': 2}));
+    TaxiHarnessProbe.home = h.home;
+    await pumpPhone(tester, const TaxiDriverHomeScreen(), size: const Size(430, 1600));
+    await settle(tester);
+    expect(find.text('AVAILABILITY'), findsOneWidget);
+    expect(find.byType(TaxiAvailabilityCard), findsOneWidget);
+    expect(inAvail(find.text('Availability')), findsOneWidget);
+    expect(inAvail(find.text('November 2026')), findsOneWidget);
+    expect(inAvail(find.text('Manage')), findsOneWidget);
+    expect(inAvail(find.text('3')), findsOneWidget);
+    expect(inAvail(find.text('2')), findsOneWidget);
+    expect(inAvail(find.text('Bookings')), findsOneWidget);
+    expect(inAvail(find.text('Days off')), findsOneWidget);
+    await finish(tester);
+  });
+
+  testWidgets('Availability card shows - when the feed has no counts', (tester) async {
+    final h = TaxiHarness.setUp(homeJson(taxi: nums, availability: null));
+    TaxiHarnessProbe.home = h.home;
+    await pumpPhone(tester, const TaxiDriverHomeScreen(), size: const Size(430, 1600));
+    await settle(tester);
+    expect(inAvail(find.text('-')), findsNWidgets(2));
+    expect(inAvail(find.text('November 2026')), findsOneWidget);
+    await finish(tester);
+  });
+
+  testWidgets('tap on the Availability card opens the Availability page', (tester) async {
+    final h = TaxiHarness.setUp(homeJson(taxi: nums));
+    TaxiHarnessProbe.home = h.home;
+    await pumpPhone(
+      tester,
+      const TaxiDriverHomeScreen(),
+      size: const Size(430, 1600),
+      pages: [GetPage(name: AppRoutes.taxiAvailability, page: () => const Scaffold(body: Text('availability page')))],
+    );
+    await settle(tester);
+    await tester.tap(inAvail(find.text('Bookings')));
+    await tester.pumpAndSettle();
+    expect(find.text('availability page'), findsOneWidget);
+    await finish(tester);
+  });
+
+  testWidgets('Availability card is hidden in first review and when rejected', (tester) async {
+    for (final json in [
+      homeJson(status: 'PendingReview', everApproved: false, switchOn: false),
+      homeJson(status: 'Rejected', everApproved: false, switchOn: false, reason: 'blurry plate'),
+    ]) {
+      final h = TaxiHarness.setUp(json);
+      TaxiHarnessProbe.home = h.home;
+      await pumpPhone(tester, const TaxiDriverHomeScreen(), size: const Size(430, 1600));
+      await settle(tester);
+      expect(find.byType(TaxiAvailabilityCard), findsNothing);
+      await finish(tester);
+    }
+  });
+
+  testWidgets('Availability card shows when offline, changes under review and taken down', (tester) async {
+    for (final json in [
+      homeJson(switchOn: false),
+      homeJson(status: 'PendingReview'),
+      homeJson(status: 'Rejected', takenDown: true),
+    ]) {
+      final h = TaxiHarness.setUp(json);
+      TaxiHarnessProbe.home = h.home;
+      await pumpPhone(tester, const TaxiDriverHomeScreen(), size: const Size(430, 1600));
+      await settle(tester);
+      expect(find.byType(TaxiAvailabilityCard), findsOneWidget);
+      await finish(tester);
+    }
+  });
+
+  testWidgets('patchAvailability updates the card counts at once and the home cache', (tester) async {
+    final h = TaxiHarness.setUp(homeJson(taxi: nums, availability: const {'month': '2026-11', 'bookings': 3, 'daysOff': 0}));
+    TaxiHarnessProbe.home = h.home;
+    await pumpPhone(tester, const TaxiDriverHomeScreen(), size: const Size(430, 1600));
+    await settle(tester);
+    h.home.patchAvailability({'month': '2026-11', 'bookings': 3, 'daysOff': 2});
+    await tester.pump();
+    expect(h.home.data?.availability?.daysOff, 2);
+    expect(inAvail(find.text('2')), findsOneWidget);
+    expect(OwnerHomeDto.fromJson(OwnerCache.read('user-a', OwnerCacheKeys.home) ?? const {}).availability?.daysOff, 2);
     await finish(tester);
   });
 

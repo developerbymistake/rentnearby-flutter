@@ -15,6 +15,7 @@ import '../../owner_core/money/money_note_math.dart';
 import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/plan_keys.dart';
 import '../../owner_core/sheets/owner_states.dart';
+import '../availability/taxi_availability_api.dart';
 import '../taxi_driver_deps.dart';
 import 'models/taxi_calendar_models.dart';
 
@@ -250,6 +251,19 @@ class TaxiCalendarController extends CalendarCoreController with WidgetsBindingO
   Future<OwnerResult<OwnerPage<CalendarEntry>>> balanceDue(DateTime m, {String? cursor}) => api.balanceDue(m, cursor: cursor);
 
   Future<OwnerResult<CalendarEntry>> entry(String id) => api.entry(id);
+
+  @override
+  Future<OwnerResult<EntryWriteResult>> create(CalendarEntryDraft draft) => TaxiHourlyLimit.guard(TaxiHourlyLimit.bookings, () => super.create(draft));
+
+  @override
+  Future<OwnerResult<EntryWriteResult>> edit(CalendarEntryDraft draft) => TaxiHourlyLimit.guard(TaxiHourlyLimit.bookings, () => super.edit(draft));
+
+  @override
+  Future<OwnerResult<EntryWriteResult>> saveMoney(CalendarEntry e, {int? finalAmount, int? receivedSoFar, required bool paidInFull}) =>
+      TaxiHourlyLimit.guard(TaxiHourlyLimit.bookings, () => super.saveMoney(e, finalAmount: finalAmount, receivedSoFar: receivedSoFar, paidInFull: paidInFull));
+
+  @override
+  Future<OwnerResult<void>> delete(String id) => TaxiHourlyLimit.guard(TaxiHourlyLimit.bookings, () => super.delete(id));
 
   Future<OwnerResult<EntryWriteResult>> markPaid(CalendarEntry e) =>
       saveMoney(e, finalAmount: e.finalAmount, receivedSoFar: e.receivedSoFar, paidInFull: true);

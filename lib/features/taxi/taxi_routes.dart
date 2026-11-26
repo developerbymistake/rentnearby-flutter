@@ -4,6 +4,7 @@ import '../../config/app_routes.dart';
 import '../../design/design.dart';
 import 'guest/taxi_detail_screen.dart';
 import 'guest/taxi_list_screen.dart';
+import 'guest/v2/taxi_results_routes.dart';
 import 'leads/trip_leads_screen.dart';
 import 'requests/driver_bookings_screen.dart';
 import 'requests/driver_rating_screen.dart';
@@ -109,4 +110,5 @@ final List<GetPage> taxiPages = [
     transitionDuration: templateTransitionDuration,
   ),
   ...driverRequestPages,
+  ...taxiSeekerPages,
 ];

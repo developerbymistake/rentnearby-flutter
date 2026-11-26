@@ -19,7 +19,11 @@ import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/plan_keys.dart';
 import '../../owner_core/sheets/owner_sheet.dart';
 import '../../owner_core/strings/owner_shared_strings.dart';
+import '../availability/taxi_availability_api.dart';
+import '../availability/taxi_availability_store.dart';
+import '../strings/taxi_availability_strings.dart';
 import '../strings/taxi_calendar_strings.dart';
+import '../taxi_driver_deps.dart';
 import '../strings/taxi_gate_strings_calendar.dart';
 import 'taxi_calendar_controller.dart';
 import 'taxi_calendar_widgets.dart';
@@ -35,7 +39,7 @@ class TaxiTripForm extends ChangeNotifier {
         to = TextEditingController(text: editing?.toPlace ?? ''),
         note = TextEditingController(text: editing?.note ?? ''),
         money = MoneyNotesController(finalAmount: editing?.finalAmount, receivedSoFar: editing?.receivedSoFar, paidInFull: editing?.paidInFull ?? false),
-        date = editing?.dateFrom ?? date ?? controller.serverToday,
+        date = editing?.dateFrom ?? firstFreeDay(date ?? controller.serverToday),
         time = OwnerDates.time(editing?.timeOfDay) {
     for (final c in [label, from, to, note]) {
       c.addListener(_changed);
@@ -66,6 +70,19 @@ class TaxiTripForm extends ChangeNotifier {
 
   bool get isEdit => editing != null;
 
+  static DateTime firstFreeDay(DateTime from) {
+    var d = OwnerDates.only(from);
+    for (var i = 0; i < 400 && TaxiDriverDeps.isDayOff(d); i++) {
+      d = OwnerDates.addDays(d, 1);
+    }
+    return d;
+  }
+
+  bool get _dateMoved {
+    final was = editing?.dateFrom;
+    return was == null || !OwnerDates.sameDay(was, date);
+  }
+
   String _snapshot() => [label.text, from.text, to.text, note.text, money.finalText.text, money.receivedText.text, money.paidInFull, date, time].join('|');
 
   bool get dirty => _snapshot() != _start;
@@ -76,7 +93,11 @@ class TaxiTripForm extends ChangeNotifier {
 
   void setDate(DateTime d) {
     date = OwnerDates.only(d);
-    errors.remove(TaxiTripField.date);
+    if (_dateMoved && TaxiDriverDeps.isDayOff(date)) {
+      errors[TaxiTripField.date] = TaxiAvailabilityStrings.dayIsOff;
+    } else {
+      errors.remove(TaxiTripField.date);
+    }
     _changed();
   }
 
@@ -107,6 +128,8 @@ class TaxiTripForm extends ChangeNotifier {
     }
     if (date.isBefore(OwnerDates.only(firstDay)) || date.isAfter(OwnerDates.only(lastDay))) {
       errors[TaxiTripField.date] = TaxiCalendarStrings.outsideWindow;
+    } else if (_dateMoved && TaxiDriverDeps.isDayOff(date)) {
+      errors[TaxiTripField.date] = TaxiAvailabilityStrings.dayIsOff;
     }
     _changed();
     return errors.isEmpty && money.error == null;
@@ -132,6 +155,8 @@ class TaxiTripForm extends ChangeNotifier {
       errors[TaxiTripField.note] = OwnerSharedStrings.noPhone;
     } else if (r.type == OwnerErrorTypes.calendarOutsideWindow) {
       errors[TaxiTripField.date] = TaxiCalendarStrings.outsideWindow;
+    } else if (r.type == OwnerErrorTypes.dayIsOff) {
+      errors[TaxiTripField.date] = TaxiAvailabilityStrings.dayIsOff;
     } else if (OwnerRefusal.stale(r)) {
       stale = true;
     }
@@ -200,12 +225,15 @@ abstract final class TaxiTripSheet {
           return;
         }
         if (await PlanGate.handleRefusal(context, r, TaxiGateStringsCalendar.fromRefusal)) return;
+        if (TaxiHourlyLimit.toastIfLimited(r)) return;
         if (r.statusCode == 429) {
           AppToast.error(OwnerSharedStrings.tooManyTries);
           return;
         }
         form.applyRefusal(r);
-        if (r.type == OwnerErrorTypes.moneyNoteInvalid || (r.type != OwnerErrorTypes.phoneNotAllowed && r.type != OwnerErrorTypes.calendarOutsideWindow && !OwnerRefusal.stale(r))) {
+        if (r.type == OwnerErrorTypes.dayIsOff) TaxiAvailabilityStore.maybe?.refresh(force: true).ignore();
+        if (r.type == OwnerErrorTypes.moneyNoteInvalid ||
+            (r.type != OwnerErrorTypes.phoneNotAllowed && r.type != OwnerErrorTypes.calendarOutsideWindow && r.type != OwnerErrorTypes.dayIsOff && !OwnerRefusal.stale(r))) {
           AppToast.error(r.message ?? OwnerSharedStrings.noConnection);
         }
       case OwnerOffline():
@@ -433,6 +461,8 @@ class TaxiInput extends StatelessWidget {
     this.keyboardType,
     this.enabled = true,
     this.maxLines = 1,
+    this.hintText,
+    this.alert = false,
   });
 
   final TextEditingController controller;
@@ -444,6 +474,8 @@ class TaxiInput extends StatelessWidget {
   final TextInputType? keyboardType;
   final bool enabled;
   final int maxLines;
+  final String? hintText;
+  final bool alert;
 
   @override
   Widget build(BuildContext context) {
@@ -466,14 +498,16 @@ class TaxiInput extends StatelessWidget {
           filled: true,
           fillColor: enabled ? DesignColors.surface : TaxiCal.softFill,
           prefixText: prefixText,
+          hintText: hintText,
+          hintStyle: Ink3D.text(13.5, FontWeight.w600, Ink3D.hint, letterSpacing: 0),
           prefixStyle: Ink3D.text(13.5, FontWeight.w600, Ink3D.title, letterSpacing: 0),
           contentPadding: DS.sym(h: 14, v: 13),
           errorText: errorText,
           errorMaxLines: 2,
           errorStyle: Ink3D.text(11.5, FontWeight.w500, DesignColors.error, letterSpacing: 0),
-          enabledBorder: border(TaxiCal.coral.line),
+          enabledBorder: border(alert ? DesignColors.error : TaxiCal.coral.line),
           disabledBorder: border(Ink3D.line),
-          focusedBorder: border(TaxiCal.ownDot, 1.4),
+          focusedBorder: border(alert ? DesignColors.error : TaxiCal.ownDot, 1.4),
           errorBorder: border(DesignColors.error),
           focusedErrorBorder: border(DesignColors.error, 1.4),
         ),

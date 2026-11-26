@@ -16,6 +16,8 @@ import '../../owner_core/sheets/owner_states.dart';
 import '../../owner_core/strings/owner_shared_strings.dart';
 import '../../../utils/app_toast.dart';
 import '../../owner_core/data/owner_result.dart';
+import '../availability/taxi_availability_store.dart';
+import '../strings/taxi_availability_strings.dart';
 import '../strings/taxi_calendar_strings.dart';
 import '../strings/taxi_gate_strings_calendar.dart';
 import '../strings/taxi_work_strings.dart';
@@ -61,6 +63,7 @@ class _TaxiBookingsTabState extends State<TaxiBookingsTab> {
   late final bool _owned;
   final _selected = Rxn<DateTime>();
   Worker? _intent;
+  TaxiAvailabilityStore? get _store => TaxiAvailabilityStore.maybe;
 
   @override
   void initState() {
@@ -69,6 +72,7 @@ class _TaxiBookingsTabState extends State<TaxiBookingsTab> {
     _owned = given == null;
     _c = given ?? TaxiCalendarController.acquire();
     _open(_c.month.value);
+    _store?.ensure().ignore();
     if (widget.root && Get.isRegistered<AuthController>()) {
       final auth = Get.find<AuthController>();
       _intent = ever(auth.tabIntent, (_) => _takeIntent(auth));
@@ -92,6 +96,7 @@ class _TaxiBookingsTabState extends State<TaxiBookingsTab> {
   }
 
   Future<void> _reload() async {
+    _store?.refresh(force: true).ignore();
     await _c.reload();
     if (!mounted) return;
     _c.loadSummary().ignore();
@@ -159,7 +164,13 @@ class _TaxiBookingsTabState extends State<TaxiBookingsTab> {
         ),
       );
 
+  bool _isOff(DateTime d) => !d.isBefore(_c.serverToday) && (_store?.offKeys.contains(OwnerDates.dayText(d)) ?? false);
+
   void _tapDay(DateTime d) {
+    if (_isOff(d) && _c.dayRows(d).isEmpty) {
+      AppToast.info(TaxiAvailabilityStrings.dayIsOff);
+      return;
+    }
     _selected.value = d;
     TaxiDaySheet.show(context, controller: _c, day: d);
   }
@@ -233,7 +244,12 @@ class _TaxiBookingsTabState extends State<TaxiBookingsTab> {
           ));
     }
     out.add((_) => TaxiMonthPager(month: _c.month.value, window: window, today: today, onMonth: _open));
-    out.add((_) => Obx(() => TaxiMonthGrid(cells: _c.grid.toList(), selected: _selected.value, onTap: (cell) => _tapDay(cell.date))));
+    out.add((_) => Obx(() => TaxiMonthGrid(
+          cells: _c.grid.toList(),
+          selected: _selected.value,
+          offDays: _store?.offKeys ?? const <String>{},
+          onTap: (cell) => _tapDay(cell.date),
+        )));
     out.add((_) => Padding(padding: DS.insets(t: 12, b: 10), child: const TaxiLegend()));
     final f = view.festival;
     if (f != null) out.add((_) => _FestivalCard(festival: f));

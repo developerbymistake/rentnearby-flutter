@@ -129,6 +129,8 @@ class AppRoutes {
   static const String taxiBalanceDue = '/taxi-balance-due';
   static const String taxiPlanVisible = '/taxi-plan-visible';
   static const String taxiAttention = '/taxi-attention';
+  static const String taxiAvailability = '/taxi-availability';
+  static const String taxiRouteResults = '/taxi-route-results';
 
   static const Set<String> stayOwnerNewRoutes = {
     stayCalendar,
@@ -150,6 +152,7 @@ class AppRoutes {
     taxiBalanceDue,
     taxiPlanVisible,
     taxiAttention,
+    taxiAvailability,
   };
 
   static const Set<String> ownerOnly = {plansBilling, planHistory};
@@ -188,6 +191,7 @@ class AppRoutes {
     taxiDetail: AppTabKeys.taxi,
     taxiList: AppTabKeys.taxi,
     taxiWays: AppTabKeys.taxi,
+    taxiRouteResults: AppTabKeys.taxi,
     journeyPlan: AppTabKeys.taxi,
     journeyRoad: AppTabKeys.taxi,
     myJourneys: AppTabKeys.taxi,

@@ -81,7 +81,9 @@ void main() {
 
   test('badge keys: known categories keep their name, unknown fall back to the default image', () {
     expect(DiscIds.badgeImage('temple'), 'disc-b-temple');
-    expect(DiscIds.badgeImage('market'), 'disc-b-place');
+    expect(DiscIds.badgeImage('market'), 'disc-b-market');
+    expect(DiscIds.badgeImage('Temple'), 'disc-b-temple');
+    expect(DiscIds.badgeImage('mystery'), 'disc-b-place');
     expect(DiscIds.badgeImage(''), 'disc-b-place');
     expect(DiscIds.badgeCategories.toSet().length, DiscIds.badgeCategories.length);
     expect(DiscIds.spotIdOfPhotoImage(DiscIds.photoImage('abc')), 'abc');

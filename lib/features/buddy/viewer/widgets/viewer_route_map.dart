@@ -132,7 +132,7 @@ class _ViewerRouteMapState extends State<ViewerRouteMap> {
         _drawn.add(layer);
       }
     }
-    await _stops.draw(map, [for (final s in scene.stops) s.route], scene.stopOpacities(_v.selected), below: below);
+    await _stops.draw(map, [for (final s in scene.stops) s.route], scene.stopOpacities(_v.selected), below: below, fullDay: scene.fullDay(_v.selected));
     await _fit(map);
   }
 
@@ -145,7 +145,7 @@ class _ViewerRouteMapState extends State<ViewerRouteMap> {
         if (_drawn.contains(layer)) await map.setLayerProperties(layer, props);
       }
     }
-    await _stops.setOpacity(map, scene.stopOpacities(_v.selected));
+    await _stops.setOpacity(map, scene.stopOpacities(_v.selected), fullDay: scene.fullDay(_v.selected));
     await _fit(map);
   }
 
@@ -158,10 +158,10 @@ class _ViewerRouteMapState extends State<ViewerRouteMap> {
     if (p == null) return;
     _halo = await map.addCircle(CircleOptions(
       geometry: LatLng(p.spot.latitude!, p.spot.longitude!),
-      circleRadius: ViewerMapScene.tuning.photoDp / 2 + DS.s(7),
+      circleRadius: ViewerMapScene.haloRadiusOf(full: _v.scene.fullDay(_v.selected) == p.day),
       circleOpacity: 0,
       circleStrokeColor: TripKit.hexOf(p.color),
-      circleStrokeWidth: DS.s(3),
+      circleStrokeWidth: ViewerMapScene.haloStroke,
       circleStrokeOpacity: Alpha.v45,
     ));
   }
@@ -169,7 +169,7 @@ class _ViewerRouteMapState extends State<ViewerRouteMap> {
   Future<void> _fit(MapLibreMapController map) async {
     final b = _v.scene.bounds(_v.selected);
     if (b == null || !mounted) return;
-    final pad = widget.padding();
+    final pad = widget.padding() + EdgeInsets.all(ViewerMapScene.haloRadiusOf(full: _v.scene.fullDay(_v.selected) != null));
     final size = MediaQuery.sizeOf(context);
     if (b.northeast.latitude - b.southwest.latitude < 0.0005 && b.northeast.longitude - b.southwest.longitude < 0.0005) {
       await map.animateCamera(CameraUpdate.newLatLngZoom(b.southwest, 14));
@@ -196,6 +196,7 @@ class _ViewerRouteMapState extends State<ViewerRouteMap> {
 
   void _onStyleLoaded() {
     _styled = true;
+    _stops.resetImages();
     _run(_draw);
     _run(_drawHalo);
   }

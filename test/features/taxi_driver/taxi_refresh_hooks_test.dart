@@ -2,6 +2,7 @@ import 'package:bakhli/config/app_tabs.dart';
 import 'package:bakhli/features/nearby/models/nearby_models.dart';
 import 'package:bakhli/features/taxi/guest/taxi_list_controller.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_feed_repository.dart';
+import 'package:bakhli/features/taxi/guest/v2/taxi_popular_routes.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_list_controller_v2.dart';
 import 'package:bakhli/features/taxi/taxi_status_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,9 @@ import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 class _Repo extends TaxiFeedRepository {
+  @override
+  Future<List<TaxiPopularRoute>> popularRoutes() async => const [];
+
   int calls = 0;
   bool fail = false;
 
@@ -19,6 +23,7 @@ class _Repo extends TaxiFeedRepository {
     String? pageToken,
     int pageSize = 20,
     String? category,
+    String? date,
   }) {
     calls++;
     return fail ? Future.error(StateError('offline')) : Future.value(const NearbyPage<TaxiFeedItem>(items: []));

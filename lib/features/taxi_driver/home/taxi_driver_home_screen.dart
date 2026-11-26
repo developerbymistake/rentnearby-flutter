@@ -10,7 +10,6 @@ import '../../../design/design.dart';
 import '../../../design/extra/ext_details.dart';
 import '../../../services/system_settings_channel.dart';
 import '../../../utils/app_toast.dart';
-import '../../../utils/money_format.dart';
 import '../../../widgets/tab_header.dart';
 import '../../owner_core/home/numbers_row.dart';
 import '../../owner_core/data/owner_args.dart';
@@ -22,7 +21,9 @@ import '../hub/taxi_hub_controller.dart';
 import '../strings/taxi_hub_strings.dart';
 import '../taxi_driver_deps.dart';
 import '../widgets/taxi_widgets.dart';
+import '../strings/taxi_availability_strings.dart';
 import 'taxi_attention_copy.dart';
+import 'taxi_availability_card.dart';
 import 'taxi_driver_home_controller.dart';
 import 'taxi_home_compose.dart';
 
@@ -196,7 +197,6 @@ class TaxiHomeBody extends StatelessWidget {
     final views = TaxiHomeCompose.rowViews(rows, actions, controller.nowUntracked);
     final total = TaxiHomeCompose.attentionCount(dto, rows, denied: denied);
     final banner = TaxiHomeCompose.banner(state, l);
-    final n = dto.numbers;
     final show = TaxiHomeCompose.showsNumbers(state);
     final children = <Widget>[];
     if (stale) children.add(const OwnerStaleLine());
@@ -247,6 +247,11 @@ class TaxiHomeBody extends StatelessWidget {
         if (state == TaxiHomeState.takenDown) {
           children.add(const TaxiStrip(art: ListingArt.shield, text: TaxiHomeStrings.takenDownStrip, fill: TaxiLook.greenSoft, ink: TaxiLook.greenText));
         }
+        if (show) {
+          children
+            ..add(const TaxiLabel(text: TaxiAvailabilityStrings.labelCaps))
+            ..add(TaxiAvailabilityCard(info: dto.availability, today: dto.today));
+        }
         if (views.isNotEmpty) {
           children
             ..add(TaxiLabel(
@@ -267,26 +272,6 @@ class TaxiHomeBody extends StatelessWidget {
           children.add(TaxiStrip(art: ListingArt.roundPushpin, text: banner, fill: TaxiLook.amberSoft, ink: TaxiLook.amberText));
         }
         if (show) {
-          children.add(Padding(
-            padding: DS.insets(l: 18, t: 16, r: 18),
-            child: NumbersRow(tiles: [
-              NumberTile(
-                value: state == TaxiHomeState.changesReview || state == TaxiHomeState.takenDown ? TaxiHomeStrings.dash : NumberTile.of(n.newRequests),
-                label: TaxiHomeStrings.newRequests,
-                onTap: () => TaxiHomeActions.openTab(AppTabs.centre),
-              ),
-              NumberTile(
-                value: state == TaxiHomeState.changesReview || state == TaxiHomeState.takenDown ? TaxiHomeStrings.dash : NumberTile.of(n.missedRequests ?? 0),
-                label: TaxiHomeStrings.missedRequests,
-                onTap: () => TaxiHomeActions.openTab(AppTabs.centre),
-              ),
-              NumberTile(
-                value: n.ratingAvg == null || (n.ratingCount ?? 0) == 0 ? NumberTile.missing : n.ratingAvg!.toStringAsFixed(1),
-                label: TaxiHomeStrings.rating,
-                onTap: () => Get.toNamed(AppRoutes.taxiRating),
-              ),
-            ]),
-          ));
           children.add(TaxiDriverDeps.upcomingCard());
         }
         if (state == TaxiHomeState.live || state == TaxiHomeState.offline) {
@@ -320,7 +305,7 @@ class TaxiHomeBody extends StatelessWidget {
       photoUrl: TaxiHomeCompose.art(state) == ListingArt.taxi ? l.displayPhotoUrl : null,
       title: title,
       line: TaxiHomeCompose.line(shown, l),
-      body: _body(l, TaxiHomeCompose.ringStrip(shown, denied: controller.notificationsDenied.value)),
+      body: _body(l, state, TaxiHomeCompose.ringStrip(shown, denied: controller.notificationsDenied.value)),
       trailing: showSwitch
           ? Semantics(
               toggled: controller.switchOn,
@@ -337,30 +322,47 @@ class TaxiHomeBody extends StatelessWidget {
     );
   }
 
-  Widget? _body(OwnerHomeListing l, TaxiRingStrip? strip) {
+  Widget? _body(OwnerHomeListing l, TaxiHomeState state, TaxiRingStrip? strip) {
     final t = TaxiHubController.maybe?.taxi ?? (Get.isRegistered<TaxiSetupController>() ? Get.find<TaxiSetupController>().taxi.value : null);
     final vehicle = l.vehicleName ?? t?.vehicleTypeName;
     final seatCount = l.seats ?? t?.seats;
     final seats = seatCount == null ? null : TaxiHomeStrings.seats(seatCount);
-    final n = t?.routes.length ?? l.routesMeter?.used;
-    final rate = t?.localDayRate ?? l.localDayRate;
+    final routes = t?.routes.length ?? l.routesMeter?.used;
     final children = <Widget>[
       if (vehicle != null || seats != null) ...[
         TaxiCarRow(art: ListingArt.taxi, name: vehicle ?? seats!, sub: vehicle == null ? null : seats),
         Divider(height: 1, thickness: 1, indent: DS.s(16), endIndent: DS.s(16), color: TaxiLook.rowLine),
       ],
-      if (n != null)
-        Padding(
-          padding: DS.insets(t: 4, b: 4),
-          child: OwnerFacts(facts: [
-            NumberTile(value: '$n', label: TaxiHomeStrings.routeCount(n)),
-            if (rate != null) NumberTile(value: Money.exact(rate), label: TaxiHomeStrings.localDay),
-          ]),
-        ),
+      Padding(
+        padding: DS.insets(t: 4, b: 4),
+        child: Material(type: MaterialType.transparency, child: OwnerFacts(tight: true, facts: _facts(state, routes))),
+      ),
       if (strip != null) _strip(strip),
     ];
-    if (children.isEmpty) return null;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: children);
+  }
+
+  List<NumberTile> _facts(TaxiHomeState state, int? routes) {
+    final n = dto.numbers;
+    final hidden = state == TaxiHomeState.changesReview || state == TaxiHomeState.takenDown;
+    return [
+      NumberTile(value: routes == null ? NumberTile.missing : '$routes', label: TaxiHomeStrings.routeCount(routes ?? 1)),
+      NumberTile(
+        value: hidden ? TaxiHomeStrings.dash : NumberTile.of(n.newRequests),
+        label: TaxiHomeStrings.newRequests,
+        onTap: () => TaxiHomeActions.openTab(AppTabs.centre),
+      ),
+      NumberTile(
+        value: hidden ? TaxiHomeStrings.dash : NumberTile.of(n.missedRequests ?? 0),
+        label: TaxiHomeStrings.missedRequests,
+        onTap: () => TaxiHomeActions.openTab(AppTabs.centre),
+      ),
+      NumberTile(
+        value: n.ratingAvg == null || (n.ratingCount ?? 0) == 0 ? NumberTile.missing : n.ratingAvg!.toStringAsFixed(1),
+        label: TaxiHomeStrings.rating,
+        onTap: () => Get.toNamed(AppRoutes.taxiRating),
+      ),
+    ];
   }
 
   Widget _strip(TaxiRingStrip s) => switch (s) {

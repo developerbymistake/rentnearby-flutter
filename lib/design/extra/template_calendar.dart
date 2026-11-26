@@ -221,6 +221,44 @@ class _TemplateCalendarPopupState extends State<TemplateCalendarPopup>
   }
 }
 
+class TemplateCalendarGrid extends StatelessWidget {
+  const TemplateCalendarGrid({
+    super.key,
+    required this.start,
+    required this.onChange,
+    this.end,
+    this.min,
+    this.max,
+    this.single = true,
+    this.tone,
+    this.allowJump = true,
+  });
+
+  final DateTime? start;
+  final DateTime? end;
+  final DateTime? min;
+  final DateTime? max;
+  final bool single;
+  final ListingTone? tone;
+  final bool allowJump;
+  final void Function(DateTime? start, DateTime? end) onChange;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = start == null ? null : _day(start!);
+    return _CalendarGrid(
+      start: s,
+      end: single ? s : (end == null ? null : _day(end!)),
+      min: min == null ? null : _day(min!),
+      max: max == null ? null : _day(max!),
+      single: single,
+      tone: tone ?? listingToneOf(KitTone.brand),
+      onChange: onChange,
+      allowJump: allowJump,
+    );
+  }
+}
+
 class _CalendarGrid extends StatefulWidget {
   const _CalendarGrid({
     required this.start,
@@ -230,7 +268,10 @@ class _CalendarGrid extends StatefulWidget {
     required this.single,
     required this.tone,
     required this.onChange,
+    this.allowJump = true,
   });
+
+  final bool allowJump;
 
   final DateTime? start;
   final DateTime? end;
@@ -402,10 +443,12 @@ class _CalendarGridState extends State<_CalendarGrid> {
             Expanded(
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTap: () => setState(() {
-                  _pickYear = null;
-                  _pickStage = _pickStage == 0 ? 1 : 0;
-                }),
+                onTap: !widget.allowJump
+                    ? null
+                    : () => setState(() {
+                        _pickYear = null;
+                        _pickStage = _pickStage == 0 ? 1 : 0;
+                      }),
                 child: SizedBox(
                   height: DS.s(44),
                   child: Row(
@@ -422,7 +465,7 @@ class _CalendarGridState extends State<_CalendarGrid> {
                           ),
                         ),
                       ),
-                      Icon(_pickStage == 0 ? Icons.arrow_drop_down : Icons.arrow_drop_up, color: accent),
+                      if (widget.allowJump) Icon(_pickStage == 0 ? Icons.arrow_drop_down : Icons.arrow_drop_up, color: accent),
                     ],
                   ),
                 ),

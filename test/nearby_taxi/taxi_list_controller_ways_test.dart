@@ -31,7 +31,7 @@ TaxiBrowseItem _item(String id) => TaxiBrowseItem(
 
 class _Browse extends TaxiBrowseRepository {
   List<TaxiBrowseItem> items = const [];
-  final searches = <({double fromLat, double toLat})>[];
+  final searches = <({double fromLat, double toLat, DateTime date})>[];
 
   @override
   Future<TaxiBrowsePage> search({
@@ -39,11 +39,12 @@ class _Browse extends TaxiBrowseRepository {
     required double fromLng,
     required double toLat,
     required double toLng,
+    required DateTime date,
     String? category,
     int page = 1,
     int pageSize = 20,
   }) {
-    searches.add((fromLat: fromLat, toLat: toLat));
+    searches.add((fromLat: fromLat, toLat: toLat, date: date));
     return Future.value((items: items, hasMore: false));
   }
 }
@@ -71,11 +72,12 @@ void _setUp({bool answer = true}) {
   _ways = FakeWaysRepo(answer: answer);
 }
 
-TaxiListController _put({PlaceResult? to}) => Get.put(
+TaxiListController _put({PlaceResult? to, DateTime Function()? now}) => Get.put(
       TaxiListController(
         preset: TaxiPreset(from: _from, to: to ?? _to),
         waysRepo: _ways,
         browseRepo: _browse,
+        now: now,
       ),
       tag: TaxiListController.pushTag,
     );
@@ -93,6 +95,23 @@ void main() {
       expect(_ways.calls.single.toLat, _to.latLng.latitude);
       expect(_ways.calls.single.fromMyLocation, c.fromIsCurrent.value);
       expect(_browse.searches, hasLength(1));
+    });
+
+    test('the list is for IST today: 20:00 UTC on 26 Nov asks for 27 Nov', () async {
+      _setUp();
+      _put(now: () => DateTime.utc(2026, 11, 26, 20));
+      await _settle();
+      expect(_browse.searches.single.date, DateTime(2026, 11, 27));
+    });
+
+    test('a refresh on a new IST day asks for that day', () async {
+      _setUp();
+      var now = DateTime.utc(2026, 11, 26, 10);
+      final c = _put(now: () => now);
+      await _settle();
+      now = DateTime.utc(2026, 11, 27, 10);
+      await c.pullRefresh();
+      expect(_browse.searches.map((s) => s.date), [DateTime(2026, 11, 26), DateTime(2026, 11, 27)]);
     });
 
     test('a way exists gives available', () async {

@@ -1,6 +1,7 @@
 import '../../../services/api_service.dart';
 import '../models/taxi_browse_item.dart';
 import '../models/taxi_detail_model.dart';
+import 'v2/taxi_journey_date.dart';
 
 typedef TaxiBrowsePage = ({List<TaxiBrowseItem> items, bool hasMore});
 
@@ -22,6 +23,7 @@ class TaxiBrowseRepository {
   }
 
   Future<TaxiBrowsePage> browseLocal({
+    required DateTime date,
     String? districtId,
     int? cityKey,
     String? cityId,
@@ -43,6 +45,7 @@ class TaxiBrowseRepository {
         'pageSize': pageSize,
         if (centre != null) 'lat': centre.lat,
         if (centre != null) 'lng': centre.lng,
+        'date': TaxiJourneyDate.apiText(date),
       }));
 
   Future<TaxiBrowsePage> search({
@@ -50,6 +53,7 @@ class TaxiBrowseRepository {
     required double fromLng,
     required double toLat,
     required double toLng,
+    required DateTime date,
     String? category,
     int page = 1,
     int pageSize = 20,
@@ -62,6 +66,7 @@ class TaxiBrowseRepository {
         'category': ?category,
         'page': page,
         'pageSize': pageSize,
+        'date': TaxiJourneyDate.apiText(date),
       }));
 
   Future<TaxiDetailModel> getById(String id) async =>

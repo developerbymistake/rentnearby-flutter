@@ -66,7 +66,6 @@ abstract final class TaxiHomeStrings {
   static const missedRequests = 'Missed';
   static const rating = 'Rating';
   static String routeCount(int n) => n == 1 ? 'Route' : 'Routes';
-  static const localDay = 'Local day rate';
   static const none = '-';
   static const dash = '–';
 

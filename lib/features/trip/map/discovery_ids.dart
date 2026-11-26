@@ -1,5 +1,7 @@
 import 'package:bakhli/design/design.dart';
 
+import 'map_marker_sizes.dart';
+
 class DiscIds {
   static const String srcAll = 'disc-all';
   static const String srcPhoto = 'disc-photo';
@@ -23,11 +25,13 @@ class DiscIds {
 
   static const List<String> badgeCategories = [
     'temple', 'fort', 'palace', 'museum', 'lake', 'waterfall', 'viewpoint', 'park', 'garden',
-    'zoo', 'wildlife', 'bridge', 'ghat', 'cave', 'historic', 'beach', badgeDefault,
+    'zoo', 'wildlife', 'bridge', 'ghat', 'cave', 'historic', 'beach', 'market', badgeDefault,
   ];
 
-  static String badgeKey(String category) =>
-      badgeCategories.contains(category) ? category : badgeDefault;
+  static String badgeKey(String category) {
+    final c = category.trim().toLowerCase();
+    return badgeCategories.contains(c) ? c : badgeDefault;
+  }
 
   static String badgeImage(String category) => '$badgePrefix${badgeKey(category)}';
 
@@ -128,7 +132,8 @@ class DiscTuning {
   final double? dotMidDp;
   final double? selDotMidDp;
   final double? stopBadgeDp;
-  final double plannedHaloScale;
+  final double sizeScale;
+  final double? ringScale;
 
   static const double zoomOut = 10;
   static const double zoomMid = 14;
@@ -161,49 +166,55 @@ class DiscTuning {
     this.dotMidDp,
     this.selDotMidDp,
     this.stopBadgeDp,
-    this.plannedHaloScale = 1,
+    this.sizeScale = 1,
+    this.ringScale,
   });
 
-  static const double markerScale = 3;
+  static const double markerScale = MapMarkerSizes.scale;
   static const int packMax = 5000;
   static const double dotsFromZoom = 12;
+  // Equal ratios can differ in the last bit after the DS and size multiplications.
+  static const double _sameScale = 1e-9;
 
   static DiscTuning get trip => _shared(photoMax: 40);
 
   static DiscTuning get stay => _shared(photoMax: 24);
 
-  static DiscTuning get tripStops => _shared(photoMax: 40, scale: 1);
+  static DiscTuning get tripStops => _shared(photoMax: 40);
 
-  // Owner order 2026-11-25: spot markers 3x. Every non-photo spot gets a category badge; badges and dots are symbols that
-  // collide by rank (best first), so a dot shows only where a badge did not fit, from zoom 12.
-  static DiscTuning _shared({required int photoMax, double scale = markerScale}) {
-    double d(double n) => DS.s(n * scale);
+  // Owner order 2026-11-25: spot markers 3x, 2026-11-26 one size bigger (+15 percent) and itinerary stops the same size.
+  // Every non-photo spot gets a category badge; badges and dots are symbols that collide by rank (best first), so a dot
+  // shows only where a badge did not fit, from zoom 12.
+  static DiscTuning _shared({required int photoMax}) {
     return DiscTuning(
       photoMax: photoMax,
       badgeMax: packMax,
       badgeMinZoom: null,
       dotMinZoom: dotsFromZoom,
-      photoMinDp: d(55),
-      photoMidDp: d(75),
-      photoDp: d(90),
-      badgeMinDp: d(37.5),
-      badgeMidDp: d(50),
-      badgeDp: d(60),
-      dotMinDp: d(22.5),
-      dotMidDp: d(35),
-      dotDp: d(42.5),
-      selDotMinDp: d(32.5),
-      selDotMidDp: d(45),
-      selDotDp: d(53.75),
-      haloPhotoDp: d(127),
-      haloDotDp: d(76),
-      stopBadgeDp: d(54),
-      thumbPx: (96 * scale).round(),
-      plannedHaloScale: 1 / scale,
+      photoMinDp: MapMarkerSizes.dp(MapMarkerSizes.photoMin),
+      photoMidDp: MapMarkerSizes.dp(MapMarkerSizes.photoMid),
+      photoDp: MapMarkerSizes.dp(MapMarkerSizes.photoFull),
+      badgeMinDp: MapMarkerSizes.dp(MapMarkerSizes.badgeMin),
+      badgeMidDp: MapMarkerSizes.dp(MapMarkerSizes.badgeMid),
+      badgeDp: MapMarkerSizes.dp(MapMarkerSizes.badgeFull),
+      dotMinDp: MapMarkerSizes.dp(MapMarkerSizes.dotMin),
+      dotMidDp: MapMarkerSizes.dp(MapMarkerSizes.dotMid),
+      dotDp: MapMarkerSizes.dp(MapMarkerSizes.dotFull),
+      selDotMinDp: MapMarkerSizes.dp(MapMarkerSizes.selDotMin),
+      selDotMidDp: MapMarkerSizes.dp(MapMarkerSizes.selDotMid),
+      selDotDp: MapMarkerSizes.dp(MapMarkerSizes.selDotFull),
+      haloPhotoDp: MapMarkerSizes.dp(MapMarkerSizes.haloPhoto),
+      haloDotDp: MapMarkerSizes.dp(MapMarkerSizes.haloDot),
+      stopBadgeDp: MapMarkerSizes.dp(MapMarkerSizes.stopBadge),
+      thumbPx: MapMarkerSizes.thumbPx,
+      sizeScale: MapMarkerSizes.scale,
     );
   }
 
   int px(double dp) => (dp * pxPerDp).round();
+
+  // Ring and outline width of the stop marker; a flat marker drawn below the full size passes its own.
+  double get ringGrow => ringScale ?? sizeScale;
 
   _ZoomSize get _photo => (low: photoMinDp, mid: photoMidDp, high: photoDp);
   _ZoomSize get _badge => (low: badgeMinDp, mid: badgeMidDp, high: badgeDp);
@@ -250,34 +261,44 @@ class DiscTuning {
   Object selIconSize(double scale) => _byZoom([_photo, _badge], (z) {
         final photo = scale * (_at(_photo, z) / photoDp);
         final badge = scale * (_at(_badge, z) / badgeDp);
-        return photo == badge ? photo : ['match', ['get', 'kind'], 'badge', badge, photo];
+        return (photo - badge).abs() < _sameScale ? photo : ['match', ['get', 'kind'], 'badge', badge, photo];
       });
 
   double _haloDot(double z) => (haloDotDp - (selDotDp - _at(_selDot, z))) / 2;
 
   double _haloPhoto(double z, double photoScale) => (haloPhotoDp - photoScale * (photoDp - _at(_photo, z))) / 2;
 
-  // A planned stop is drawn at the route-stop size, so its halo is the 1x photo halo.
-  double _haloPlanned(double z) => plannedHaloScale * _haloPhoto(z, 1);
+  // A planned stop of the full day is drawn at the photo size (1x photo halo); a stop drawn as a dot takes the dot halo.
+  double _haloPlanned(double z) => _haloPhoto(z, 1);
+
+  static const String smallKey = 'small';
+  static const List<Object> _isSmall = ['==', ['get', smallKey], true];
 
   Object haloRadius(String dotKind, double photoScale, {String? plannedKind}) => _byZoom([_photo, _selDot], (z) => [
         'match',
         ['get', 'kind'],
         dotKind,
         _haloDot(z),
-        if (plannedKind != null) ...[plannedKind, _haloPlanned(z)],
+        if (plannedKind != null) ...[plannedKind, ['case', _isSmall, _haloDot(z), _haloPlanned(z)]],
         _haloPhoto(z, photoScale),
       ]);
 
-  double haloRadiusAt(String kind, double zoom, {required String dotKind, required String plannedKind, required double photoScale}) {
+  double haloRadiusAt(String kind, double zoom,
+      {required String dotKind, required String plannedKind, required double photoScale, bool small = false}) {
     if (kind == dotKind) return _haloDot(zoom);
-    if (kind == plannedKind) return _haloPlanned(zoom);
+    if (kind == plannedKind) return small ? _haloDot(zoom) : _haloPlanned(zoom);
     return _haloPhoto(zoom, photoScale);
   }
 
   Object stopIconSize(double minScale) {
     final stop = (low: photoMinDp ?? photoDp * minScale, mid: photoMidDp, high: photoDp);
     return _byZoom([stop], (z) => _at(stop, z) / photoDp);
+  }
+
+  // One stop layer: a feature whose kind is dotKind takes the dot ramp, every other one the stop ramp above.
+  Object stopLayerIconSize(double minScale, {required String kindKey, required String dotKind}) {
+    final stop = (low: photoMinDp ?? photoDp * minScale, mid: photoMidDp, high: photoDp);
+    return _byZoom([stop, _dot], (z) => ['match', ['get', kindKey], dotKind, _at(_dot, z) / dotDp, _at(stop, z) / photoDp]);
   }
 }
 

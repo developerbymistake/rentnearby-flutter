@@ -49,12 +49,14 @@ class DiscoveryHost {
   final String? Function(DiscoverySpot spot)? lineFor;
   final double Function() topInset;
   final double Function() bottomInset;
+  final bool Function(String spotId) plannedIsDot;
 
   const DiscoveryHost({
     required this.anchorLayerId,
     required this.plannedDayOf,
     required this.topInset,
     required this.bottomInset,
+    this.plannedIsDot = _never,
     this.targetDayFor,
     this.onAdd,
     this.onRemove,
@@ -64,6 +66,7 @@ class DiscoveryHost {
 
   static String? _noAnchor() => null;
   static int? _noDay(String _) => null;
+  static bool _never(String _) => false;
   static double _zero() => 0;
 
   const DiscoveryHost.readOnly({
@@ -73,6 +76,7 @@ class DiscoveryHost {
     this.onDetails,
     this.lineFor,
   })  : plannedDayOf = _noDay,
+        plannedIsDot = _never,
         targetDayFor = null,
         onAdd = null,
         onRemove = null;

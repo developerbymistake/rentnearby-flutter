@@ -41,7 +41,7 @@ void main() {
       'coordinates': [78.25, 30.5],
     });
     expect(f[0]['properties'], {'cat': 'lake', 'grp': DiscTiers.grpWater, 'rank': 3, 'tier': 1});
-    expect(f[1]['properties']['cat'], 'place');
+    expect(f[1]['properties']['cat'], 'market');
     expect(f[1]['properties']['tier'], DiscTiers.dot);
     expect(f[0]['properties'].containsKey('id'), isFalse);
     expect(jsonEncode(fc).contains('promoteId'), isFalse);

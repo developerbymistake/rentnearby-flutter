@@ -37,6 +37,10 @@ abstract final class OwnerErrorTypes {
   static const tabInactive = 'TabInactive';
   static const roleMismatch = 'RoleMismatch';
   static const planRowInactive = 'PlanRowInactive';
+  static const dayOffBooked = 'DayOffBooked';
+  static const dayOffPast = 'DayOffPast';
+  static const dayOffReasonTooLong = 'DayOffReasonTooLong';
+  static const dayIsOff = 'DayIsOff';
 
   static const Set<String> limitTypes = {
     planPhotoLimit,
@@ -54,7 +58,8 @@ abstract final class OwnerErrorTypes {
     blockedRangeInvalid, specialPriceLimit, specialPriceOverlap, specialPriceSavesLimit, specialPriceInvalid,
     planVisibleLimit, planVisibleInvalid, planVisibleNotNeeded, planFeatureLocked, moneyNoteInvalid,
     phoneNotAllowed, staleEdit, idTaken, stayFullOnDates, changeTouchesBlock, roomTypeDuplicate, stayNeedsPhoto,
-    stayEditGone, stayEditChanged, planValueBelowFree, announceTooSoon,
+    stayEditGone, stayEditChanged, planValueBelowFree, announceTooSoon, dayOffBooked, dayOffPast, dayOffReasonTooLong,
+    dayIsOff,
   };
 }
 
