@@ -27,6 +27,7 @@ void main() {
       expect(role, 'RENT_OWNER');
       expect(identical(RoleCapabilities.of(role), RoleCapabilities.none), isTrue);
       expect(RoleCapabilities.of(role).isOwner, isFalse);
+      expect(RoleCapabilities.of(role).canUseTravellerFeatures, isFalse);
     });
 
     test('returns SEEKER from a seeker token', () {

@@ -165,7 +165,9 @@ void main() {
 
   group('G13 removed role fails soft', () {
     test('capabilities of kept roles', () {
-      expect(identical(RoleCapabilities.of(UserRoleKeys.seeker), RoleCapabilities.none), isTrue);
+      expect(identical(RoleCapabilities.of(UserRoleKeys.seeker), RoleCapabilities.seeker), isTrue);
+      expect(RoleCapabilities.of(UserRoleKeys.seeker).isOwner, isFalse);
+      expect(RoleCapabilities.of(UserRoleKeys.seeker).deletionLine, isNull);
       expect(RoleCapabilities.of(UserRoleKeys.stayOwner).canListStays, isTrue);
       expect(RoleCapabilities.of(UserRoleKeys.stayOwner).canListTaxis, isFalse);
       expect(RoleCapabilities.of(UserRoleKeys.taxiDriver).canListTaxis, isTrue);

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/ext_journeys.dart';
+import '../../../navigation/traveller_gate.dart';
 import '../../trip/trip_strings_steps_a3.dart';
 import 'journey_plan_controller.dart';
 import 'models/taxi_ways_models.dart';
@@ -104,7 +105,7 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> with TickerProvid
               child: JourneyTotalBar(
                 total: plan.totalWith(c.chosen, people: c.args.people),
                 busy: c.isBusy || c.loading.value,
-                onSave: c.args.inTrip ? null : c.saveJourney,
+                onSave: c.args.inTrip || !TravellerGate.allowed ? null : c.saveJourney,
                 onUse: c.args.inTrip ? () => c.useForTrip(context) : null,
                 useLabel: TripStringsStepsA3.useForMyTrip,
               ),

@@ -285,12 +285,13 @@ void main() {
       await _finish(t);
     });
 
-    testWidgets('row shows for an owner too', (t) async {
+    testWidgets('row is hidden for an owner', (t) async {
       final a = _setup();
       a.canListStays.value = true;
       a.roleKey.value = 'STAY_OWNER';
       await _openProfile(t);
-      expect(find.text(_username), findsOneWidget);
+      expect(find.text(_username), findsNothing);
+      expect(find.text(BuddyStrings.sectionBuddies), findsNothing);
       await _finish(t);
     });
   });

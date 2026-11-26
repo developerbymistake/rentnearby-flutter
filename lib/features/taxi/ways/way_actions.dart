@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import '../../../config/app_routes.dart';
+import '../../../navigation/traveller_gate.dart';
 import '../../../utils/app_toast.dart';
 import '../../trip/controllers/trip_plan_controller.dart';
 import '../../trip/models/trip_enquiry_model.dart';
@@ -60,21 +61,27 @@ class WayActions {
     return plan.legs.isEmpty ? null : total;
   }
 
-  Future<SavedJourney?> saveIfNeeded(WayPlan plan, {bool quiet = false}) => JourneysController.ensure().saveIfNeeded(
-        quiet: quiet,
-        plan: plan,
-        chosen: chosenOf(plan.planKey),
-        date: date(),
-        people: people(),
-        fromName: plan.from.name,
-        fromLat: plan.from.lat,
-        fromLng: plan.from.lng,
-        toName: plan.to.name,
-        toLat: plan.to.lat,
-        toLng: plan.to.lng,
-        forTripId: forTrip || forSegment ? tripId : null,
-        forTripLegIndex: forSegment && trip != null ? tripLegIndex : null,
-      );
+  Future<SavedJourney?> saveIfNeeded(WayPlan plan, {bool quiet = false}) async {
+    if (!TravellerGate.allowed) {
+      TravellerGate.tell();
+      return null;
+    }
+    return JourneysController.ensure().saveIfNeeded(
+      quiet: quiet,
+      plan: plan,
+      chosen: chosenOf(plan.planKey),
+      date: date(),
+      people: people(),
+      fromName: plan.from.name,
+      fromLat: plan.from.lat,
+      fromLng: plan.from.lng,
+      toName: plan.to.name,
+      toLat: plan.to.lat,
+      toLng: plan.to.lng,
+      forTripId: forTrip || forSegment ? tripId : null,
+      forTripLegIndex: forSegment && trip != null ? tripLegIndex : null,
+    );
+  }
 
   Future<({bool go, bool replaceBooked})> segmentGate(BuildContext? context, WayPlan plan) async {
     final c = trip;

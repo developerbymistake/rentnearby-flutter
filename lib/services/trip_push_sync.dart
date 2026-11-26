@@ -16,6 +16,7 @@ import '../features/trip/controllers/trip_plan_controller.dart';
 import '../features/trip/controllers/trip_taxi_request_controller.dart';
 import '../features/trip/enquiries/my_enquiries_controller.dart';
 import '../features/trip/enquiries/my_enquiry_count_controller.dart';
+import '../navigation/traveller_gate.dart';
 
 class TripPushSync {
   const TripPushSync._();
@@ -178,6 +179,7 @@ class TripPushSync {
         c.loadBadge(force: true);
       }
     }
+    if (!TravellerGate.allowed) return;
     if (enquiries) {
       MyEnquiryCountController.maybe?.refresh();
       if (Get.isRegistered<MyEnquiriesController>()) {

@@ -337,29 +337,11 @@ void main() {
   });
 
   group('o_st_23 profile rows', () {
-    testWidgets('o_st_23_planATripRow shows Plan a trip, Travel as a guest and New', (t) async {
-      await pumpPhone(t, Scaffold(body: Column(children: ProfileRows.activityRows(ShellKind.stayOwner))));
-      expect(find.text('Plan a trip'), findsOneWidget);
-      expect(find.text('Travel as a guest'), findsOneWidget);
-      expect(find.text('New'), findsOneWidget);
-      expect(ProfileRows.activityRows(ShellKind.seeker), isEmpty);
-      expect(ProfileRows.activityRows(ShellKind.taxiDriver), isEmpty);
-    });
-
     test('o_st_23_noJobsFeedRow for owner shells, kept for Seeker', () {
       expect(ProfileRows.showsJobsFeed(ShellKind.stayOwner), isFalse);
       expect(ProfileRows.showsJobsFeed(ShellKind.taxiDriver), isFalse);
       expect(ProfileRows.showsJobsFeed(ShellKind.seeker), isTrue);
     });
-
-    for (final w in [320.0, 360.0, 411.0]) {
-      for (final sc in [1.0, 1.3]) {
-        testWidgets('o_st_23 plan a trip row at $w @$sc', (t) async {
-          await pumpPhone(t, Scaffold(body: Column(children: ProfileRows.activityRows(ShellKind.stayOwner))), size: Size(w, 700), textScale: sc);
-          expect(t.takeException(), isNull);
-        });
-      }
-    }
   });
 }
 

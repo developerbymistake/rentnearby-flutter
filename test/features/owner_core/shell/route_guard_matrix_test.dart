@@ -77,11 +77,12 @@ void main() {
     }
   });
 
-  test('plans for owners, traveller routes for everyone, unregistered for nobody', () {
+  test('plans for owners, traveller routes for seekers only, chat for everyone, unregistered for nobody', () {
     expectOpen(AppRoutes.plansBilling, {_Who.seeker: false, _Who.stay: true, _Who.taxi: true});
-    for (final r in [AppRoutes.tripReplies, AppRoutes.tripView, AppRoutes.chatConversation]) {
-      expectOpen(r, {_Who.seeker: true, _Who.stay: true, _Who.taxi: true});
+    for (final r in [AppRoutes.tripReplies, AppRoutes.tripView]) {
+      expectOpen(r, {_Who.seeker: true, _Who.stay: false, _Who.taxi: false});
     }
+    expectOpen(AppRoutes.chatConversation, {_Who.seeker: true, _Who.stay: true, _Who.taxi: true});
     expectOpen('/my-listings', {_Who.seeker: false, _Who.stay: false, _Who.taxi: false});
   });
 

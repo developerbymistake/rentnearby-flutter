@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 
+import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/tab_config_controller.dart';
 import '../design/tokens/listing_palette.dart';
@@ -91,7 +92,7 @@ abstract final class TabShell {
           center: true,
           rootTag: 'trips',
           root: () => const TripsDiscoveryScreen(),
-          active: () => _tabs.isActiveForIndex(AppTabs.trips),
+          active: () => Get.isRegistered<AuthController>() ? Get.find<AuthController>().tripsEnabled : _tabs.isActiveForIndex(AppTabs.trips),
           onTap: (_) => _seekerCommonTap(),
         ),
         TabSlot(

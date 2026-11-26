@@ -112,7 +112,7 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel>
     return Obx(() {
       final owner = _auth.effectiveIsOwner;
       final slides = <_Slide>[
-        if (_tabs.isActiveForIndex(AppTabs.trips)) _Slide.trip,
+        if (_auth.tripsEnabled) _Slide.trip,
         if (_tabs.isStaysActive && (!owner || _auth.staysEnabled)) _Slide.stay,
         if (_tabs.isTaxiActive && (!owner || _auth.taxisEnabled)) _Slide.taxi,
       ];

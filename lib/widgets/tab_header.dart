@@ -38,7 +38,8 @@ class TabHeaderIcons extends StatelessWidget {
           ),
           if (Get.isRegistered<AuthController>())
             Obx(() {
-              if (Get.find<AuthController>().shellKind.value != ShellKind.seeker) return const SizedBox.shrink();
+              final auth = Get.find<AuthController>();
+              if (auth.shellKind.value != ShellKind.seeker || !auth.canUseTravellerFeatures) return const SizedBox.shrink();
               return Padding(
                 padding: EdgeInsets.only(left: _u(10)),
                 child: _TabHeaderIcon(

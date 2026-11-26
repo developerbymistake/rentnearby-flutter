@@ -97,8 +97,6 @@ abstract final class TaxiHubStrings {
   static const kmRange = 'Km must be between 1 and 1000';
 
   static const profileTitle = 'Profile';
-  static const planATrip = 'Plan a trip';
-  static const travelAsGuest = 'Travel as a guest';
   static const myRating = 'My rating';
   static const noRatingsYet = 'No ratings yet';
   static String ratingSub(double avg, int n) => '${avg.toStringAsFixed(1)} from $n ratings';

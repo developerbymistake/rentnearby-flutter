@@ -40,6 +40,7 @@ import '../controllers/tour_controller.dart';
 import '../features/stay/guest/stay_guest_controller.dart';
 import '../features/taxi/requests/controllers/driver_ready_controller.dart';
 import '../features/trip/controllers/my_trips_controller.dart';
+import '../features/trip/models/trip_model.dart';
 import '../features/trip/widgets/trip_bar.dart';
 
 class MainScreen extends StatefulWidget {
@@ -88,8 +89,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // Fetches the Home bell's unread count once per session in its own onInit() — refreshed on
     // resume below, not via a live push.
     Get.put(NotificationController());
-    Get.put(MyEnquiryCountController());
-    BuddyBindings.ensure();
+    final traveller = _auth.canUseTravellerFeatures;
+    if (traveller) Get.put(MyEnquiryCountController());
+    BuddyBindings.ensure(traveller: traveller);
     OwnerShellBindings.ensure(_shellKind);
     _chatCtrl = Get.put(ChatController());
     Get.put(ChatHubService());
@@ -108,7 +110,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     _bannerCtrl = Get.put(BannerController());
     Get.put(BannerHubService());
     if (_auth.taxisEnabled) DriverReadyController.to;
-    _packWarmup.start(userLocation: _locationCtrl.userLocation, trips: MyTripsController.to.active);
+    _packWarmup.start(userLocation: _locationCtrl.userLocation, trips: traveller ? MyTripsController.to.active : <TripSummaryModel>[].obs);
     WidgetsBinding.instance.addObserver(this);
     _bannerDistrictWorker = ever(_locationCtrl.selectedDistrict, (district) {
       if (district != null) {
@@ -340,7 +342,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
               )),
             ),
             bottomNavigationBar: AppBottomDock(
-              banner: Obx(() => _locationCtrl.hasActiveGate || _auth.isLoggingOut.value || _auth.isOwnerShell
+              banner: Obx(() => _locationCtrl.hasActiveGate || _auth.isLoggingOut.value || _auth.isOwnerShell || !_auth.canUseTravellerFeatures
                   ? const SizedBox.shrink()
                   : const TripBar()),
               nav: Obx(() => _buildBottomNav()),

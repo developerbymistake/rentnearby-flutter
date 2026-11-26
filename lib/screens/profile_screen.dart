@@ -111,7 +111,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Gap.v(16),
             item(Obx(() => _auth.isOwner ? _buildPlansCard() : const SizedBox.shrink())),
             Obx(() => ProfileRows.forShell(_auth.shellKind.value)),
-            item(_sectionGroup(BuddyStrings.sectionBuddies, [_usernameTile(), const ProfileBuddiesRow()])),
+            item(Obx(() => _auth.canUseTravellerFeatures
+                ? _sectionGroup(BuddyStrings.sectionBuddies, [_usernameTile(), const ProfileBuddiesRow()])
+                : const SizedBox.shrink())),
             item(_sectionGroup('ACCOUNT', [
               _accountPhoneTile(),
               _accountVisibilityTile(),
@@ -119,20 +121,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ])),
             item(Obx(() {
               final rows = <({String art, String title, String route})>[
-                (art: ListingArt.luggage, title: 'My Trips', route: AppRoutes.myTrips),
+                if (_auth.canOpenRoute(AppRoutes.myTrips)) (art: ListingArt.luggage, title: 'My Trips', route: AppRoutes.myTrips),
                 if (_auth.jobsBrowseEnabled && ProfileRows.showsJobsFeed(_auth.shellKind.value)) (art: ListingArt.briefcase, title: 'Jobs', route: AppRoutes.jobs),
                 if (_auth.canOpenRoute(AppRoutes.myJourneys))
                   (art: ListingArt.compass, title: 'My Journeys', route: AppRoutes.myJourneys),
                 (art: ListingArt.warning, title: 'My Reports', route: AppRoutes.myFiledReports),
               ];
-              final lead = ProfileRows.activityRows(_auth.shellKind.value);
               return _sectionGroup('ACTIVITY', [
-                ...lead,
                 for (var r = 0; r < rows.length; r++)
                   IconRow3D(
                     art: rows[r].art,
                     title: rows[r].title,
-                    divider: r > 0 || lead.isNotEmpty,
+                    divider: r > 0,
                     onTap: () => Get.toNamed(rows[r].route),
                   ),
               ]);

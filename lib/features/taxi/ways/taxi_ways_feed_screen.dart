@@ -6,6 +6,7 @@ import 'package:bakhli/design/extra/ext_journeys.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:bakhli/design/extra/ways_kit.dart';
 import '../../../models/place_result_model.dart';
+import '../../../navigation/traveller_gate.dart';
 import '../../../widgets/listing_contact_actions.dart';
 import '../../trip/controllers/trip_plan_controller.dart';
 import '../../trip/trip_strings_final_aa.dart';
@@ -99,7 +100,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
         tag: _tag,
       );
       _c = c;
-      JourneysController.ensure().load();
+      if (TravellerGate.allowed) JourneysController.ensure().load();
     }
   }
 
@@ -260,7 +261,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
               title: TaxiWaysStrings.title,
               subtitle: from.isEmpty || to.isEmpty ? '' : TaxiWaysStrings.subtitle(from, to),
               onBack: () => Get.back(),
-              trailing: _journeysButton(),
+              trailing: TravellerGate.allowed ? _journeysButton() : null,
               bottom: Padding(
                 padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), 0),
                 child: Column(
