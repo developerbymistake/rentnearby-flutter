@@ -1,3 +1,5 @@
+import '../../../../widgets/ring/ready_check_row.dart';
+
 class DriverReadyStrings {
   static const String title = 'Get ready for requests';
   static const String subtitle = 'Four quick checks so your phone rings';
@@ -19,9 +21,9 @@ class DriverReadyStrings {
   static const String testDone = 'Your phone rang';
   static const String testFix = 'Did your phone ring? Run a test to see';
 
-  static const String done = 'Done';
-  static const String fix = 'Fix';
-  static const String openSettings = 'Open settings';
+  static const String done = RingReadyStrings.done;
+  static const String fix = RingReadyStrings.fix;
+  static const String openSettings = RingReadyStrings.openSettings;
   static const String runTest = 'Run test ring';
   static const String runTestAgain = 'Test again';
   static const String running = 'Ringing your phone...';

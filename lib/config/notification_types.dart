@@ -85,6 +85,10 @@ class NotificationTypeKeys {
 
   static bool isRingsMissed(String? type) => type == taxiRingsMissed || type == taxiRingsMissedWire;
 
+  static const String stayEnquiryRingWire = 'stay_enquiry_ring';
+  static const String stayEnquiryRingMissed = 'StayEnquiryRingMissed';
+  static const String stayEnquiryRingMissedWire = 'stay_enquiry_ring_missed';
+
   static const String stayEditApprovedWire = 'stay_edit_approved';
   static const String stayEditRejectedWire = 'stay_edit_rejected';
   static const String festivalReminderWire = 'festival_reminder';
@@ -107,6 +111,7 @@ class NotificationTypeKeys {
     stayEditRejectedWire,
     stayApprovedWire,
     stayRejectedWire,
+    stayEnquiryRingMissedWire,
   };
 
   static const Set<String> ownerTaxi = {

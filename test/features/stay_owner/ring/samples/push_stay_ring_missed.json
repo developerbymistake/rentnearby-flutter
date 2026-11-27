@@ -1,0 +1,13 @@
+{
+  "data": {
+    "notification_type": "stay_enquiry_ring_missed",
+    "kind": "stay_ring_missed",
+    "ringKind": "stay",
+    "v": "1",
+    "enquiryId": "5e0c7a11-0001-4a00-8000-0000000000e1",
+    "action_route": "/stay-enquiries",
+    "action_args_json": "{\"enquiryId\":\"5e0c7a11-0001-4a00-8000-0000000000e1\",\"bucket\":\"new\"}",
+    "ownerUserId": "7c1e2f3a-0005-4b00-9000-0000000000a5"
+  },
+  "notification": { "title": "Missed enquiry", "body": "Asha · 2 nights · 18 to 20 Dec · Hill View Homestay. Reply in Enquiries." }
+}

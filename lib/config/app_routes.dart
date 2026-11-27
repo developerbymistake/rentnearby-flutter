@@ -138,6 +138,8 @@ class AppRoutes {
   static const String stayPlanVisible = '/stay-plan-visible';
   static const String stayAttention = '/stay-attention';
   static const String stayLiveEdit = '/stay-live-edit';
+  static const String stayEnquiryRing = '/stay-enquiry-ring';
+  static const String stayRingReady = '/stay-ring-ready';
   static const String taxiCalendarEntry = '/taxi-calendar-entry';
   static const String taxiUpcoming = '/taxi-upcoming';
   static const String taxiPast = '/taxi-past';
@@ -159,6 +161,8 @@ class AppRoutes {
     stayPlanVisible,
     stayAttention,
     stayLiveEdit,
+    stayEnquiryRing,
+    stayRingReady,
   };
   static const Set<String> taxiDriverNewRoutes = {
     taxiCalendarEntry,

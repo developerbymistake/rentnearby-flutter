@@ -247,7 +247,7 @@ void main() {
     }
     debugOnRebuildDirtyWidget = prev;
     expect(find.text('3:04'), findsOneWidget);
-    expect(rebuilt.where((n) => n == 'DriverRingScreen' || n == 'Art3D' || n == 'Wrap' || n == '_Chip' || n == '_Round'), isEmpty, reason: rebuilt.toSet().join(', '));
+    expect(rebuilt.where((n) => n == 'DriverRingScreen' || n == 'Art3D' || n == 'Wrap' || n == 'RingChip' || n == 'RingRoundButton' || n == 'RingCallDial'), isEmpty, reason: rebuilt.toSet().join(', '));
     expect(rebuilt.where((n) => n.startsWith('ValueListenableBuilder')).length, 3);
     final paint = tester.widget<CustomPaint>(find.byKey(const ValueKey('ring_progress')));
     expect((paint.painter as dynamic).progress, closeTo(184 / 300, 0.01));

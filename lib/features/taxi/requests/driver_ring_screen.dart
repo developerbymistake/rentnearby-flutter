@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
-
 import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -9,6 +7,7 @@ import '../../../config/app_routes.dart';
 import '../../../services/system_settings_channel.dart';
 import '../../../services/taxi_ring_service.dart';
 import '../../../services/taxi_ring_session.dart';
+import '../../../widgets/ring/ring_call_parts.dart';
 import '../../owner_core/plan/plan_gate.dart';
 import '../../taxi_driver/strings/taxi_work_strings.dart';
 import '../../taxi_driver/taxi_driver_deps.dart';
@@ -70,13 +69,9 @@ class DriverRingScreen extends StatefulWidget {
 }
 
 class _DriverRingScreenState extends State<DriverRingScreen> {
-  static const Color _acceptGreen = Color(0xFF2EA84F);
-  static const Color _onDark = Colors.white;
+  static const Color _onDark = RingCallLook.onDark;
   static const String _art = 'assets/images/design/travel3d/taxi.png';
   static const Duration _ringWindow = Duration(minutes: 5);
-  static final Color _top = Color.lerp(ListingPalette.sunrise.g2, ListingPalette.coral.g1, 0.55)!;
-  static final Color _mid = Color.lerp(ListingPalette.coral.g1, ListingPalette.coral.g2, 0.35)!;
-  static final Color _bottom = ListingPalette.coral.g2;
 
   late final DriverRequestsController _c = widget.controller ?? DriverRequestsController.to;
   late final RingAlertControl _alert = widget.alert ?? SystemSettingsChannel.instance;
@@ -319,22 +314,7 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) unawaited(_close());
-      },
-      child: Scaffold(
-        backgroundColor: _bottom,
-        body: DecoratedBox(
-          position: DecorationPosition.background,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [_top, _mid, _bottom], stops: const [0, 0.55, 1]),
-          ),
-          child: SizedBox.expand(child: SafeArea(child: Obx(_body))),
-        ),
-      ),
-    );
+    return RingCallPage(onClose: () => unawaited(_close()), child: Obx(_body));
   }
 
   String _leftForFailed() {
@@ -345,7 +325,7 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
   }
 
   Widget _opening() =>
-      const _RingStateView(key: ValueKey('ring_opening'), eyebrow: TaxiWorkStrings.incomingRequest, spinner: true, title: TaxiWorkStrings.opening, sub: TaxiWorkStrings.oneMoment);
+      const RingStateView(key: ValueKey('ring_opening'), eyebrow: TaxiWorkStrings.incomingRequest, spinner: true, title: TaxiWorkStrings.opening, sub: TaxiWorkStrings.oneMoment);
 
   Widget _body() {
     final o = _c.offer(_id);
@@ -355,7 +335,7 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
     if (o == null) {
       if (!_loadFailed) return _opening();
       final left = _leftForFailed();
-      return _RingStateView(
+      return RingStateView(
         key: const ValueKey('ring_failed'),
         eyebrow: TaxiWorkStrings.taxiRequest,
         art: ListingArt.warning,
@@ -384,7 +364,7 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
       RingEndKind.ended => ListingArt.taxi,
     };
     final paused = end.kind == RingEndKind.pausedOnFree;
-    return _RingStateView(
+    return RingStateView(
       key: ValueKey('ring_end_${end.kind.name}'),
       eyebrow: TaxiWorkStrings.taxiRequest,
       art: art,
@@ -409,8 +389,6 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
       if (o.sections.sightseeing) TaxiWorkStrings.sightseeing(o.sightseeingDayCount),
       if (o.sections.drop) TaxiWorkStrings.drop,
     ];
-    final box = DS.s(230);
-    final disc = DS.s(180);
     final column = Padding(
       padding: DS.insets(l: 24, r: 24, t: 40, b: 40),
       child: Column(
@@ -423,45 +401,16 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
             alignment: WrapAlignment.center,
             spacing: DS.gh(8),
             runSpacing: DS.gv(8),
-            children: [for (final c in chips) _Chip(c)],
+            children: [for (final c in chips) RingChip(c)],
           ),
           _line(DriverRingStrings.summary(o.dayCount, o.nightCount, o.fromDay, o.toDay)),
           if (o.routeLine.isNotEmpty) _line(o.routeLine),
           _line(TaxiWorkStrings.seats(o.seats, o.travellers)),
           Gap.v(44),
-          SizedBox(
-            width: box,
-            height: box,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Positioned.fill(
-                  child: RepaintBoundary(
-                    child: CustomPaint(
-                      key: const ValueKey('ring_progress'),
-                      painter: _RingPainter(
-                        progressOf: () => (_c.remaining(o).inMilliseconds / _ringWindow.inMilliseconds).clamp(0.0, 1.0),
-                        repaint: _ticks,
-                        radius: DS.s(92),
-                        stroke: DS.s(8),
-                        pulseRadius: DS.s(139),
-                        pulseStroke: DS.s(2),
-                        ringShift: DS.s(15),
-                      ),
-                    ),
-                  ),
-                ),
-                RepaintBoundary(
-                  child: Container(
-                    width: disc,
-                    height: disc,
-                    decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: Alpha.v14)),
-                    alignment: Alignment.center,
-                    child: Art3D(asset: _art, size: 120, shadowOffset: const Offset(6, 9), shadowBlur: 8, shadowAlpha: Alpha.scrim),
-                  ),
-                ),
-              ],
-            ),
+          RingCallDial(
+            art: _art,
+            ticks: _ticks,
+            progressOf: () => (_c.remaining(o).inMilliseconds / _ringWindow.inMilliseconds).clamp(0.0, 1.0),
           ),
           Gap.v(34),
           ValueListenableBuilder<int>(
@@ -483,250 +432,17 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
             Text(TaxiWorkStrings.answerFailed, textAlign: TextAlign.center, style: Ink3D.text(13, FontWeight.w600, _onDark, height: 1.4)),
           ],
           const Spacer(),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _Round(label: TaxiWorkStrings.decline, color: DesignColors.error, glyph: const _DeclineX(), onTap: busy ? null : _onDecline),
-              Gap.h(90),
-              _Round(label: TaxiWorkStrings.accept, color: _acceptGreen, glyph: Icon(Icons.call, color: Colors.white, size: DS.s(30)), onTap: busy ? null : _onAccept),
-            ],
+          RingCallButtons(
+            declineLabel: TaxiWorkStrings.decline,
+            acceptLabel: TaxiWorkStrings.accept,
+            onDecline: busy ? null : _onDecline,
+            onAccept: busy ? null : _onAccept,
           ),
           Gap.v(28),
           Text(TaxiWorkStrings.swipeUp, textAlign: TextAlign.center, style: Ink3D.text(12.5, FontWeight.w400, _onDark.withValues(alpha: Alpha.high))),
         ],
       ),
     );
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onVerticalDragEnd: busy
-          ? null
-          : (d) {
-              if ((d.primaryVelocity ?? 0) < -300) _onAccept();
-            },
-      child: LayoutBuilder(
-        builder: (context, c) => FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.topCenter,
-          child: SizedBox(
-            width: c.maxWidth,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: c.maxHeight),
-              child: IntrinsicHeight(child: column),
-            ),
-          ),
-        ),
-      ),
-    );
+    return RingCallLayout(onSwipeUp: busy ? null : _onAccept, child: column);
   }
-}
-
-class _RingStateView extends StatelessWidget {
-  static const double _pillFont = 13;
-
-  const _RingStateView({
-    super.key,
-    required this.eyebrow,
-    this.art,
-    this.spinner = false,
-    required this.title,
-    required this.sub,
-    this.primary,
-    this.onPrimary,
-    this.secondary,
-    this.onSecondary,
-  });
-
-  final String eyebrow;
-  final String? art;
-  final bool spinner;
-  final String title;
-  final String sub;
-  final String? primary;
-  final VoidCallback? onPrimary;
-  final String? secondary;
-  final VoidCallback? onSecondary;
-
-  @override
-  Widget build(BuildContext context) {
-    final a = art;
-    final disc = DS.s(112);
-    final p = primary;
-    final s = secondary;
-    return Padding(
-      padding: DS.insets(l: 18, r: 18, t: 40, b: 48),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  Text(eyebrow.toUpperCase(), textAlign: TextAlign.center, style: Ink3D.text(11, FontWeight.w500, Colors.white.withValues(alpha: Alpha.v80), letterSpacing: 0.6)),
-                  Gap.v(36),
-                  if (spinner)
-                    SizedBox(
-                      width: DS.s(88),
-                      height: DS.s(88),
-                      child: CircularProgressIndicator(
-                        key: const ValueKey('ring_opening_spinner'),
-                        strokeWidth: DS.s(4),
-                        color: ListingPalette.sunrise.g1,
-                        backgroundColor: Colors.white.withValues(alpha: Alpha.v18),
-                      ),
-                    )
-                  else if (a != null)
-                    Container(
-                      width: disc,
-                      height: disc,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: Alpha.v14)),
-                      child: Art3D(asset: a, size: 72, shadowAlpha: Alpha.scrim),
-                    ),
-                  Gap.v(24),
-                  Text(title, key: const ValueKey('ring_state_title'), textAlign: TextAlign.center, style: Ink3D.text(18, FontWeight.w700, Colors.white, height: 1.3)),
-                  Gap.v(8),
-                  Text(sub, key: const ValueKey('ring_state_sub'), textAlign: TextAlign.center, style: Ink3D.text(11.5, FontWeight.w500, Colors.white, height: 1.5)),
-                ],
-              ),
-            ),
-          ),
-          if (p != null) GradientPillButton(key: const ValueKey('ring_state_primary'), tone: ListingTone.coral, label: p, onTap: onPrimary, height: 44, fontSize: _pillFont),
-          if (s != null) ...[
-            Gap.v(10),
-            WhitePillButton(key: const ValueKey('ring_state_secondary'), tone: ListingTone.coral, label: s, onTap: onSecondary, height: 44, fontSize: _pillFont),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _RingPainter extends CustomPainter {
-  _RingPainter({
-    required this.progressOf,
-    required Listenable repaint,
-    required this.radius,
-    required this.stroke,
-    required this.pulseRadius,
-    required this.pulseStroke,
-    required this.ringShift,
-  }) : super(repaint: repaint);
-
-  final double Function() progressOf;
-  final double radius;
-  final double stroke;
-  final double pulseRadius;
-  final double pulseStroke;
-  final double ringShift;
-
-  double get progress => progressOf();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final progress = this.progress;
-    final c = size.center(Offset.zero);
-    final rc = c - Offset(ringShift, ringShift);
-    canvas.drawCircle(
-      c,
-      pulseRadius,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = pulseStroke
-        ..color = Colors.white.withValues(alpha: Alpha.v22),
-    );
-    final arc = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.round;
-    canvas.drawCircle(rc, radius, arc..color = Colors.white.withValues(alpha: Alpha.v18));
-    if (progress <= 0) return;
-    canvas.drawArc(Rect.fromCircle(center: rc, radius: radius), -math.pi / 2, 2 * math.pi * progress, false, arc..color = ListingPalette.sunrise.g1);
-  }
-
-  @override
-  bool shouldRepaint(_RingPainter old) =>
-      old.progressOf != progressOf || old.radius != radius || old.stroke != stroke || old.pulseRadius != pulseRadius || old.pulseStroke != pulseStroke || old.ringShift != ringShift;
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: Alpha.v16),
-        borderRadius: DS.circular(14),
-      ),
-      child: Padding(
-        padding: DS.sym(h: 14, v: 6),
-        child: Text(text, style: Ink3D.text(12.5, FontWeight.w600, Colors.white)),
-      ),
-    );
-  }
-}
-
-class _Round extends StatelessWidget {
-  const _Round({required this.label, required this.color, required this.glyph, required this.onTap});
-  static const List<BoxShadow> _shadow = [BoxShadow(color: Color(0x59000000), offset: Offset(0, 8), blurRadius: 18)];
-  final String label;
-  final Color color;
-  final Widget glyph;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final size = DS.s(76);
-    return Tap3D(
-      onTap: onTap,
-      label: label,
-      exclude: true,
-      child: Opacity(
-        opacity: onTap == null ? 0.5 : 1,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle, boxShadow: DS.shadows(_shadow)),
-              alignment: Alignment.center,
-              child: glyph,
-            ),
-            Gap.v(10),
-            Text(label, style: Ink3D.text(13, FontWeight.w600, Colors.white)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DeclineX extends StatelessWidget {
-  const _DeclineX();
-
-  @override
-  Widget build(BuildContext context) {
-    final side = DS.s(30);
-    return CustomPaint(key: const ValueKey('ring_decline_x'), size: Size.square(side), painter: _XPainter());
-  }
-}
-
-class _XPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = size.width * 3 / 24
-      ..strokeCap = StrokeCap.round;
-    final a = size.width * 0.25;
-    final b = size.width * 0.75;
-    canvas.drawLine(Offset(a, a), Offset(b, b), p);
-    canvas.drawLine(Offset(b, a), Offset(a, b), p);
-  }
-
-  @override
-  bool shouldRepaint(_XPainter old) => false;
 }
