@@ -2,12 +2,14 @@ import 'dart:math' as math;
 
 import 'package:flutter/painting.dart';
 
+import 'design_colors.dart';
+
 abstract final class SplashInk {
   static const Color night = Color(0xFF1E1466);
   static const Color white = Color(0xFFFFFFFF);
-  static const Color glowCore = Color(0xFF5C5EDD);
-  static const Color glowMid = Color(0x54738AE6);
-  static const Color glowEdge = Color(0x00738AE6);
+  static const Color glowCore = DesignColors.brandRoyal;
+  static const Color glowMid = DesignColors.brandSky33;
+  static const Color glowEdge = DesignColors.brandSkyClear;
   static const Color tagline = Color(0xFFE9ECFF);
   static const Color shimmer = Color(0xCCFFFFFF);
   static const Color shimmerClear = Color(0x00FFFFFF);

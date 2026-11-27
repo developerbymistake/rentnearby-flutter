@@ -15,6 +15,7 @@ import '../../shared/social_nav.dart';
 import '../../shared/social_strings.dart';
 import '../../shared/widgets/follow_button.dart';
 import '../../shared/widgets/mutuals_line.dart';
+import '../../shared/widgets/travel_level_widgets.dart';
 import '../models/join_gender_rule.dart';
 import '../social_strings_b.dart';
 import '../../a/widgets/social_chips_a.dart';
@@ -34,6 +35,7 @@ class TripPostScreen extends StatefulWidget {
   static const Key joinRequestsKey = ValueKey('trip_post_join_requests');
   static const Key openTripKey = ValueKey('trip_post_open_trip');
   static const Key onlyForKey = ValueKey('trip_post_only_for');
+  static const Key ownerLevelKey = ValueKey('trip_post_owner_level');
 
   @override
   State<TripPostScreen> createState() => _TripPostScreenState();
@@ -139,6 +141,7 @@ class _TripPostScreenState extends State<TripPostScreen> {
                           children: [
                             Flexible(child: Text(o.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(15.5, FontWeight.w600, Ink3D.title, letterSpacing: 0))),
                             if (o.gender.isNotEmpty) ...[Gap.h(6), GenderGlyph(gender: o.gender, color: GenderGlyph.inkOf(o.gender), size: 12, badge: true)],
+                            if (!t.sample) ...[Gap.h(6), TrophyBadge(key: TripPostScreen.ownerLevelKey, level: o.level, trips: o.completedTrips)],
                           ],
                         ),
                         if ((o.username ?? '').isNotEmpty) Text(o.username!, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w400, Ink3D.hint, letterSpacing: 0)),

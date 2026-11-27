@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/tokens/design_colors.dart';
 
 import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
@@ -20,7 +21,7 @@ abstract final class Report3D {
     _ => ListingPalette.indigo.page,
   };
 
-  static const Color indigoPage = Color(0xFFF2F3F8);
+  static const Color indigoPage = DesignColors.scaffold;
 
   static String art(String listingType) => switch (listingType) {
     'Stay' => ListingArt.stay,

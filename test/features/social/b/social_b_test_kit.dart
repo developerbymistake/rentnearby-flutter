@@ -23,10 +23,12 @@ Map<String, dynamic> publicTripJson({
   bool notOpen = false,
   bool sample = false,
   Map<String, dynamic>? mutuals,
+  int ownerTrips = 0,
+  int ownerLevel = 0,
 }) =>
     {
       'tripId': id,
-      'owner': personJson(ownerId, ownerName, city: 'Dehradun'),
+      'owner': personJson(ownerId, ownerName, city: 'Dehradun', completedTrips: ownerTrips, level: ownerLevel),
       'ownerInterests': ['Mountains', 'Treks'],
       'isMine': isMine,
       'cityKey': 0,

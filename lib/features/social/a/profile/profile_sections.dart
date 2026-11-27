@@ -22,6 +22,7 @@ class ProfileHeroCard extends StatelessWidget {
     this.photo,
     this.pill,
     this.after,
+    this.trailing,
     this.onFollowers,
     this.onFollowing,
   });
@@ -36,6 +37,7 @@ class ProfileHeroCard extends StatelessWidget {
   final Widget? photo;
   final Widget? pill;
   final Widget? after;
+  final Widget? trailing;
   final VoidCallback? onFollowers;
   final VoidCallback? onFollowing;
 
@@ -97,6 +99,7 @@ class ProfileHeroCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (trailing != null) ...[Gap.h(10), trailing!],
             ],
           ),
           if (about.trim().isNotEmpty)
@@ -124,17 +127,18 @@ class ProfileCounters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget box(int n, String label, VoidCallback? onTap) {
+    Widget box(int n, String label, Color ink, VoidCallback? onTap) {
       final body = Container(
         padding: DS.sym(h: 4, v: 8),
         decoration: BoxDecoration(
-          color: DesignColors.onPrimary.withValues(alpha: Alpha.v18),
+          color: DesignColors.surface,
           borderRadius: DS.br(CardRadius.card),
+          boxShadow: [BoxShadow(color: ProfileStatColors.tileShadow.withValues(alpha: Alpha.v22), offset: DS.shadowOffset(LevelSizes.statShadowOffset))],
         ),
         child: Column(
           children: [
-            Text('$n', maxLines: 1, style: Ink3D.text(18, FontWeight.w700, DesignColors.onPrimary, height: 1.2, letterSpacing: 0)),
-            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w400, DesignColors.onPrimary, letterSpacing: 0)),
+            Text('$n', maxLines: 1, style: Ink3D.text(18, FontWeight.w700, ink, height: 1.2, letterSpacing: 0)),
+            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w400, ProfileStatColors.label, letterSpacing: 0)),
           ],
         ),
       );
@@ -143,11 +147,11 @@ class ProfileCounters extends StatelessWidget {
 
     return Row(
       children: [
-        box(trips, SocialStringsA.trips, null),
+        box(trips, SocialStringsA.trips, ProfileStatColors.trips, null),
         Gap.h(8),
-        box(followers, SocialStringsA.followers, onFollowers),
+        box(followers, SocialStringsA.followers, ProfileStatColors.followers, onFollowers),
         Gap.h(8),
-        box(following, SocialStringsA.followingTab, onFollowing),
+        box(following, SocialStringsA.followingTab, ProfileStatColors.following, onFollowing),
       ],
     );
   }

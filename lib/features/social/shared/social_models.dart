@@ -1,9 +1,10 @@
 import '../../buddy/shared/buddy_json.dart';
 import '../../buddy/shared/models/person_models.dart';
 import 'social_formats.dart';
+import 'travel_levels.dart';
 
 class SocialPerson {
-  const SocialPerson({required this.userId, required this.name, this.username, this.photoUrl, required this.initial, this.homeCity, this.gender = ''});
+  const SocialPerson({required this.userId, required this.name, this.username, this.photoUrl, required this.initial, this.homeCity, this.gender = '', this.completedTrips = 0, this.level = 0});
 
   final String userId;
   final String name;
@@ -12,6 +13,10 @@ class SocialPerson {
   final String initial;
   final String? homeCity;
   final String gender;
+  final int completedTrips;
+  final int level;
+
+  TravelLevel get travelLevel => TravelLevels.at(level);
 
   String get shortName => SocialFormats.shortName(name);
 
@@ -20,6 +25,7 @@ class SocialPerson {
   factory SocialPerson.fromJson(Map<String, dynamic> j) {
     final name = BuddyJson.str(j['name']);
     final initial = BuddyJson.str(j['initial']);
+    final done = BuddyJson.integer(j['completedTrips']);
     return SocialPerson(
       userId: BuddyJson.str(j['userId']),
       name: name,
@@ -28,6 +34,8 @@ class SocialPerson {
       initial: initial.isNotEmpty ? initial : (name.trim().isEmpty ? '' : name.trim().substring(0, 1).toUpperCase()),
       homeCity: BuddyJson.strOrNull(j['homeCity']),
       gender: BuddyJson.str(j['gender']),
+      completedTrips: done,
+      level: TravelLevels.parseLevel(j['level'], done),
     );
   }
 }
@@ -344,6 +352,8 @@ class MyProfile {
     this.buddies = 0,
     this.publicTrips = const [],
     this.nameChangeAllowedAt,
+    this.completedTrips = 0,
+    this.level = 0,
   });
 
   final String userId;
@@ -371,8 +381,13 @@ class MyProfile {
   final int buddies;
   final List<PublicTrip> publicTrips;
   final DateTime? nameChangeAllowedAt;
+  final int completedTrips;
+  final int level;
 
-  SocialPerson get person => SocialPerson(userId: userId, name: name, username: username, photoUrl: photoUrl, initial: initial, homeCity: homeCity);
+  TravelLevel get travelLevel => TravelLevels.at(level);
+
+  SocialPerson get person =>
+      SocialPerson(userId: userId, name: name, username: username, photoUrl: photoUrl, initial: initial, homeCity: homeCity, completedTrips: completedTrips, level: level);
 
   bool nameLockedAt(DateTime now) {
     final at = nameChangeAllowedAt;
@@ -405,11 +420,14 @@ class MyProfile {
         buddies: buddies,
         publicTrips: publicTrips,
         nameChangeAllowedAt: at,
+        completedTrips: completedTrips,
+        level: level,
       );
 
   factory MyProfile.fromJson(Map<String, dynamic> j) {
     final c = BuddyJson.map(j['counters']);
     final p = SocialPerson.fromJson(j);
+    final done = BuddyJson.integer(j['completedTrips'] ?? c['completedTrips']);
     return MyProfile(
       userId: p.userId,
       name: p.name,
@@ -436,6 +454,8 @@ class MyProfile {
       buddies: BuddyJson.integer(c['buddies']),
       publicTrips: BuddyJson.list(j['publicTrips'], PublicTrip.fromJson),
       nameChangeAllowedAt: BuddyJson.time(j['nameChangeAllowedAt'] ?? j['nextAllowedAt']),
+      completedTrips: done,
+      level: TravelLevels.parseLevel(j['level'] ?? c['level'], done),
     );
   }
 }
@@ -460,6 +480,8 @@ class TravellerProfile {
     this.mutuals = Mutuals.none,
     this.privateLocked = false,
     this.publicTrips = const [],
+    this.completedTrips = 0,
+    this.level = 0,
   });
 
   final SocialPerson person;
@@ -480,6 +502,10 @@ class TravellerProfile {
   final Mutuals mutuals;
   final bool privateLocked;
   final List<PublicTrip> publicTrips;
+  final int completedTrips;
+  final int level;
+
+  TravelLevel get travelLevel => TravelLevels.at(level);
 
   TravellerProfile copyWith({bool? iFollow, bool? followRequested, bool? isBuddy, int? followers}) => TravellerProfile(
         person: person,
@@ -500,13 +526,20 @@ class TravellerProfile {
         mutuals: mutuals,
         privateLocked: privateLocked,
         publicTrips: publicTrips,
+        completedTrips: completedTrips,
+        level: level,
       );
 
   factory TravellerProfile.fromJson(Map<String, dynamic> j) {
     final c = BuddyJson.map(j['counters']);
     final r = BuddyJson.map(j['relation']);
+    final pj = BuddyJson.map(j['person']);
+    final done = BuddyJson.integer(j['completedTrips'] ?? pj['completedTrips'] ?? c['completedTrips']);
+    final level = TravelLevels.parseLevel(j['level'] ?? pj['level'] ?? c['level'], done);
+    final p = SocialPerson.fromJson(pj);
     return TravellerProfile(
-      person: SocialPerson.fromJson(BuddyJson.map(j['person'])),
+      person: SocialPerson(
+          userId: p.userId, name: p.name, username: p.username, photoUrl: p.photoUrl, initial: p.initial, homeCity: p.homeCity, gender: p.gender, completedTrips: done, level: level),
       gender: BuddyJson.str(j['gender']),
       about: BuddyJson.str(j['about']),
       interests: BuddyJson.strings(j['interests']),
@@ -524,6 +557,8 @@ class TravellerProfile {
       mutuals: Mutuals.fromJson(BuddyJson.mapOrNull(j['mutuals'])),
       privateLocked: BuddyJson.boolean(j['privateLocked']),
       publicTrips: BuddyJson.list(j['publicTrips'], PublicTrip.fromJson),
+      completedTrips: done,
+      level: level,
     );
   }
 }

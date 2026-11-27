@@ -190,7 +190,7 @@ class Dialog3D extends StatelessWidget {
           Container(
             margin: EdgeInsets.only(top: DS.s(10)),
             padding: EdgeInsets.symmetric(horizontal: DS.s(14), vertical: DS.s(10)),
-            decoration: BoxDecoration(color: const Color(0xFFF2F3F8), borderRadius: DS.circular(16)),
+            decoration: BoxDecoration(color: DesignColors.scaffold, borderRadius: DS.circular(16)),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

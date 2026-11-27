@@ -6,6 +6,7 @@ import '../../buddy/buddy_routes.dart';
 import 'edit/edit_profile_screen.dart';
 import 'people/add_buddies_screen.dart';
 import 'people/people_screen.dart';
+import 'profile/travel_levels_screen.dart';
 import 'profile/traveller_profile_screen.dart';
 import 'settings/settings_screen.dart';
 
@@ -18,4 +19,5 @@ final List<GetPage<dynamic>> socialPagesA = [
   _page(AppRoutes.traveller, () => TravellerProfileScreen(userId: BuddyArgs.text(BuddyArgs.current, 'userId'))),
   _page(AppRoutes.people, () => PeopleScreen(tab: BuddyArgs.textOrNull(BuddyArgs.current, 'tab') ?? 'followers')),
   _page(AppRoutes.addBuddies, () => const AddBuddiesScreen()),
+  _page(AppRoutes.travelLevels, () => const TravelLevelsScreen()),
 ];

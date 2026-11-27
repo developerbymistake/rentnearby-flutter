@@ -75,4 +75,22 @@ void main() {
     expect(find.text('3 seats left'), findsOneWidget);
     expect(find.text('3 of 3 seats left'), findsNothing);
   });
+
+  testWidgets('owner level: round trophy + N trips beside the name on the feed and rail cards; none on a sample', (t) async {
+    final trip = PublicTrip.fromJson(publicTripJson(ownerTrips: 124, ownerLevel: 4));
+    await pumpSocial(t, _host(Column(children: [
+      PublicTripCard(trip: trip),
+      SizedBox(width: 290, child: PublicTripCard(trip: trip, mode: PublicTripCardMode.rail)),
+      PublicTripCard(trip: PublicTrip.fromJson(publicTripJson(id: 's', sample: true, ownerTrips: 3, ownerLevel: 1)), mode: PublicTripCardMode.profile),
+    ])), size: const Size(392, 1800));
+    expect(find.byKey(PublicTripCard.levelKey), findsNWidgets(2));
+    expect(find.text('124 trips'), findsNWidgets(2));
+    expect(find.text('3 trips'), findsNothing);
+    final names = find.text('Kavya S.');
+    final badges = find.byKey(PublicTripCard.levelKey);
+    for (var i = 0; i < 2; i++) {
+      expect(t.getRect(badges.at(i)).left, greaterThan(t.getRect(names.at(i)).right));
+    }
+    expect(t.takeException(), isNull);
+  });
 }

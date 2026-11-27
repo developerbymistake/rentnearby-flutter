@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/tokens/design_colors.dart';
 
 import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
@@ -20,7 +21,7 @@ class _ToastLook {
     ToastKind.success => const _ToastLook(Color(0xFF66BB6A), Color(0xFF2E7D32), Color(0xFF2E7D32), ''),
     ToastKind.error => const _ToastLook(Color(0xFFFA7D82), Color(0xFFE0525C), Color(0xFFE0525C), '!'),
     ToastKind.warning => const _ToastLook(Color(0xFFFFC371), Color(0xFFFF8A3D), Color(0xFFE67000), '!'),
-    ToastKind.info => const _ToastLook(Color(0xFF738AE6), Color(0xFF5C5EDD), Color(0xFF5C5EDD), 'i'),
+    ToastKind.info => const _ToastLook(DesignColors.brandNavy, DesignColors.brandRoyal, DesignColors.brandRoyal, 'i'),
   };
 }
 

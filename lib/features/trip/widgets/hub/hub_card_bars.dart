@@ -39,7 +39,7 @@ class HubCardBars extends StatelessWidget {
             child: _Bar(
               label: TripStringsHubTrips.plan,
               bar: bars.plan,
-              from: HubTokens.accentLight,
+              from: HubTokens.gradientStart,
               to: HubTokens.accent,
             ),
           ),

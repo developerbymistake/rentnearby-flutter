@@ -15,6 +15,7 @@ import '../controllers/report_controller.dart';
 import '../features/buddy/buddy_bindings.dart';
 import '../features/buddy/buddy_live.dart';
 import '../features/social/shared/social_me_controller.dart';
+import '../features/social/shared/widgets/level_up_host.dart';
 import '../features/social/social_bindings.dart';
 import '../features/map_discovery/data/map_pack_warmup.dart';
 import '../features/trip/enquiries/my_enquiry_count_controller.dart';
@@ -387,6 +388,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             if (!stayLoading) return const SizedBox.shrink();
             return AppLoadingOverlay.stackChild(message: 'Finding nearest stays...');
           }),
+          const LevelUpHost(),
         ],
       ),
     );

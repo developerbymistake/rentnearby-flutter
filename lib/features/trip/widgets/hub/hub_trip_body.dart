@@ -153,9 +153,9 @@ class _Strip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final from = past ? const Color(0xFF9AA3B8) : HubTokens.accentLight;
+    final from = past ? const Color(0xFF9AA3B8) : HubTokens.gradientStart;
     final to = past ? const Color(0xFF6B7488) : HubTokens.accent;
-    final shadow = past ? const Color(0x386B7488) : const Color(0x405C5EDD);
+    final shadow = past ? const Color(0x386B7488) : DesignColors.brandRoyal25;
     return Padding(
       padding: EdgeInsets.only(top: DS.gv(14)),
       child: DecoratedBox(

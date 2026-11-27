@@ -5,12 +5,13 @@ class DesignColors {
   DesignColors._();
 
   // surfaces
-  static const Color scaffold = Color(0xFFF2F3F8);
+  static const int scaffoldArgb = 0xFFF2F3F8;
+  static const Color scaffold = Color(scaffoldArgb);
   static const Color scaffoldHotel = Color(0xFFF6F6F6);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color surfaceAlt = Color(0xFFFAFAFA);
   static const Color surfaceMuted = Color(0xFFEDF0F2);
-  static const Color surfaceTint = Color(0xFFE8EAF8);
+  static const Color surfaceTint = brandButton;
   static const Color card = surface;
   static const Color sheet = surface;
   static const Color dialog = surface;
@@ -38,10 +39,34 @@ class DesignColors {
   // intro chapters
   static const Color introSky = Color(0xFF0369A1);
 
+  // brand blue family: navy -> royal; royal is the lightest end with white text >= 4.5:1 (4.70:1)
+  static const Color brandNavy = Color(0xFF1E3A8A);
+  static const Color brandRoyal = Color(0xFF2F6FE0);
+  static const Color brandSky = Color(0xFF3B82F6);
+  static const Color brandTint = Color(0xFFEFF6FF);
+  static const Color brandLine = Color(0xFFBFDBFE);
+  static const Color brandButton = Color(0xFFDBEAFE);
+  static const Color brandRing = Color(0xFF93C5FD);
+  static const Color brandPage = scaffold;
+  static const Color brandNavy18 = Color(0x2E1E3A8A);
+  static const Color brandNavy35 = Color(0x591E3A8A);
+  static const Color brandNavy50 = Color(0x801E3A8A);
+  static const Color brandRoyal14 = Color(0x242F6FE0);
+  static const Color brandRoyal25 = Color(0x402F6FE0);
+  static const Color brandRoyal28 = Color(0x472F6FE0);
+  static const Color brandRoyal30 = Color(0x4D2F6FE0);
+  static const Color brandRoyal35 = Color(0x592F6FE0);
+  static const Color brandRoyal40 = Color(0x662F6FE0);
+  static const Color brandRoyal45 = Color(0x732F6FE0);
+  static const Color brandRoyal50 = Color(0x802F6FE0);
+  static const Color brandRoyal60 = Color(0x992F6FE0);
+  static const Color brandSky33 = Color(0x543B82F6);
+  static const Color brandSkyClear = Color(0x003B82F6);
+
   // brand
-  static const Color primary = Color(0xFF2633C5);
+  static const Color primary = brandNavy;
   static const Color primaryLight = Color(0xFF00B6F0);
-  static const Color primarySoft = Color(0x1A2633C5);
+  static const Color primarySoft = Color(0x1A1E3A8A);
   static const Color onPrimary = Color(0xFFFFFFFF);
   static const Color accentTeal = Color(0xFF54D3C2);
   static const Color accentTealDeep = Color(0xFF2FB5A4);
@@ -49,8 +74,8 @@ class DesignColors {
   // gradient stops
   static const Color breakfastStart = Color(0xFFFA7D82);
   static const Color breakfastEnd = Color(0xFFFFB295);
-  static const Color lunchStart = Color(0xFF738AE6);
-  static const Color lunchEnd = Color(0xFF5C5EDD);
+  static const Color lunchStart = brandNavy;
+  static const Color lunchEnd = brandRoyal;
   static const Color snackStart = Color(0xFFFE95B6);
   static const Color snackEnd = Color(0xFFFF5287);
   static const Color dinnerStart = Color(0xFF6F72CA);
@@ -64,16 +89,16 @@ class DesignColors {
   static const Color amberNoteBorder = Color(0xFFF3C892);
   static const Color hotelStart = Color(0xFF54D3C2);
   static const Color hotelEnd = Color(0xFF2FB5A4);
-  static const Color ringLight = Color(0xFF8A98E8);
-  static const Color navAccentEnd = Color(0xFF6A88E5);
+  static const Color ringLight = brandRing;
+  static const Color navAccentEnd = brandRoyal;
   static const Color brandStart = primary;
-  static const Color brandEnd = primaryLight;
+  static const Color brandEnd = brandRoyal;
 
   // status
   static const Color statusTodo = Color(0xFF767676);
   static const Color statusAsked = Color(0xFFFFB295);
-  static const Color statusOffer = Color(0xFF738AE6);
-  static const Color statusConfirmed = Color(0xFF2633C5);
+  static const Color statusOffer = brandSky;
+  static const Color statusConfirmed = brandNavy;
   static const Color statusBooked = Color(0xFF2FB5A4);
   static const Color statusOwn = Color(0xFF6F72CA);
   static const Color statusSaved = Color(0xFFFF5287);
@@ -89,8 +114,8 @@ class DesignColors {
   static const Color infoSoft = Color(0x1A00B6F0);
   static const Color statusTodoSoft = Color(0x1A767676);
   static const Color statusAskedSoft = Color(0x26FFB295);
-  static const Color statusOfferSoft = Color(0x1A738AE6);
-  static const Color statusConfirmedSoft = Color(0x1A2633C5);
+  static const Color statusOfferSoft = Color(0x1A3B82F6);
+  static const Color statusConfirmedSoft = Color(0x1A1E3A8A);
   static const Color statusBookedSoft = Color(0x1A2FB5A4);
   static const Color statusOwnSoft = Color(0x1A6F72CA);
   static const Color statusSavedSoft = Color(0x1AFF5287);
@@ -104,14 +129,14 @@ class DesignColors {
   static const Color overlayWhite = Color(0xCCFFFFFF);
   static const Color overlayWhiteSoft = Color(0x33FFFFFF);
   static const Color overlayWhiteFaint = Color(0x1AFFFFFF);
-  static const Color splash = Color(0x1F2633C5);
-  static const Color highlight = Color(0x0F2633C5);
+  static const Color splash = Color(0x1F1E3A8A);
+  static const Color highlight = Color(0x0F1E3A8A);
   static const Color shadowBase = Color(0xFF3A5160);
 
   // chip
   static const Color chipBackground = Color(0xFFEDF0F2);
   static const Color chipSelected = primary;
-  static const Color chipSelectedSoft = Color(0x1A2633C5);
+  static const Color chipSelectedSoft = Color(0x1A1E3A8A);
   static const Color chipLabel = textPrimary;
   static const Color chipLabelSelected = onPrimary;
   static const Color chipBorder = Color(0x333A5160);
@@ -139,20 +164,20 @@ class DesignColors {
   static const Color scrimClear = Color(0x00000000);
   static const Color scrimMid = Color(0x22000000);
   static const Color scrimBlack = Color(0xCC000000);
-  static const Color primaryFaint = Color(0x142633C5);
-  static const Color primaryTint = Color(0x1F2633C5);
+  static const Color primaryFaint = Color(0x141E3A8A);
+  static const Color primaryTint = Color(0x1F1E3A8A);
   static const Color infoTint = Color(0x1F00B6F0);
   static const Color attentionTint = Color(0x1FFA7D82);
   static const Color savedTint = Color(0x1FFF5287);
   static const Color askedTint = Color(0x1FFFB295);
-  static const Color offerTint = Color(0x1F738AE6);
-  static const Color offerTintMid = Color(0x26738AE6);
+  static const Color offerTint = Color(0x1F3B82F6);
+  static const Color offerTintMid = Color(0x263B82F6);
   static const Color askedTintMid = Color(0x33FFB295);
   static const Color snackTintMid = Color(0x26FE95B6);
   static const Color borderSoft = Color(0x1F3A5160);
   static const Color shadowSoft = Color(0x1A3A5160);
   static const Color shadowCool = Color(0x33CBD0DB);
-  static const Color bookedSoft = Color(0x1A5C5EDD);
+  static const Color bookedSoft = Color(0x1A2F6FE0);
 
   // alpha statics (Alpha ladder)
   static const Color whiteSoft = Color(0x33FFFFFF);
@@ -162,7 +187,7 @@ class DesignColors {
 
   // contrast-safe gradient ends for white text (>= 4.5:1)
   static const Color sunriseDeep = Color(0xFFC94A52);
-  static const Color skyDeepStart = Color(0xFF5A6CD0);
+  static const Color skyDeepStart = brandNavy;
   static const Color sunriseDeepEnd = Color(0xFFB03A4A);
   static const Color roseDeepStart = Color(0xFFD8406F);
   static const Color roseDeep = Color(0xFFCF2F62);
@@ -179,10 +204,10 @@ class DesignColors {
   static const Color dayFullChip = Color(0xFFFDECEE);
   static const Color gripDot = Color(0xFF8A8F9C);
   static const Color addRowFill = Color(0xFFF7F8FD);
-  static const Color addDayLine = Color(0xFF9AA3E8);
+  static const Color addDayLine = brandRing;
   static const Color addDayFill = Color(0xFFF5F6FD);
   static const Color dangerLine = Color(0xFFF0B7BB);
-  static const Color driveLine = Color(0x4D5C5EDD);
+  static const Color driveLine = brandRoyal30;
   static const Color goodInk = Color(0xFF17501B);
 
   // buddy username

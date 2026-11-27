@@ -24,7 +24,7 @@ abstract final class DetailLook {
   static const Color glass = Color(0xE6FFFFFF);
   static const Color darkGlass = Color(0x5217262A);
   static const Color darkGlassStrong = Color(0x8C17262A);
-  static const Color backFill = Color(0xFFF2F3F8);
+  static const Color backFill = DesignColors.scaffold;
   static const Color hiddenFill = Color(0xFFECEDF1);
   static const Color hiddenText = Color(0xFF6A6A6A);
   static const Color reportFill = Color(0xFFFDECEC);

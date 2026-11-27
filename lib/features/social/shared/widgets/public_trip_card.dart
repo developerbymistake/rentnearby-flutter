@@ -8,6 +8,7 @@ import '../../b/widgets/social_widgets_b.dart';
 import '../social_formats.dart';
 import '../social_models.dart';
 import 'follow_button.dart';
+import 'travel_level_widgets.dart';
 
 enum PublicTripCardMode { rail, feed, profile }
 
@@ -21,6 +22,7 @@ class PublicTripCard extends StatelessWidget {
   final VoidCallback? onMenu;
 
   static const Key menuKey = ValueKey('public_trip_menu');
+  static const Key levelKey = ValueKey('public_trip_owner_level');
 
   int get _seed => SocialLookB.seedOf(trip.cityKey, trip.tripId);
 
@@ -67,6 +69,9 @@ class PublicTripCard extends StatelessWidget {
         ],
       );
 
+  Widget? _level({bool showCount = true}) =>
+      trip.sample ? null : TrophyBadge(key: levelKey, level: trip.owner.level, trips: trip.owner.completedTrips, showCount: showCount);
+
   Widget _avatar(BuddyAvatarSize size) =>
       BuddyAvatar(initial: trip.owner.initial, seed: trip.owner.userId.isEmpty ? trip.owner.name : trip.owner.userId, size: size, photoUrl: trip.owner.photoUrl);
 
@@ -94,6 +99,7 @@ class PublicTripCard extends StatelessWidget {
                     Expanded(
                       child: Text(trip.owner.shortName, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(13.5, FontWeight.w500, Ink3D.body, letterSpacing: 0)),
                     ),
+                    if (_level() case final level?) ...[Gap.h(6), level],
                   ],
                 ),
               ],
@@ -123,6 +129,7 @@ class PublicTripCard extends StatelessWidget {
                   children: [
                     Flexible(child: Text(owner.shortName, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(15.5, FontWeight.w600, Ink3D.title, letterSpacing: 0))),
                     if (owner.gender.isNotEmpty) ...[Gap.h(6), GenderGlyph(gender: owner.gender, color: GenderGlyph.inkOf(owner.gender), size: 12, badge: true)],
+                    if (_level() case final level?) ...[Gap.h(6), level],
                   ],
                 ),
                 if (sub.isNotEmpty)

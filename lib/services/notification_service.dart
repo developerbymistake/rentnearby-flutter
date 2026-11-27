@@ -535,6 +535,7 @@ class NotificationService extends GetxService {
   static const _routesOnTopOfMain = {
     AppRoutes.plansBilling,
     AppRoutes.seekerPlus,
+    AppRoutes.travelLevels,
     AppRoutes.settings,
     AppRoutes.editProfile,
     AppRoutes.traveller,

@@ -11,7 +11,7 @@ import 'trip_kit.dart';
 
 class PickKit {
   static const Color stay = DesignColors.lunchStart;
-  static const Color stayDark = DesignColors.lunchEnd;
+  static const Color stayDark = DesignColors.brandNavy;
   static const Color stayTint = DesignColors.offerTint;
   static const LinearGradient stayGradient = DesignGradients.lunch;
 

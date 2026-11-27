@@ -47,7 +47,7 @@ class KitTone {
 
   static const KitTone stay = KitTone(
     accent: DesignColors.lunchStart,
-    accentDark: DesignColors.lunchEnd,
+    accentDark: DesignColors.brandNavy,
     tint: DesignColors.offerTint,
     gradient: DesignGradients.lunch,
     glow: DesignColors.lunchEnd,

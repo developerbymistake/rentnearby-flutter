@@ -33,5 +33,39 @@ abstract final class SocialStrings {
 
   static String mutualCount(int n) => '$n mutual';
 
+  static const String levelNewTraveller = 'New Traveller';
+  static const String levelTrailStarter = 'Trail Starter';
+  static const String levelWanderer = 'Wanderer';
+  static const String levelTrekker = 'Trekker';
+  static const String levelPathfinder = 'Pathfinder';
+  static const String levelSummitSeeker = 'Summit Seeker';
+  static const String levelTravelKing = 'Travel King';
+
+  static const String travelLevelsTitle = 'Travel levels';
+  static const String travelLevelsSub = 'Trips done with a Bakhli booking';
+  static const String allLevels = 'All levels';
+  static const String youAreHere = 'You are here';
+  static const String levelsFooter = 'Others see only your level and trip count.';
+  static const String highestLevel = 'You have reached the highest level';
+  static const String keepExploring = 'Keep exploring';
+  static const String openLevels = 'Open travel levels';
+  static const String to = 'to';
+
+  static String levelEyebrow(int index) => 'LEVEL $index';
+  static String tripsWord(int n) => n == 1 ? 'trip' : 'trips';
+  static String tripsCount(int n) => '$n ${tripsWord(n)}';
+  static String tripsDone(int n) => '${tripsCount(n)} done';
+  static String moreTrips(int n) => n == 1 ? '1 more trip' : '$n more trips';
+  static String moreTripsTo(int n, String name) => '${moreTrips(n)} to $name';
+  static String atTrips(int n) => 'at $n trips';
+  static String levelRange(int index, int min, int? max) =>
+      'Level $index · ${max == null ? '$min+ trips' : min == max ? tripsCount(min) : '$min to $max trips'}';
+  static String newLevel(String name) => 'New level: $name';
+  static String levelUpLine(int n) => 'Your trip is counted. ${tripsDone(n)}.';
+  static String levelLabel(String name, int n) => '$name, ${tripsCount(n)}';
+  static String openLevelsLabel(String name, int n) => '$openLevels. ${levelLabel(name, n)}';
+  static String levelRowLabel(String name, String range, {bool current = false}) => '$name, $range${current ? ', $youAreHere' : ''}';
+  static String toNext(String? name) => ' $to${name == null ? '' : ' $name'}';
+
   static String buddyLine(int tripsTogether) => tripsTogether <= 0 ? buddy : '$buddy · $tripsTogether ${tripsTogether == 1 ? 'trip' : 'trips'} together';
 }

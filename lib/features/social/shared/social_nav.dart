@@ -25,6 +25,8 @@ abstract final class SocialNav {
 
   static Future<dynamic>? openAddBuddies() => _go(AppRoutes.addBuddies);
 
+  static Future<dynamic>? openTravelLevels() => _go(AppRoutes.travelLevels);
+
   // The feed already on top: never stack a second copy.
   static Future<dynamic>? openTravelBuddies({bool posted = false}) =>
       Get.currentRoute == AppRoutes.travelBuddies ? null : _go(AppRoutes.travelBuddies, {if (posted) 'posted': true});

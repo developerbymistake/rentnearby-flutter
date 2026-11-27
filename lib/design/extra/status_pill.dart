@@ -1,6 +1,7 @@
 import 'package:bakhli/design/tokens/design_scale.dart';
 import 'package:flutter/material.dart';
 
+import '../tokens/design_colors.dart';
 import 'art_3d.dart';
 
 BorderRadius get _kPillRadius => DS.br(const BorderRadius.all(Radius.circular(8)));
@@ -31,15 +32,17 @@ enum StatusTone3D {
   static final List<ListingTone> _tones = [
     _t(0xFF6F72CA, 0xFF1E1466, 0x8C1E1466, 0xFF1E1466),
     _t(0xFFFFC371, 0xFFFF8A3D, 0x80F57C00, 0xFFE8710A),
-    _t(0xFF738AE6, 0xFF5C5EDD, 0x995C5EDD, 0xFF5C5EDD),
+    _tc(DesignColors.brandNavy, DesignColors.brandRoyal, DesignColors.brandRoyal60, DesignColors.brandRoyal),
     _t(0xFF66BB6A, 0xFF2E7D32, 0x8C2E7D32, 0xFF2E7D32),
     _t(0xFF54D3C2, 0xFF1FA396, 0x8C1FA396, 0xFF168276),
     _t(0xFFFE95B6, 0xFFFF5287, 0x8CFF5287, 0xFFE0406F),
     _t(0xFFA9B1C4, 0xFF646D84, 0x735A6278, 0xFF5A6278),
   ];
 
-  static ListingTone _t(int g1, int g2, int shadow, int text) =>
-      ListingTone(g1: Color(g1), g2: Color(g2), shadow: Color(shadow), haloBase: Color(g2), text: Color(text), button: Color(text));
+  static ListingTone _t(int g1, int g2, int shadow, int text) => _tc(Color(g1), Color(g2), Color(shadow), Color(text));
+
+  static ListingTone _tc(Color g1, Color g2, Color shadow, Color text) =>
+      ListingTone(g1: g1, g2: g2, shadow: shadow, haloBase: g2, text: text, button: text);
 }
 
 class StatusPill3D extends StatelessWidget {

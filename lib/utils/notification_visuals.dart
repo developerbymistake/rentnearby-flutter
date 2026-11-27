@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import '../design/design.dart';
 import '../config/app_routes.dart';
+import '../features/social/shared/travel_levels.dart';
 
 enum NotificationKind { approved, rejected, takedown, other }
 
@@ -52,7 +53,19 @@ abstract final class NotificationVisuals {
     'tripproblemreported': 'BOOKING',
     'rolerequestapproved': 'ROLE',
     'rolerequestrejected': 'ROLE',
+    travelLevelUp: 'LEVEL',
   };
+
+  static const String travelLevelUp = 'travellevelup';
+
+  /// Level-up congratulation row: the trophy of the level named in the server copy (title + body).
+  static ({String art, ListingTone tone})? levelLook(String? type, String? actionRoute, String text) {
+    if ((type ?? '').replaceAll('_', '').toLowerCase() != travelLevelUp && actionRoute != AppRoutes.travelLevels) return null;
+    for (final l in TravelLevels.all.reversed) {
+      if (text.contains(l.name)) return (art: l.asset, tone: ListingTone.indigo);
+    }
+    return (art: TravelLevels.at(1).asset, tone: ListingTone.indigo);
+  }
 
   /// Art and tone of a stay owner inbox row (o_st_22); null keeps the generic look.
   static ({String art, ListingTone tone})? ownerLook(String? type, String? actionRoute) {

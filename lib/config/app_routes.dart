@@ -127,6 +127,7 @@ class AppRoutes {
   static const String joinRequests = '/join-requests';
   static const String dmRoom = '/dm-room';
   static const String seekerPlus = '/seeker-plus';
+  static const String travelLevels = '/travel-levels';
 
   static const String stayCalendar = '/stay-calendar';
   static const String stayCalendarEntry = '/stay-calendar-entry';
@@ -210,6 +211,7 @@ class AppRoutes {
     joinRequests,
     dmRoom,
     seekerPlus,
+    travelLevels,
   };
 
   static const Set<String> ownerOnly = {plansBilling, planHistory};

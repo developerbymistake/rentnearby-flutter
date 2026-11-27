@@ -1,4 +1,5 @@
 import 'package:flutter/painting.dart';
+import 'design_colors.dart';
 
 class IntroSkyPalette {
   const IntroSkyPalette(this.t, this.b, this.h1, this.h1b, this.h2, this.h2b, this.g, this.r);
@@ -105,7 +106,7 @@ abstract final class IntroStoryColors {
   static const Color phoneScreen = Color(0xFF8FD0F7);
   static const Color phoneLens = Color(0xFF6B7390);
 
-  static const List<Color> confetti = [Color(0xFFFF6B6B), Color(0xFFFFD25A), Color(0xFF5C5EDD), Color(0xFF4CC38A)];
+  static const List<Color> confetti = [Color(0xFFFF6B6B), Color(0xFFFFD25A), DesignColors.brandRoyal, Color(0xFF4CC38A)];
 
   static const Color wood = Color(0xFFB9855A);
   static const Color woodLeg = Color(0xFF8A5F3C);
@@ -117,5 +118,5 @@ abstract final class IntroStoryColors {
   static const Color water = Color(0xFF8EC9F0);
   static const Color block = Color(0xFFEFE3CF);
   static const Color mapLine35 = Color(0x5978A06E);
-  static const Color route = Color(0xFF5C5EDD);
+  static const Color route = DesignColors.brandRoyal;
 }

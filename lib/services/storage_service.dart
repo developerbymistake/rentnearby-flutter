@@ -248,6 +248,10 @@ class StorageService {
 
   static void saveTourSeen(String key) => _box.write(key, true);
 
+  static int? getSeenTravelLevel(String userId) => _box.read<int>('travel_level_seen_$userId');
+
+  static void saveSeenTravelLevel(String userId, int level) => _box.write('travel_level_seen_$userId', level);
+
   static void dropLegacyTourKeys() {
     _box.remove('tour_home_seen_v2');
     _box.remove('tour_stays_seen_v1');

@@ -106,8 +106,16 @@ FakeAuth putSeeker({String role = UserRoleKeys.seeker, bool profileCompleted = t
   return a;
 }
 
-Map<String, dynamic> personJson(String id, String name, {String? city}) =>
-    {'userId': id, 'name': name, 'username': 'Bakhli#${id.hashCode.abs()}', 'photoUrl': null, 'initial': name.substring(0, 1), 'homeCity': city};
+Map<String, dynamic> personJson(String id, String name, {String? city, int completedTrips = 0, int level = 0}) => {
+      'userId': id,
+      'name': name,
+      'username': 'Bakhli#${id.hashCode.abs()}',
+      'photoUrl': null,
+      'initial': name.substring(0, 1),
+      'homeCity': city,
+      'completedTrips': completedTrips,
+      'level': level,
+    };
 
 Map<String, dynamic> rowJson(String id, String name,
         {bool followsMe = true, bool iFollow = false, bool requested = false, bool isBuddy = false, int mutualCount = 0, String? mutualName}) =>
@@ -121,8 +129,8 @@ Map<String, dynamic> rowJson(String id, String name,
       'mutualName': mutualName,
     };
 
-Map<String, dynamic> myProfileJson({bool isPrivate = false, String policy = 'Everyone'}) => {
-      ...personJson('me', 'Rahul Verma', city: 'Dehradun'),
+Map<String, dynamic> myProfileJson({bool isPrivate = false, String policy = 'Everyone', int completedTrips = 4, int level = 1}) => {
+      ...personJson('me', 'Rahul Verma', city: 'Dehradun', completedTrips: completedTrips, level: level),
       'gender': 'Male',
       'birthMonth': 8,
       'birthYear': 1998,
@@ -137,7 +145,7 @@ Map<String, dynamic> myProfileJson({bool isPrivate = false, String policy = 'Eve
       'notifyMessages': true,
       'notifyFollows': true,
       'notifyFollowedTrips': true,
-      'counters': {'trips': 4, 'followers': 128, 'following': 41, 'buddies': 6},
+      'counters': {'trips': completedTrips, 'followers': 128, 'following': 41, 'buddies': 6},
       'publicTrips': [],
     };
 
@@ -174,15 +182,17 @@ Map<String, dynamic> travellerJson({
   bool isBuddy = false,
   bool privateLocked = false,
   int mutualCount = 4,
+  int completedTrips = 6,
+  int level = 1,
 }) =>
     {
-      'person': personJson('kavya', 'Kavya Sharma', city: 'Dehradun'),
+      'person': personJson('kavya', 'Kavya Sharma', city: 'Dehradun', completedTrips: completedTrips, level: level),
       'gender': 'Female',
       'about': privateLocked ? '' : 'Mountains, chai and long walks.',
       'interests': privateLocked ? [] : ['Treks', 'Mountains'],
       'skills': privateLocked ? [] : ['First aid'],
       'places': privateLocked ? [] : ['Rishikesh', 'Auli'],
-      'counters': {'trips': 6, 'followers': 86, 'following': 40},
+      'counters': {'trips': completedTrips, 'followers': 86, 'following': 40},
       'relation': {
         'iFollow': iFollow,
         'followRequested': requested,

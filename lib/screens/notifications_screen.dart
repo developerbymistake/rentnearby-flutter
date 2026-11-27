@@ -238,7 +238,7 @@ class _NotificationRow extends StatelessWidget {
     final look = NotificationLook.of(kindName);
     final kind = NotificationVisuals.listingKind(notification.actionRoute, type: notification.type);
     final route = notification.actionRoute;
-    final owner = NotificationVisuals.ownerLook(notification.type, route);
+    final owner = NotificationVisuals.levelLook(notification.type, route, '${notification.title} ${notification.body}') ?? NotificationVisuals.ownerLook(notification.type, route);
     final cut = dateText.lastIndexOf(' ');
     return NotificationCard3D(
       tone: owner?.tone ?? NotificationTone.of(kindName),

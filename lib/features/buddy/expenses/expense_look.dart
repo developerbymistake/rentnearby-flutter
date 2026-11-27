@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/tokens/design_colors.dart';
 
 import '../shared/buddy_look.dart';
 import 'models/expense_models.dart';
@@ -10,7 +11,7 @@ abstract final class ExpenseLook {
   static const Color roseFill = Color(0xFFFFF7FA);
   static const Color roseDot = Color(0xFFFF5287);
   static const Color fieldBorder = Color(0xFFE3E5EC);
-  static const Color fieldOn = Color(0xFF5C5EDD);
+  static const Color fieldOn = DesignColors.brandRoyal;
   static const Color fieldBad = Color(0xFFE5484D);
   static const Color okBorder = Color(0xFF66BB6A);
   static const Color okText = Color(0xFF17501B);
@@ -25,7 +26,7 @@ abstract final class ExpenseLook {
   static const Color label = Color(0xFF253840);
   static const Color thumbTop = Color(0xFFF4F5FF);
   static const Color thumbBottom = Color(0xFFE6E9FF);
-  static const Color thumbEdge = Color(0xFFD5D9F5);
+  static const Color thumbEdge = DesignColors.brandLine;
   static const Color pillDisabled = Color(0xFFC9CDD6);
   static const Color amberBg = Color(0xFFFFF4E0);
   static const Color amberText = BuddyLook.amberText;

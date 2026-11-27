@@ -13,6 +13,7 @@ import '../../shared/social_models.dart';
 import '../../shared/social_nav.dart';
 import '../../shared/social_strings.dart';
 import '../../shared/widgets/person_actions.dart';
+import '../../shared/widgets/travel_level_widgets.dart';
 import '../data/join_api.dart';
 import '../social_strings_b.dart';
 import '../../a/widgets/social_chips_a.dart';
@@ -27,6 +28,7 @@ class JoinRequestsScreen extends StatefulWidget {
   static Key acceptKey(String id) => ValueKey('join_accept_$id');
   static Key declineKey(String id) => ValueKey('join_decline_$id');
   static Key buddyKey(String id) => ValueKey('join_buddy_$id');
+  static Key levelKey(String id) => ValueKey('join_level_$id');
 
   @override
   State<JoinRequestsScreen> createState() => _JoinRequestsScreenState();
@@ -98,6 +100,8 @@ class _JoinRequestsScreenState extends State<JoinRequestsScreen> {
                               children: [
                                 Flexible(child: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(15.5, FontWeight.w600, Ink3D.title, letterSpacing: 0))),
                                 if (p.gender.isNotEmpty) ...[Gap.h(6), GenderGlyph(gender: p.gender, color: GenderGlyph.inkOf(p.gender), size: 12, badge: true)],
+                                Gap.h(6),
+                                TrophyBadge(key: JoinRequestsScreen.levelKey(item.id), level: p.level, trips: p.completedTrips),
                               ],
                             ),
                             if ((p.username ?? '').isNotEmpty) Text(p.username!, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w400, Ink3D.hint, letterSpacing: 0)),

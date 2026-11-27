@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/tokens/design_colors.dart';
 
 import '../expenses/models/expense_models.dart';
 import '../shared/buddy_look.dart';
@@ -16,7 +17,7 @@ abstract final class LedgerLook {
   static const List<Color> barGreen = [Color(0xFF66BB6A), Color(0xFF2E7D32)];
   static const List<Color> barRose = [Color(0xFFFE95B6), Color(0xFFFF5287)];
   static const List<Color> barTeal = [Color(0xFF54D3C2), Color(0xFF1FA396)];
-  static const List<Color> barIndigo = [Color(0xFF738AE6), Color(0xFF5C5EDD)];
+  static const List<Color> barIndigo = [DesignColors.brandNavy, DesignColors.brandRoyal];
   static const List<Color> barAmber = [Color(0xFFFFD27A), Color(0xFFE0A030)];
 
   static List<Color> barOf(String category) => switch (category) {

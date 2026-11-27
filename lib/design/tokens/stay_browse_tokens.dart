@@ -9,7 +9,7 @@ class StayBrowseTokens {
   static const Color glassStrong = Color(0xD9FFFFFF);
   static const Color dotInactive = Color(0x80FFFFFF);
   static const Color dotActive = DesignColors.surface;
-  static const Color buttonGlow = Color(0x802633C5);
+  static const Color buttonGlow = DesignColors.brandNavy50;
   static const Color greyShadow = DesignColors.border;
   static const Color greyShadowStrong = DesignColors.borderStrong;
 

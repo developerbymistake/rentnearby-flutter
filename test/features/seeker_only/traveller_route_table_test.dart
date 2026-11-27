@@ -31,7 +31,7 @@ void main() {
         _Who.unknown => auth.signIn(role: 'SOMETHING_NEW'),
       };
 
-  test('travellerOnly is exactly the trip pages, the buddy pages, the two journey pages and the 11 social pages', () {
+  test('travellerOnly is exactly the trip pages, the buddy pages, the two journey pages and the 12 social pages', () {
     const social = {
       AppRoutes.settings,
       AppRoutes.editProfile,
@@ -44,6 +44,7 @@ void main() {
       AppRoutes.joinRequests,
       AppRoutes.dmRoom,
       AppRoutes.seekerPlus,
+      AppRoutes.travelLevels,
     };
     final want = {
       for (final p in tripPages) p.name,
@@ -53,7 +54,7 @@ void main() {
       ...social,
     };
     expect(AppRoutes.travellerOnly, want);
-    expect(AppRoutes.travellerOnly, hasLength(38));
+    expect(AppRoutes.travellerOnly, hasLength(39));
   });
 
   test('every traveller route opens for a seeker only', () {

@@ -160,4 +160,14 @@ void main() {
     expect(find.text(SocialStringsB.postGone), findsOneWidget);
     await drain(t);
   });
+
+  testWidgets('owner row carries the trophy badge and N trips beside the name', (t) async {
+    final server = installServer();
+    server.on('GET', _path, publicTripJson(ownerTrips: 124, ownerLevel: 4));
+    await pumpSocial(t, const TripPostScreen(tripId: 'trip-1'), pages: _pages);
+    expect(find.byKey(TripPostScreen.ownerLevelKey), findsOneWidget);
+    expect(find.descendant(of: find.byKey(TripPostScreen.ownerLevelKey), matching: find.text('124 trips')), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is Art3D && w.asset == ListingArt.trophyLevel4), findsOneWidget);
+    await drain(t);
+  });
 }

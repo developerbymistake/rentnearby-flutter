@@ -55,9 +55,9 @@ abstract final class HubTiles {
       line: TripStringsHub.whereLine,
       title: TripStringsHub.whereTitle,
       side: HubTileSide.textLeft,
-      c1: Color(0xFFECEFFE),
-      c2: Color(0xFFC6D0FA),
-      text: Color(0xFF1B2A8A),
+      c1: DesignColors.brandTint,
+      c2: DesignColors.brandLine,
+      text: DesignColors.brandNavy,
       status: HubTileStatus.live,
       route: AppRoutes.tripWhere,
       art: [

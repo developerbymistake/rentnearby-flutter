@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/tokens/design_colors.dart';
 
 import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
@@ -15,8 +16,8 @@ BorderRadius get _kStripRadius => DS.br(CardRadius.card);
 abstract final class RepliesLook {
   static const Color stayPage = Color(0xFFD8EEDA);
   static const Color taxiPage = Color(0xFFFFE3DA);
-  static const Color plainPage = Color(0xFFF2F3F8);
-  static const Color field = Color(0xFFF2F3F8);
+  static const Color plainPage = DesignColors.scaffold;
+  static const Color field = DesignColors.scaffold;
   static const Color ok = Color(0xFF2E7D32);
   static const Color bad = Color(0xFFE0406F);
   static const Color badInk = Color(0xFFB8264F);
