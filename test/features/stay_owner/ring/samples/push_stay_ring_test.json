@@ -1,0 +1,20 @@
+{
+  "data": {
+    "notification_type": "stay_enquiry_ring",
+    "kind": "stay_ring_test",
+    "ringKind": "stay",
+    "v": "1",
+    "enquiryId": "",
+    "expiresAt": "2026-12-10T09:41:39Z",
+    "sentAt": "2026-12-10T09:41:08Z",
+    "title": "Test ring",
+    "guestName": "",
+    "stayName": "",
+    "line1": "This is how a new enquiry rings",
+    "line2": "",
+    "line3": "",
+    "action_route": "/stay-ring-ready",
+    "action_args_json": "{}",
+    "ownerUserId": "7c1e2f3a-0005-4b00-9000-0000000000a5"
+  }
+}

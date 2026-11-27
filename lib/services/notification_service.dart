@@ -28,6 +28,7 @@ import '../features/trip/controllers/trip_plan_controller.dart';
 import '../models/conversation_model.dart';
 import '../models/notification_model.dart';
 import '../services/api_service.dart';
+import 'stay_ring_decline_bridge.dart';
 import '../services/storage_service.dart';
 import '../features/owner_core/plan/plan_expired_tap.dart';
 import 'enquiry_nudge_push.dart';
@@ -49,7 +50,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (ring != null) {
     WidgetsFlutterBinding.ensureInitialized();
     await GetStorage.init();
-    // A visible ring end was already shown with the ring's tag by the system, which replaced the ring.
+    // A visible ring end (taxi or stay) was already shown with the ring's tag by the system, which replaced the ring.
     if (ring.kind == TaxiRingKind.end) {
       await TaxiRingEndedLog.record(ring.offerId, DateTime.now());
       return;
@@ -65,7 +66,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     );
     await plugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(TaxiRingNotification.ringChannel);
+        ?.createNotificationChannel(TaxiRingNotification.ringChannelFor(ring.role));
     final result = await TaxiRingService.withPlugin(plugin).handle(message.data);
     await TaxiRingAckClient.within(result.ack);
     return;
@@ -94,13 +95,11 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   );
 }
 
-// Android's action-button-tap callback — this design has no action buttons, so a plain tap
-// shouldn't route here in practice (it should hit onDidReceiveNotificationResponse, or the
-// cold-start getNotificationAppLaunchDetails() check, instead). Kept as a documented no-op
-// for forward-compatibility; verify on-device which callback actually fires for a plain tap
-// in each app state.
+// Actions without UI land here (background isolate): only the stay ring Decline uses it.
 @pragma('vm:entry-point')
-void _onBackgroundNotificationTap(NotificationResponse response) {}
+void _onBackgroundNotificationTap(NotificationResponse response) {
+  StayRingDeclineBridge.forward(response.actionId, response.payload);
+}
 
 // Draws a circular initial-letter avatar matching chats_list_screen.dart's existing
 // per-conversation avatar exactly (solid DesignColors.primary, white bold initial) — there
@@ -365,8 +364,12 @@ class NotificationService extends GetxService {
         return false;
       case TaxiRingOutcome.shown:
         final type = data['notification_type'];
-        TripPushSync.onPush(type is String ? type : null, TaxiRingPush.ringRoute);
-        if (StorageService.isLoggedIn && !_ringScreenOpenFor(push.offerId)) {
+        if (push.isStay) {
+          TripPushSync.onPush(type is String ? type : null, AppRoutes.stayEnquiries, {'enquiryId': push.offerId});
+        } else {
+          TripPushSync.onPush(type is String ? type : null, TaxiRingPush.ringRoute);
+        }
+        if (StorageService.isLoggedIn && !_ringScreenOpenFor(push.offerId, stay: push.isStay)) {
           final route = TaxiRingNotification.routeData(push);
           _runWhenMainReady(() => _dispatchNotificationRoute(route));
         }
@@ -379,9 +382,11 @@ class NotificationService extends GetxService {
     }
   }
 
-  bool _ringScreenOpenFor(String offerId) {
+  bool _ringScreenOpenFor(String id, {bool stay = false}) {
     final args = Get.arguments;
-    return Get.currentRoute == AppRoutes.taxiRequestRing && args is Map && args['offerId']?.toString() == offerId;
+    if (args is! Map) return false;
+    if (stay) return Get.currentRoute == AppRoutes.stayEnquiryRing && args['enquiryId']?.toString() == id;
+    return Get.currentRoute == AppRoutes.taxiRequestRing && args['offerId']?.toString() == id;
   }
 
   Map<String, dynamic> _ringTapData(Map<String, dynamic> data, String? actionId) {
@@ -398,20 +403,32 @@ class NotificationService extends GetxService {
   // A ring tap or full-screen launch opens the ring screen once; without a driver session it only ends the lock screen alert.
   void _openRingTap(Map<String, dynamic> data, String? actionId) {
     final tag = data[TaxiRingNotification.tagKey] as String;
+    final stay = TaxiRingNotification.isStayRingPayload(data);
+    final args = NotificationModel.parseArguments(data['action_args_json']);
+    final id = args?[stay ? 'enquiryId' : 'offerId']?.toString() ?? '';
+    if (stay && actionId == TaxiRingNotification.declineAction) return _declineStayRing(id, tag);
     final auth = Get.isRegistered<AuthController>() ? Get.find<AuthController>() : null;
     if (!StorageService.isLoggedIn ||
         auth == null ||
         auth.postLoginRoute != AppRoutes.main ||
-        !auth.canOpenRoute(TaxiRingPush.ringRoute)) {
+        !auth.canOpenRoute(stay ? TaxiRingPush.stayRingRoute : TaxiRingPush.ringRoute)) {
       unawaited(SystemSettingsChannel.instance.ringAlertEnd(tag));
       return;
     }
-    final offerId = NotificationModel.parseArguments(data['action_args_json'])?['offerId']?.toString() ?? '';
-    if (actionId == null && _ringScreenOpenFor(offerId)) {
-      TaxiRingSession.relaunched.value = TaxiRingRelaunch(offerId);
+    if (actionId == null && _ringScreenOpenFor(id, stay: stay)) {
+      TaxiRingSession.relaunched.value = TaxiRingRelaunch(id);
       return;
     }
     _dispatchNotificationRoute(_ringTapData(data, actionId));
+  }
+
+  // Decline on a stay ring only silences this phone: no call to the server, the enquiry stays as it is.
+  void _declineStayRing(String enquiryId, String tag) {
+    unawaited(_localNotifications.cancel(id: TaxiRingNotification.id, tag: tag).catchError((_) {}));
+    unawaited(SystemSettingsChannel.instance.ringAlertEnd(tag).catchError((_) => false));
+    if (enquiryId.isEmpty) return;
+    unawaited(TaxiRingEndedLog.record(enquiryId, DateTime.now()));
+    TaxiRingSession.ended.value = TaxiRingEnd(enquiryId, StayRingEnds.declinedHere, role: RingRole.stay);
   }
 
   Future<void> _initLocalNotifications() async {
@@ -422,6 +439,7 @@ class NotificationService extends GetxService {
       onDidReceiveNotificationResponse: _onLocalNotificationTap,
       onDidReceiveBackgroundNotificationResponse: _onBackgroundNotificationTap,
     );
+    StayRingDeclineBridge.listen((id) => _declineStayRing(id, TaxiRingNotification.stayTagFor(id)));
 
     final androidPlugin = _localNotifications
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
@@ -439,6 +457,8 @@ class NotificationService extends GetxService {
     ));
     await androidPlugin?.createNotificationChannel(EnquiryNudgePush.channel);
     await androidPlugin?.createNotificationChannel(TaxiRingNotification.ringChannel);
+    await androidPlugin?.createNotificationChannel(TaxiRingNotification.stayRingChannel);
+    await androidPlugin?.createNotificationChannel(TaxiRingNotification.stayUpdatesChannel);
     await androidPlugin?.createNotificationChannel(TaxiRingNotification.updatesChannel);
     unawaited(TaxiRingDevice.refresh());
 
@@ -609,6 +629,8 @@ class NotificationService extends GetxService {
     AppRoutes.stayPlanVisible,
     AppRoutes.stayAttention,
     AppRoutes.stayLiveEdit,
+    AppRoutes.stayEnquiryRing,
+    AppRoutes.stayRingReady,
     AppRoutes.taxiCalendarEntry,
     AppRoutes.taxiUpcoming,
     AppRoutes.taxiPast,

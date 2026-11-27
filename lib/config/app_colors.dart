@@ -18,4 +18,6 @@ class AppColors {
   static const Color successText = TripLook.successText;
   static const Color tripDark = TripLook.accentDark;
   static const Color tripBooked = TripLook.booked;
+  static const Color ringAccept = Color(0xFF2EA84F);
+  static const Color ringButtonShadow = Color(0x59000000);
 }

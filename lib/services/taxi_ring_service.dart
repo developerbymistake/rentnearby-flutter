@@ -23,7 +23,26 @@ class TripStringsTaxiRing {
   static const String accept = 'Accept';
 }
 
+class StayRingStrings {
+  StayRingStrings._();
+  static const String ringChannelName = 'Stay enquiries';
+  static const String ringChannelDescription = 'Rings when a traveller sends you a stay enquiry';
+  static const String updatesChannelName = 'Stay enquiry updates';
+  static const String updatesChannelDescription = 'When an enquiry ring ends or is missed';
+  static const String fallbackTitle = 'New stay enquiry';
+  static const String testTitle = 'Test ring';
+}
+
 enum TaxiRingKind { ring, test, end }
+
+/// Who the ring is for: a Taxi Driver's request offer or a Stay Owner's new enquiry.
+enum RingRole { taxi, stay }
+
+/// Stay ring end reasons: the server sends Answered, Closed, Accepted, Declined; a missed ring ends with Missed; the app adds DeclinedHere.
+abstract final class StayRingEnds {
+  static const String missed = 'Missed';
+  static const String declinedHere = 'DeclinedHere';
+}
 
 class TaxiRingPush {
   const TaxiRingPush({
@@ -39,6 +58,8 @@ class TaxiRingPush {
     this.sentAt,
     this.clockOffset = Duration.zero,
     this.driverUserId,
+    this.role = RingRole.taxi,
+    this.stay,
   });
 
   static const Duration maxRing = Duration(seconds: 300);
@@ -47,8 +68,17 @@ class TaxiRingPush {
   static const String endKind = 'taxi_ring_end';
   static const String version = '1';
   static const String ringRoute = '/taxi-request-ring';
+  static const String stayRingKind = 'stay_ring';
+  static const String stayTestKind = 'stay_ring_test';
+  static const String stayEndKind = 'stay_ring_end';
+  static const String stayMissedKind = 'stay_ring_missed';
+  static const String stayRingRoute = '/stay-enquiry-ring';
+  static const String stayTestTag = 'stay_ring_test';
+  static const Set<String> stayKinds = {stayRingKind, stayTestKind, stayEndKind, stayMissedKind};
 
   final TaxiRingKind kind;
+  final RingRole role;
+  /// The ringing taxi offer, or the enquiry id of a stay ring.
   final String offerId;
   final String requestId;
   final DateTime? expiresAt;
@@ -59,9 +89,18 @@ class TaxiRingPush {
   final String? reason;
   final DateTime? sentAt;
   final Duration clockOffset;
+  /// The user the ring is for (the driver, or the Stay Owner of a stay ring).
   final String? driverUserId;
+  final StayRingInfo? stay;
 
-  String get tag => kind == TaxiRingKind.test ? 'taxi_ring_test' : TaxiRingNotification.tagFor(offerId);
+  bool get isStay => role == RingRole.stay;
+
+  String get tag => switch ((role, kind)) {
+        (RingRole.taxi, TaxiRingKind.test) => 'taxi_ring_test',
+        (RingRole.stay, TaxiRingKind.test) => stayTestTag,
+        (RingRole.taxi, _) => TaxiRingNotification.tagFor(offerId),
+        (RingRole.stay, _) => TaxiRingNotification.stayTagFor(offerId),
+      };
 
   // FCM drops a ring after its TTL (time left at send), so arrival means the server clock now is sentAt.
   TaxiRingPush receivedAt(DateTime deviceNow) {
@@ -80,6 +119,8 @@ class TaxiRingPush {
       sentAt: sent,
       clockOffset: sent.difference(deviceNow.toUtc()),
       driverUserId: driverUserId,
+      role: role,
+      stay: stay,
     );
   }
 
@@ -94,9 +135,10 @@ class TaxiRingPush {
   bool isExpired(DateTime now) => timeLeft(now) <= Duration.zero;
 
   static bool isUnreadableRing(Map<String, dynamic> data) =>
-      (data['kind'] == ringKind || data['kind'] == testKind) && tryParse(data) == null;
+      (data['kind'] == ringKind || data['kind'] == testKind || data['kind'] == stayRingKind || data['kind'] == stayTestKind) && tryParse(data) == null;
 
   static TaxiRingPush? tryParse(Map<String, dynamic> data) {
+    if (stayKinds.contains(data['kind'])) return _tryParseStay(data);
     final kind = switch (data['kind']) {
       ringKind => TaxiRingKind.ring,
       testKind => TaxiRingKind.test,
@@ -133,6 +175,109 @@ class TaxiRingPush {
       driverUserId: switch (data['driverUserId']?.toString()) { final String id when id.isNotEmpty => id, _ => null },
     );
   }
+
+  // A missed ring ends the ring like a ring end; the server shows it with the ring's tag.
+  static TaxiRingPush? _tryParseStay(Map<String, dynamic> data) {
+    if (data['v']?.toString() != version) return null;
+    final kind = switch (data['kind']) {
+      stayRingKind => TaxiRingKind.ring,
+      stayTestKind => TaxiRingKind.test,
+      _ => TaxiRingKind.end,
+    };
+    final enquiryId = data['enquiryId']?.toString() ?? '';
+    if (kind != TaxiRingKind.test && enquiryId.isEmpty) return null;
+    DateTime? expiresAt;
+    if (kind != TaxiRingKind.end) {
+      expiresAt = DateTime.tryParse(data['expiresAt']?.toString() ?? '');
+      if (expiresAt == null) return null;
+    }
+    final title = data['title']?.toString() ?? '';
+    final slots = [for (final key in const ['line1', 'line2', 'line3']) data[key]?.toString() ?? ''];
+    return TaxiRingPush(
+      kind: kind,
+      role: RingRole.stay,
+      offerId: kind == TaxiRingKind.test ? '' : enquiryId,
+      requestId: '',
+      expiresAt: expiresAt?.toUtc(),
+      ackToken: '',
+      title: title.isNotEmpty ? title : (kind == TaxiRingKind.test ? StayRingStrings.testTitle : StayRingStrings.fallbackTitle),
+      lines: [for (final l in slots) if (l.isNotEmpty) l],
+      reason: data['kind'] == stayMissedKind ? StayRingEnds.missed : data['reason']?.toString(),
+      slots: slots,
+      sentAt: DateTime.tryParse(data['sentAt']?.toString() ?? '')?.toUtc(),
+      driverUserId: switch (data['ownerUserId']?.toString()) { final String id when id.isNotEmpty => id, _ => null },
+      stay: kind == TaxiRingKind.ring ? StayRingInfo.fromData(data) : null,
+    );
+  }
+}
+
+/// What the stay ring shows: never a phone number or other contact.
+class StayRingInfo {
+  const StayRingInfo({
+    this.travellerFirstName = '',
+    this.stayName = '',
+    this.checkIn,
+    this.checkOut,
+    this.guests,
+    this.price,
+  });
+
+  final String travellerFirstName;
+  final String stayName;
+  final DateTime? checkIn;
+  final DateTime? checkOut;
+  final int? guests;
+  final int? price;
+
+  static DateTime? day(Object? raw) {
+    final d = DateTime.tryParse(raw?.toString() ?? '');
+    return d == null ? null : DateTime(d.year, d.month, d.day);
+  }
+
+  static int? positive(Object? raw) => switch (int.tryParse(raw?.toString() ?? '')) { final int n when n > 0 => n, _ => null };
+
+  static String firstName(Object? raw) {
+    final name = raw?.toString().trim() ?? '';
+    return name.isEmpty ? '' : name.split(RegExp(r'\s+')).first;
+  }
+
+  static int? _guests(Map<dynamic, dynamic> data) {
+    final given = positive(data['guests']);
+    if (given != null) return given;
+    final adults = positive(data['adults']) ?? 0;
+    final kids = positive(data['kids']) ?? 0;
+    return adults + kids > 0 ? adults + kids : null;
+  }
+
+  // Push fields (guestName, adults, kids) and the ring screen arguments (guests) both read here.
+  factory StayRingInfo.fromData(Map<dynamic, dynamic> data) => StayRingInfo(
+        travellerFirstName: firstName(data['guestName']),
+        stayName: data['stayName']?.toString().trim() ?? '',
+        checkIn: day(data['checkIn']),
+        checkOut: day(data['checkOut']),
+        guests: _guests(data),
+        price: positive(data['price']),
+      );
+
+  static String _ymd(DateTime d) => '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  Map<String, dynamic> toArgs() {
+    final from = checkIn;
+    final to = checkOut;
+    return {
+      if (travellerFirstName.isNotEmpty) 'guestName': travellerFirstName,
+      if (stayName.isNotEmpty) 'stayName': stayName,
+      if (from != null) 'checkIn': _ymd(from),
+      if (to != null) 'checkOut': _ymd(to),
+      'guests': ?guests,
+      'price': ?price,
+    };
+  }
+
+  List<String> get lines {
+    final head = [if (travellerFirstName.isNotEmpty) travellerFirstName, if (stayName.isNotEmpty) stayName].join(' · ');
+    return [if (head.isNotEmpty) head];
+  }
 }
 
 class TaxiRingNotification {
@@ -141,6 +286,8 @@ class TaxiRingNotification {
   static const int id = 0;
   static const String ringChannelId = 'taxi_requests_ring_v1';
   static const String updatesChannelId = 'taxi_request_updates_v1';
+  static const String stayRingChannelId = 'stay_enquiry_ring_v1';
+  static const String stayUpdatesChannelId = 'stay_enquiry_updates_v1';
   static const String ringtoneUri = 'content://settings/system/ringtone';
   static const String declineAction = 'decline';
   static const String acceptAction = 'accept';
@@ -157,6 +304,25 @@ class TaxiRingNotification {
     enableVibration: true,
   );
 
+  static const AndroidNotificationChannel stayRingChannel = AndroidNotificationChannel(
+    stayRingChannelId,
+    StayRingStrings.ringChannelName,
+    description: StayRingStrings.ringChannelDescription,
+    importance: Importance.max,
+    sound: UriAndroidNotificationSound(ringtoneUri),
+    audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+    enableVibration: true,
+  );
+
+  static AndroidNotificationChannel ringChannelFor(RingRole role) => role == RingRole.stay ? stayRingChannel : ringChannel;
+
+  static const AndroidNotificationChannel stayUpdatesChannel = AndroidNotificationChannel(
+    stayUpdatesChannelId,
+    StayRingStrings.updatesChannelName,
+    description: StayRingStrings.updatesChannelDescription,
+    importance: Importance.defaultImportance,
+  );
+
   static const AndroidNotificationChannel updatesChannel = AndroidNotificationChannel(
     updatesChannelId,
     TripStringsTaxiRing.updatesChannelName,
@@ -167,10 +333,11 @@ class TaxiRingNotification {
   static AndroidNotificationDetails android(TaxiRingPush push, DateTime now, {AndroidBitmap<Object>? largeIcon}) {
     final left = push.timeLeft(now).inMilliseconds;
     final lines = bodyLines(push);
+    final channel = ringChannelFor(push.role);
     return AndroidNotificationDetails(
-      ringChannelId,
-      TripStringsTaxiRing.ringChannelName,
-      channelDescription: TripStringsTaxiRing.ringChannelDescription,
+      channel.id,
+      channel.name,
+      channelDescription: channel.description,
       importance: Importance.max,
       priority: Priority.max,
       category: AndroidNotificationCategory.call,
@@ -186,17 +353,29 @@ class TaxiRingNotification {
       styleInformation: lines.isEmpty ? null : BigTextStyleInformation(lines.join('\n')),
       largeIcon: largeIcon,
       tag: push.tag,
-      actions: const <AndroidNotificationAction>[
-        AndroidNotificationAction(declineAction, TripStringsTaxiRing.decline, showsUserInterface: true),
-        AndroidNotificationAction(acceptAction, TripStringsTaxiRing.accept, showsUserInterface: true),
-      ],
+      actions: push.isStay ? stayActions : taxiActions,
     );
   }
+
+  static const List<AndroidNotificationAction> taxiActions = <AndroidNotificationAction>[
+    AndroidNotificationAction(declineAction, TripStringsTaxiRing.decline, showsUserInterface: true),
+    AndroidNotificationAction(acceptAction, TripStringsTaxiRing.accept, showsUserInterface: true),
+  ];
+
+  // Decline on a stay ring only silences this phone: the system cancels the notification and the app stays closed.
+  static const List<AndroidNotificationAction> stayActions = <AndroidNotificationAction>[
+    AndroidNotificationAction(declineAction, TripStringsTaxiRing.decline, showsUserInterface: false, cancelNotification: true),
+    AndroidNotificationAction(acceptAction, TripStringsTaxiRing.accept, showsUserInterface: true),
+  ];
 
   static NotificationDetails details(TaxiRingPush push, DateTime now, {AndroidBitmap<Object>? largeIcon}) =>
       NotificationDetails(android: android(push, now, largeIcon: largeIcon));
 
   static List<String> bodyLines(TaxiRingPush push) {
+    if (push.isStay) {
+      final head = push.stay?.lines.firstOrNull ?? (push.slots.length > 1 ? push.slots[1] : '');
+      return [for (final l in [head, if (push.slots.isNotEmpty) push.slots[0], if (push.slots.length > 2) push.slots[2]]) if (l.isNotEmpty) l];
+    }
     String at(int i) => i < push.slots.length ? push.slots[i] : '';
     final seats = at(2).split(' · ').first;
     final second = [if (at(1).isNotEmpty) at(1), if (seats.isNotEmpty) seats].join(' · ');
@@ -205,9 +384,9 @@ class TaxiRingNotification {
 
   static NotificationDetails endDetails(TaxiRingPush push) => NotificationDetails(
         android: AndroidNotificationDetails(
-          updatesChannelId,
-          TripStringsTaxiRing.updatesChannelName,
-          channelDescription: TripStringsTaxiRing.updatesChannelDescription,
+          push.isStay ? stayUpdatesChannelId : updatesChannelId,
+          push.isStay ? StayRingStrings.updatesChannelName : TripStringsTaxiRing.updatesChannelName,
+          channelDescription: push.isStay ? StayRingStrings.updatesChannelDescription : TripStringsTaxiRing.updatesChannelDescription,
           importance: Importance.defaultImportance,
           priority: Priority.defaultPriority,
           autoCancel: true,
@@ -217,27 +396,56 @@ class TaxiRingNotification {
 
   static String tagFor(String offerId) => 'taxi_ring_$offerId';
 
+  static String stayTagFor(String enquiryId) => 'stay_ring_$enquiryId';
+
+  static Future<void> stopStay(TaxiRingNotifier notifier, String enquiryId) async {
+    try {
+      await notifier.cancel(id, stayTagFor(enquiryId));
+    } catch (_) {}
+  }
+
   static Future<void> stop(TaxiRingNotifier notifier, String offerId) async {
     try {
       await notifier.cancel(id, tagFor(offerId));
     } catch (_) {}
   }
 
-  static String body(TaxiRingPush push) => push.lines.isEmpty ? '' : push.lines.first;
+  static String body(TaxiRingPush push) {
+    if (push.isStay) return bodyLines(push).firstOrNull ?? '';
+    return push.lines.isEmpty ? '' : push.lines.first;
+  }
 
-  static Map<String, dynamic> routeData(TaxiRingPush push, {String? action}) => {
-        'notification_type': 'taxi_request_ring',
-        'action_route': TaxiRingPush.ringRoute,
-        'action_args_json': jsonEncode({'offerId': push.offerId, 'action': ?action, 'expiresAt': ?push.expiresAt?.toIso8601String()}),
-        tagKey: push.tag,
-      };
+  static const String ringType = 'taxi_request_ring';
+  static const String stayRingType = 'stay_enquiry_ring';
+
+  static Map<String, dynamic> routeData(TaxiRingPush push, {String? action}) => push.isStay
+      ? {
+          'notification_type': stayRingType,
+          'action_route': TaxiRingPush.stayRingRoute,
+          'action_args_json': jsonEncode({
+            'enquiryId': push.offerId,
+            'action': ?action,
+            'expiresAt': ?push.expiresAt?.toIso8601String(),
+            ...?push.stay?.toArgs(),
+          }),
+          tagKey: push.tag,
+        }
+      : {
+          'notification_type': ringType,
+          'action_route': TaxiRingPush.ringRoute,
+          'action_args_json': jsonEncode({'offerId': push.offerId, 'action': ?action, 'expiresAt': ?push.expiresAt?.toIso8601String()}),
+          tagKey: push.tag,
+        };
 
   static String? payload(TaxiRingPush push) => push.kind == TaxiRingKind.test ? null : jsonEncode(routeData(push));
 
   static bool stopsOnTap(String? actionId) => actionId == declineAction || actionId == acceptAction;
 
   static bool isRingPayload(Map<String, dynamic> data) =>
-      data['action_route'] == TaxiRingPush.ringRoute && data[tagKey] is String;
+      (data['action_route'] == TaxiRingPush.ringRoute || data['action_route'] == TaxiRingPush.stayRingRoute) && data[tagKey] is String;
+
+  static bool isStayRingPayload(Map<String, dynamic> data) =>
+      data['action_route'] == TaxiRingPush.stayRingRoute && data[tagKey] is String;
 
   static Map<String, dynamic> withAction(Map<String, dynamic> data, String? actionId) {
     if (actionId != declineAction && actionId != acceptAction) return data;
@@ -303,7 +511,9 @@ class TaxiRingService {
     required this.probe,
     DateTime Function()? clock,
     this.driverSession,
+    this.stayOwnerSession,
     this.art,
+    this.stayArt,
   }) : _clock = clock ?? DateTime.now;
 
   factory TaxiRingService.withPlugin(FlutterLocalNotificationsPlugin plugin) => TaxiRingService(
@@ -311,7 +521,9 @@ class TaxiRingService {
         sendAck: TaxiRingAckClient.send,
         probe: () => TaxiRingDevice.read(plugin),
         driverSession: TaxiRingSession.accepts,
+        stayOwnerSession: TaxiRingSession.acceptsStay,
         art: TaxiRingArt.load,
+        stayArt: TaxiRingArt.loadStay,
       );
 
   final TaxiRingNotifier notifier;
@@ -320,10 +532,13 @@ class TaxiRingService {
   final TaxiRingDeviceProbe probe;
   final DateTime Function() _clock;
   final Future<bool> Function(String? driverUserId)? driverSession;
+  final Future<bool> Function(String? ownerUserId)? stayOwnerSession;
+  final Future<Uint8List?> Function()? stayArt;
 
-  Future<bool> _isDriverSession(String? driverUserId) async {
-    final check = driverSession;
-    if (check == null) return true;
+  // A stay ring needs an explicit Stay Owner check; a taxi ring keeps its old default.
+  Future<bool> _isDriverSession(String? driverUserId, RingRole role) async {
+    final check = role == RingRole.stay ? stayOwnerSession : driverSession;
+    if (check == null) return role == RingRole.taxi;
     try {
       return await check(driverUserId);
     } catch (_) {
@@ -352,12 +567,12 @@ class TaxiRingService {
     final now = _clock().toUtc();
     final push = TaxiRingPush.tryParse(data)?.receivedAt(now);
     if (push == null) return TaxiRingResult(TaxiRingOutcome.ignored, null, Future<void>.value());
-    if (push.kind != TaxiRingKind.end && !await _isDriverSession(push.driverUserId)) {
+    if (push.kind != TaxiRingKind.end && !await _isDriverSession(push.driverUserId, push.role)) {
       return TaxiRingResult(TaxiRingOutcome.ignored, push, Future<void>.value());
     }
     switch (push.kind) {
       case TaxiRingKind.end:
-        TaxiRingSession.ended.value = TaxiRingEnd(push.offerId, push.reason);
+        TaxiRingSession.ended.value = TaxiRingEnd(push.offerId, push.reason, role: push.role);
         await TaxiRingEndedLog.record(push.offerId, now);
         await _safe(() => notifier.cancel(TaxiRingNotification.id, push.tag));
         return TaxiRingResult(TaxiRingOutcome.ended, push, Future<void>.value());
@@ -368,20 +583,25 @@ class TaxiRingService {
         return TaxiRingResult(shown ? TaxiRingOutcome.testShown : TaxiRingOutcome.ignored, push, Future<void>.value());
       case TaxiRingKind.ring:
         if (TaxiRingEndedLog.contains(push.offerId, now)) {
-          return TaxiRingResult(TaxiRingOutcome.alreadyEnded, push, _ack(push, now, shown: false, late: true));
+          return TaxiRingResult(TaxiRingOutcome.alreadyEnded, push, _lateAck(push, now));
         }
         if (push.isExpired(now)) {
-          return TaxiRingResult(TaxiRingOutcome.expired, push, _ack(push, now, shown: false, late: true));
+          return TaxiRingResult(TaxiRingOutcome.expired, push, _lateAck(push, now));
         }
         final shown = await _show(push, now);
+        if (push.isStay) return TaxiRingResult(TaxiRingOutcome.shown, push, Future<void>.value());
         return TaxiRingResult(TaxiRingOutcome.shown, push, _ack(push, now, shown: shown, late: false));
     }
   }
 
+  // The stay ring has no ack endpoint.
+  Future<void> _lateAck(TaxiRingPush push, DateTime now) =>
+      push.isStay ? Future<void>.value() : _ack(push, now, shown: false, late: true);
+
   Future<bool> _show(TaxiRingPush push, DateTime now) async {
     Uint8List? bytes;
     try {
-      bytes = await art?.call();
+      bytes = await (push.isStay ? stayArt : art)?.call();
     } catch (_) {}
     return _safe(() => notifier.show(
           TaxiRingNotification.id,
@@ -432,7 +652,20 @@ class TaxiRingArt {
   TaxiRingArt._();
 
   static const String asset = 'assets/images/design/travel3d/taxi.png';
+  static const String stayAsset = 'assets/images/design/travel3d/camping.png';
   static Uint8List? _cached;
+  static Uint8List? _cachedStay;
+
+  static Future<Uint8List?> loadStay() async {
+    final hit = _cachedStay;
+    if (hit != null) return hit;
+    try {
+      final data = await rootBundle.load(stayAsset);
+      return _cachedStay = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    } catch (_) {
+      return null;
+    }
+  }
 
   static Future<Uint8List?> load() async {
     final hit = _cached;
@@ -564,22 +797,25 @@ class TaxiRingDevice {
   }
 
   // Below high the ring makes no sound and shows no heads-up.
-  static bool ringChannelReady(Iterable<AndroidNotificationChannel> channels) {
+  static bool ringChannelReady(Iterable<AndroidNotificationChannel> channels, {String channelId = TaxiRingNotification.ringChannelId}) {
     for (final c in channels) {
-      if (c.id == TaxiRingNotification.ringChannelId) {
+      if (c.id == channelId) {
         return c.importance == Importance.high || c.importance == Importance.max;
       }
     }
     return false;
   }
 
-  static Future<TaxiRingDeviceState> read(FlutterLocalNotificationsPlugin plugin) async {
+  static Future<TaxiRingDeviceState> read(FlutterLocalNotificationsPlugin plugin, {RingRole role = RingRole.taxi}) async {
     final android = plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     var notificationsOn = false;
     var ringChannelOn = false;
     try {
       notificationsOn = await android?.areNotificationsEnabled() ?? false;
-      ringChannelOn = ringChannelReady(await android?.getNotificationChannels() ?? const <AndroidNotificationChannel>[]);
+      ringChannelOn = ringChannelReady(
+        await android?.getNotificationChannels() ?? const <AndroidNotificationChannel>[],
+        channelId: TaxiRingNotification.ringChannelFor(role).id,
+      );
     } catch (_) {}
     var appBuild = 0;
     try {

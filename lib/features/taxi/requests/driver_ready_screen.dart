@@ -2,9 +2,9 @@ import 'package:bakhli/design/design.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../config/app_colors.dart';
 import '../../../services/system_settings_channel.dart';
 import '../../../services/taxi_ring_service.dart';
+import '../../../widgets/ring/ready_check_row.dart';
 import '../../trip/utils/taxi_result.dart';
 import 'controllers/driver_ready_controller.dart';
 import 'models/driver_request_models.dart';
@@ -118,7 +118,7 @@ class _DriverReadyScreenState extends State<DriverReadyScreen> {
         if (!loaded && !probeFailed)
           Padding(padding: EdgeInsets.symmetric(vertical: DS.gv(24)), child: const Center(child: CircularProgressIndicator())),
         if (loaded) ...[
-          _Row(
+          ReadyCheckRow(
             key: const ValueKey('ready_row_notifications'),
             tone: _tone,
             title: DriverReadyStrings.notificationsTitle,
@@ -128,7 +128,7 @@ class _DriverReadyScreenState extends State<DriverReadyScreen> {
             onFix: _settings.openNotificationSettings,
           ),
           Gap.v(12),
-          _Row(
+          ReadyCheckRow(
             key: const ValueKey('ready_row_ring'),
             tone: _tone,
             title: DriverReadyStrings.ringTitle,
@@ -138,7 +138,7 @@ class _DriverReadyScreenState extends State<DriverReadyScreen> {
             onFix: () => _settings.openRingChannelSettings(TaxiRingNotification.ringChannelId),
           ),
           Gap.v(12),
-          _Row(
+          ReadyCheckRow(
             key: const ValueKey('ready_row_battery'),
             tone: _tone,
             title: DriverReadyStrings.batteryTitle,
@@ -149,7 +149,7 @@ class _DriverReadyScreenState extends State<DriverReadyScreen> {
             onFix: _settings.openBatterySettings,
           ),
           Gap.v(12),
-          _Row(
+          ReadyCheckRow(
             key: const ValueKey('ready_row_test'),
             tone: _tone,
             title: DriverReadyStrings.testTitle,
@@ -221,65 +221,6 @@ class _ProbeFailed extends StatelessWidget {
         Gap.v(12),
         WhitePillButton(key: const ValueKey('ready_probe_retry'), tone: tone, label: DriverReadyStrings.retry, onTap: onRetry),
       ]),
-    );
-  }
-}
-
-class _Row extends StatelessWidget {
-  const _Row({super.key, required this.tone, required this.title, required this.text, required this.done, this.extra, this.actionKey, this.onFix});
-
-  final ListingTone tone;
-  final String title;
-  final String text;
-  final String? extra;
-  final bool done;
-  final Key? actionKey;
-  final Future<bool> Function()? onFix;
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = done ? AppColors.successText : tone.text;
-    return Container(
-      padding: EdgeInsets.all(DS.s(14)),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: DS.circular(18), boxShadow: DS.shadows(Ink3D.softShadow)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(done ? Icons.check_circle_rounded : Icons.error_rounded, size: DS.s(26), color: accent),
-            Gap.h(12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(title, style: Ink3D.text(16, FontWeight.w700, Ink3D.title)),
-                Gap.v(2),
-                Text(text, style: Ink3D.text(13.5, FontWeight.w400, Ink3D.sub, letterSpacing: 0, height: 1.35)),
-                if (extra != null) ...[Gap.v(4), Text(extra!, style: Ink3D.text(12.5, FontWeight.w500, Ink3D.grey, letterSpacing: 0, height: 1.35))],
-              ]),
-            ),
-            Gap.h(8),
-            Text(done ? DriverReadyStrings.done : DriverReadyStrings.fix, style: Ink3D.text(12.5, FontWeight.w700, accent)),
-          ]),
-          if (!done && onFix != null) ...[
-            Gap.v(10),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Tap3D(
-                tapKey: actionKey,
-                onTap: () => onFix!(),
-                label: DriverReadyStrings.openSettings,
-                exclude: true,
-                child: Container(
-                  constraints: BoxConstraints(minHeight: DS.s(36)),
-                  padding: EdgeInsets.symmetric(horizontal: DS.s(18), vertical: DS.s(6)),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(gradient: tone.gradient, borderRadius: DS.circular(18), boxShadow: DS.shadows(Form3D.glow(tone))),
-                  child: Text(DriverReadyStrings.openSettings, maxLines: 1, softWrap: false, style: Ink3D.text(13.5, FontWeight.w700, Colors.white)),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
     );
   }
 }

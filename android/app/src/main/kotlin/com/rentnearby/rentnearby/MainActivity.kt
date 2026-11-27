@@ -72,14 +72,15 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    // Only the body launch of a real taxi request ring may show over the lock screen.
+    // Only the body launch of a real taxi request ring or stay enquiry ring may show over the lock screen.
     private fun ringTag(intent: Intent?): String? {
         if (intent == null || intent.action != SELECT_NOTIFICATION) return null
         if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return null
         return try {
             val payload = JSONObject(intent.getStringExtra(PAYLOAD) ?: return null)
             val tag = payload.opt(RING_TAG) as? String
-            val ring = payload.optString("notification_type") == RING_TYPE && payload.optString("action_route") == RING_ROUTE
+            val ring = (payload.optString("notification_type") == RING_TYPE && payload.optString("action_route") == RING_ROUTE) ||
+                (payload.optString("notification_type") == STAY_RING_TYPE && payload.optString("action_route") == STAY_RING_ROUTE)
             if (ring && !tag.isNullOrEmpty()) tag else null
         } catch (e: Exception) {
             null
@@ -182,6 +183,8 @@ class MainActivity : FlutterActivity() {
         private const val PAYLOAD = "payload"
         private const val RING_TYPE = "taxi_request_ring"
         private const val RING_ROUTE = "/taxi-request-ring"
+        private const val STAY_RING_TYPE = "stay_enquiry_ring"
+        private const val STAY_RING_ROUTE = "/stay-enquiry-ring"
         private const val RING_TAG = "ring_tag"
         private const val CLAIM_MS = 30_000L
         private const val MAX_RING_MS = 300_000L

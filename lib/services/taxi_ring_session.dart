@@ -3,12 +3,15 @@ import 'package:flutter/foundation.dart';
 import '../config/user_roles.dart';
 import '../utils/jwt_claims.dart';
 import 'storage_service.dart';
+import 'taxi_ring_service.dart' show RingRole;
 
 class TaxiRingEnd {
-  const TaxiRingEnd(this.offerId, this.reason);
+  const TaxiRingEnd(this.offerId, this.reason, {this.role = RingRole.taxi});
 
+  /// The taxi offer id, or the enquiry id of a stay ring.
   final String offerId;
   final String? reason;
+  final RingRole role;
 }
 
 class TaxiRingRelaunch {
@@ -41,13 +44,20 @@ class TaxiRingSession {
     }
   }
 
-  static Future<bool> accepts(String? driverUserId) async {
+  static Future<bool> accepts(String? driverUserId) => _accepts(UserRoleKeys.taxiDriver, driverUserId);
+
+  static bool isStayOwnerToken(String? token) => JwtClaims.role(token) == UserRoleKeys.stayOwner;
+
+  // A stay ring for another account or a non Stay Owner session (role changed, logged out) never shows.
+  static Future<bool> acceptsStay(String? ownerUserId) => _accepts(UserRoleKeys.stayOwner, ownerUserId);
+
+  static Future<bool> _accepts(String role, String? userId) async {
     try {
       final token = StorageService.getToken();
-      if (!isDriverToken(token)) return false;
-      if (driverUserId == null || driverUserId.isEmpty) return true;
+      if (JwtClaims.role(token) != role) return false;
+      if (userId == null || userId.isEmpty) return true;
       final me = JwtClaims.userId(token) ?? StorageService.getUser()?.id;
-      return me != null && me.toLowerCase() == driverUserId.toLowerCase();
+      return me != null && me.toLowerCase() == userId.toLowerCase();
     } catch (_) {
       return false;
     }

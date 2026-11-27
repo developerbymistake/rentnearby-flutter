@@ -1,0 +1,27 @@
+{
+  "data": {
+    "notification_type": "stay_enquiry_ring",
+    "kind": "stay_ring",
+    "ringKind": "stay",
+    "v": "1",
+    "enquiryId": "5e0c7a11-0001-4a00-8000-0000000000e1",
+    "expiresAt": "2026-12-10T09:46:07Z",
+    "sentAt": "2026-12-10T09:41:08Z",
+    "title": "New stay enquiry",
+    "guestName": "Asha",
+    "stayName": "Hill View Homestay",
+    "checkIn": "2026-12-18",
+    "checkOut": "2026-12-20",
+    "nights": "2",
+    "adults": "2",
+    "kids": "1",
+    "rooms": "1",
+    "price": "4500",
+    "line1": "2 nights · 18 to 20 Dec",
+    "line2": "Hill View Homestay",
+    "line3": "2 adults, 1 kid · 1 room · Rs 4,500",
+    "action_route": "/stay-enquiries",
+    "action_args_json": "{\"enquiryId\":\"5e0c7a11-0001-4a00-8000-0000000000e1\",\"bucket\":\"new\"}",
+    "ownerUserId": "7c1e2f3a-0005-4b00-9000-0000000000a5"
+  }
+}
