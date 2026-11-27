@@ -499,7 +499,7 @@ class ChatHeader3D extends StatelessWidget {
               ),
               Gap.v(12),
               Padding(
-                padding: EdgeInsets.only(right: art == null ? 0 : DS.s(artSize) + DS.s(2)),
+                padding: DS.insets(r: art == null ? 0 : artSize + 2),
                 child: Row(
                   children: [
                     leading ??

@@ -43,7 +43,8 @@ void main() {
         if (!call.contains('photoUrl:') && !_noPersonInScope.contains(path)) missing.add('$path: ${call.split('\n').first}');
       }
     }
-    expect(count, greaterThanOrEqualTo(27), reason: 'site count dropped: the scan is broken');
+    // 21 since social-next deleted the dead BuddiesScreen, find and requests widgets (7 sites, all with photoUrl).
+    expect(count, greaterThanOrEqualTo(21), reason: 'site count dropped: the scan is broken');
     expect(missing, isEmpty);
   });
 

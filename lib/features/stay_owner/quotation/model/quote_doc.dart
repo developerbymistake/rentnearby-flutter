@@ -161,7 +161,7 @@ abstract final class QuoteDocBuilder {
       'footer': {
         'preparedBy': name.isEmpty ? '' : StayQuoteDocStrings.preparedByLine(name),
         'pagePattern': StayQuoteDocStrings.pagePattern,
-        'notTaxInvoice': proforma ? StayQuoteDocStrings.notTaxInvoice : '',
+        'proformaNote': proforma ? StayQuoteDocStrings.notTaxInvoice : '',
         'forBusiness': name.isEmpty ? '' : StayQuoteDocStrings.forBusiness(name),
         'thankYou': name.isEmpty ? '' : StayQuoteDocStrings.thankYou(name),
         'kindLabel': proforma ? StayQuoteDocStrings.proforma : StayQuoteDocStrings.quotation,

@@ -1,5 +1,5 @@
-class TaxiCountdown {
-  const TaxiCountdown._();
+class RingCountdown {
+  const RingCountdown._();
 
   static Duration remaining(DateTime? until, {required Duration offset, required DateTime now}) {
     if (until == null) return Duration.zero;

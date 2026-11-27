@@ -128,7 +128,7 @@ class TripArchiveSections extends StatelessWidget {
       padding: DS.insets(l: 16, t: 14, r: 12, b: 14),
       child: Row(
         children: [
-          ExcludeSemantics(child: TravelIcon(asset, size: 22)),
+          ExcludeSemantics(child: TravelIcon(asset, size: DS.s(22), scaled: false)),
           Gap.h(12),
           Expanded(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: _strong)),
           if (onTap != null) Icon(Icons.chevron_right_rounded, size: DS.s(20), color: Ink3D.grey),

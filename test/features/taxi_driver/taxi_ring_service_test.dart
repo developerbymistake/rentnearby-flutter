@@ -596,10 +596,18 @@ void main() {
     final open = body('void _openRingTap(');
     final noDriver = open.substring(open.indexOf('if (!StorageService.isLoggedIn'), open.indexOf('return;'));
     expect(noDriver, contains('ringAlertEnd(tag)'));
-    final guard = open.substring(open.indexOf('_ringScreenOpenFor(offerId)'));
-    expect(guard, contains('TaxiRingSession.relaunched.value = TaxiRingRelaunch(offerId)'));
-    expect(guard.indexOf('TaxiRingSession.relaunched.value = TaxiRingRelaunch(offerId)'), lessThan(guard.indexOf('return')));
+    // The stay enquiry ring shares this path: the id is the taxi offerId unless the payload is a stay ring.
+    expect(open, contains("args?[stay ? 'enquiryId' : 'offerId']"));
+    expect(open.indexOf('_declineStayRing('), lessThan(open.indexOf('if (!StorageService.isLoggedIn')));
+    expect(open.substring(0, open.indexOf('_declineStayRing(')), contains('if (stay && actionId == TaxiRingNotification.declineAction)'));
+    final guardAt = open.indexOf('_ringScreenOpenFor(id, stay: stay)');
+    expect(guardAt, greaterThan(0));
+    final guard = open.substring(guardAt);
+    expect(guard, contains('TaxiRingSession.relaunched.value = TaxiRingRelaunch(id)'));
+    expect(guard.indexOf('TaxiRingSession.relaunched.value = TaxiRingRelaunch(id)'), lessThan(guard.indexOf('return')));
     expect(guard.indexOf('return'), lessThan(guard.indexOf('_dispatchNotificationRoute')));
+    final screenOpen = body('bool _ringScreenOpenFor(');
+    expect(screenOpen, contains("return Get.currentRoute == AppRoutes.taxiRequestRing && args['offerId']?.toString() == id;"));
 
     final tap = body('void _onLocalNotificationTap(');
     expect(tap.indexOf('_openRingTap(decoded'), greaterThan(0));

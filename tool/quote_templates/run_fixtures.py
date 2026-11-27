@@ -78,7 +78,7 @@ def base():
         'bank': {'holder': 'The Banyan Retreat', 'accountNo': '30987654521', 'ifsc': 'SBIN0001234', 'bank': 'State Bank of India, Ramnagar', 'branch': '',
                  'upi': 'banyanretreat@sbi'},
         'labels': LABELS,
-        'footer': {'preparedBy': 'Prepared by The Banyan Retreat.', 'pagePattern': 'Page {x} of {y}', 'notTaxInvoice': '',
+        'footer': {'preparedBy': 'Prepared by The Banyan Retreat.', 'pagePattern': 'Page {x} of {y}', 'proformaNote': '',
                    'forBusiness': 'For The Banyan Retreat', 'thankYou': 'Thank you for choosing The Banyan Retreat', 'kindLabel': 'Quotation'},
     }
 
@@ -91,7 +91,7 @@ def proforma():
                            {'label': 'Bank transfer', 'date': '14 Nov 2026', 'amount': '50,000'},
                            {'label': 'Cash', 'date': '23 Nov 2026', 'amount': '30,000'}],
               'received': '1,00,000', 'balance': '\u20b9 41,026', 'balanceWords': 'Rupees Forty-One Thousand Twenty-Six Only'})
-    d['footer'].update({'notTaxInvoice': 'This is not a tax invoice.', 'kindLabel': 'Proforma invoice'})
+    d['footer'].update({'proformaNote': 'This is not a tax invoice.', 'kindLabel': 'Proforma invoice'})
     return d
 
 

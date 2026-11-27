@@ -7,6 +7,7 @@ import 'package:bakhli/features/stay_owner/ring/stay_ring_ready_controller.dart'
 import 'package:bakhli/features/stay_owner/ring/stay_ring_ready_screen.dart';
 import 'package:bakhli/features/stay_owner/ring/stay_ring_settings_controller.dart';
 import 'package:bakhli/features/stay_owner/ring/stay_ring_switch_row.dart';
+import 'package:bakhli/services/storage_service.dart';
 import 'package:bakhli/services/system_settings_channel.dart';
 import 'package:bakhli/services/taxi_ring_service.dart';
 import 'package:flutter/material.dart';
@@ -46,6 +47,8 @@ class _Settings extends SystemSettingsChannel {
 }
 
 void main() {
+  // sendAccepted reads the FCM token from StorageService, so GetStorage must be ready (as in the taxi repository test).
+  setUpAll(() => initTestStorage('stay_ring_settings_test'));
   setUp(Get.reset);
   tearDown(OwnerApi.debugReset);
 
@@ -91,11 +94,23 @@ void main() {
     });
 
     test('Accept posts the Accepted answer; nothing posts Declined', () async {
-      final t = FakeTransport((m, p, b) async => {'data': {}});
+      final bodies = <Map<String, dynamic>?>[];
+      final t = FakeTransport((m, p, b) async {
+        bodies.add(b);
+        return {'data': {}};
+      });
       OwnerApi.transport = t;
+      StorageService.clearFcmToken();
       final r = await StayRingApi.sendAccepted('e1');
       expect(r, isA<OwnerOk<void>>());
-      expect(t.calls, ['POST /stays/me/enquiry-ring/e1/answer']);
+      await StorageService.saveFcmToken('tok-1');
+      await StayRingApi.sendAccepted('e1');
+      StorageService.clearFcmToken();
+      expect(t.calls, ['POST /stays/me/enquiry-ring/e1/answer', 'POST /stays/me/enquiry-ring/e1/answer']);
+      expect(bodies, [
+        {'outcome': 'Accepted'},
+        {'outcome': 'Accepted', 'deviceToken': 'tok-1'},
+      ]);
       expect(StayRingApi.accepted, 'Accepted');
     });
 

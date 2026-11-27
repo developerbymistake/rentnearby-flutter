@@ -17,7 +17,7 @@ import 'data/driver_request_repository.dart';
 import 'models/driver_request_models.dart';
 import 'models/ring_end.dart';
 import 'strings/driver_ring_strings.dart';
-import 'utils/taxi_countdown.dart';
+import '../../../widgets/ring/ring_countdown.dart';
 
 enum DriverRingAction {
   accept,
@@ -149,7 +149,7 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
     final left = o != null
         ? _c.remaining(o)
         : at != null
-            ? TaxiCountdown.remaining(at, offset: _c.clockOffset.value, now: DateTime.now())
+            ? RingCountdown.remaining(at, offset: _c.clockOffset.value, now: DateTime.now())
             : TaxiRingPush.maxRing;
     unawaited(_alert.ringAlertHold(_tag, left).catchError((_) => false));
   }
@@ -320,8 +320,8 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
   String _leftForFailed() {
     final at = widget.expiresAt;
     if (at == null) return '';
-    final left = TaxiCountdown.remaining(at, offset: _c.clockOffset.value, now: DateTime.now());
-    return left > Duration.zero ? TaxiCountdown.text(left) : '';
+    final left = RingCountdown.remaining(at, offset: _c.clockOffset.value, now: DateTime.now());
+    return left > Duration.zero ? RingCountdown.text(left) : '';
   }
 
   Widget _opening() =>
@@ -417,12 +417,12 @@ class _DriverRingScreenState extends State<DriverRingScreen> {
             valueListenable: _ticks,
             builder: (context, _, _) {
               final left = _c.remaining(o);
-              final spoken = TaxiCountdown.text(Duration(seconds: ((left.inSeconds + 9) ~/ 10) * 10));
+              final spoken = RingCountdown.text(Duration(seconds: ((left.inSeconds + 9) ~/ 10) * 10));
               return Semantics(
                 liveRegion: true,
                 label: spoken,
                 child: ExcludeSemantics(
-                  child: Text(TaxiCountdown.text(left), key: const ValueKey('ring_countdown'), style: Ink3D.text(28, FontWeight.w600, _onDark, letterSpacing: 1)),
+                  child: Text(RingCountdown.text(left), key: const ValueKey('ring_countdown'), style: Ink3D.text(28, FontWeight.w600, _onDark, letterSpacing: 1)),
                 ),
               );
             },

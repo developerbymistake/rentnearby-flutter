@@ -5,7 +5,6 @@ import 'package:get/get.dart';
 import '../../../services/system_settings_channel.dart';
 import '../../../services/taxi_ring_service.dart';
 import '../../../widgets/ring/ready_check_row.dart';
-import '../../taxi/requests/strings/driver_ready_strings.dart';
 import '../strings/stay_ring_strings.dart';
 import 'stay_ring_ready_controller.dart';
 import 'stay_ring_settings_controller.dart';
@@ -71,8 +70,8 @@ class _StayRingReadyScreenState extends State<StayRingReadyScreen> {
                 ReadyCheckRow(
                   key: const ValueKey('stay_ready_check_failed'),
                   tone: _tone,
-                  title: DriverReadyStrings.probeFailedTitle,
-                  text: DriverReadyStrings.probeFailedBody,
+                  title: RingReadyStrings.probeFailedTitle,
+                  text: RingReadyStrings.probeFailedBody,
                   done: false,
                 ),
               if (!loaded && !failed) Padding(padding: EdgeInsets.symmetric(vertical: DS.gv(24)), child: const Center(child: CircularProgressIndicator())),
@@ -80,8 +79,8 @@ class _StayRingReadyScreenState extends State<StayRingReadyScreen> {
                 ReadyCheckRow(
                   key: const ValueKey('stay_ready_row_notifications'),
                   tone: _tone,
-                  title: DriverReadyStrings.notificationsTitle,
-                  text: _ctrl.isDone(StayRingReadyItem.notifications) ? DriverReadyStrings.notificationsDone : StayRingReadyStrings.notificationsFix,
+                  title: RingReadyStrings.notificationsTitle,
+                  text: _ctrl.isDone(StayRingReadyItem.notifications) ? RingReadyStrings.notificationsDone : StayRingReadyStrings.notificationsFix,
                   done: _ctrl.isDone(StayRingReadyItem.notifications),
                   actionKey: const ValueKey('stay_ready_fix_notifications'),
                   onFix: _settings.openNotificationSettings,
@@ -90,8 +89,8 @@ class _StayRingReadyScreenState extends State<StayRingReadyScreen> {
                 ReadyCheckRow(
                   key: const ValueKey('stay_ready_row_ring'),
                   tone: _tone,
-                  title: DriverReadyStrings.ringTitle,
-                  text: _ctrl.isDone(StayRingReadyItem.ringSound) ? DriverReadyStrings.ringDone : StayRingReadyStrings.ringFix,
+                  title: RingReadyStrings.ringTitle,
+                  text: _ctrl.isDone(StayRingReadyItem.ringSound) ? RingReadyStrings.ringDone : StayRingReadyStrings.ringFix,
                   done: _ctrl.isDone(StayRingReadyItem.ringSound),
                   actionKey: const ValueKey('stay_ready_fix_ring'),
                   onFix: () => _settings.openRingChannelSettings(TaxiRingNotification.stayRingChannelId),
@@ -100,8 +99,8 @@ class _StayRingReadyScreenState extends State<StayRingReadyScreen> {
                 ReadyCheckRow(
                   key: const ValueKey('stay_ready_row_battery'),
                   tone: _tone,
-                  title: DriverReadyStrings.batteryTitle,
-                  text: _ctrl.isDone(StayRingReadyItem.battery) ? DriverReadyStrings.batteryDone : DriverReadyStrings.batteryFix,
+                  title: RingReadyStrings.batteryTitle,
+                  text: _ctrl.isDone(StayRingReadyItem.battery) ? RingReadyStrings.batteryDone : RingReadyStrings.batteryFix,
                   done: _ctrl.isDone(StayRingReadyItem.battery),
                   actionKey: const ValueKey('stay_ready_fix_battery'),
                   onFix: _settings.openBatterySettings,
@@ -110,18 +109,18 @@ class _StayRingReadyScreenState extends State<StayRingReadyScreen> {
                 ReadyCheckRow(
                   key: const ValueKey('stay_ready_row_test'),
                   tone: _tone,
-                  title: DriverReadyStrings.testTitle,
-                  text: testDone ? DriverReadyStrings.testDone : StayRingReadyStrings.testFix,
+                  title: RingReadyStrings.testTitle,
+                  text: testDone ? RingReadyStrings.testDone : StayRingReadyStrings.testFix,
                   done: testDone,
                 ),
                 Gap.v(16),
                 if (testing)
-                  Padding(padding: EdgeInsets.only(bottom: DS.gv(8)), child: Center(child: Text(DriverReadyStrings.running, style: Ink3D.text(14, FontWeight.w500, Ink3D.sub)))),
+                  Padding(padding: EdgeInsets.only(bottom: DS.gv(8)), child: Center(child: Text(RingReadyStrings.running, style: Ink3D.text(14, FontWeight.w500, Ink3D.sub)))),
                 if (_ctrl.testNotShown.value || _ctrl.testFailed.value)
                   Padding(
                     padding: EdgeInsets.only(bottom: DS.gv(12)),
                     child: Text(
-                      _ctrl.testFailed.value ? DriverReadyStrings.testFailed : StayRingReadyStrings.testNotShown,
+                      _ctrl.testFailed.value ? RingReadyStrings.testFailed : StayRingReadyStrings.testNotShown,
                       key: const ValueKey('stay_ready_test_note'),
                       textAlign: TextAlign.center,
                       style: Ink3D.text(14, FontWeight.w600, Ink3D.sub),
@@ -131,7 +130,7 @@ class _StayRingReadyScreenState extends State<StayRingReadyScreen> {
                   GradientPillButton(
                     key: const ValueKey('stay_ready_test_primary'),
                     tone: _tone,
-                    label: DriverReadyStrings.runTest,
+                    label: RingReadyStrings.runTest,
                     loading: testing,
                     onTap: _ctrl.testRing,
                   )
@@ -139,7 +138,7 @@ class _StayRingReadyScreenState extends State<StayRingReadyScreen> {
                   WhitePillButton(
                     key: const ValueKey('stay_ready_test_again'),
                     tone: _tone,
-                    label: DriverReadyStrings.runTestAgain,
+                    label: RingReadyStrings.runTestAgain,
                     enabled: !testing,
                     onTap: _ctrl.testRing,
                   ),

@@ -51,6 +51,9 @@ void main() {
       'android.permission.VIBRATE',
       'android.permission.WAKE_LOCK',
       'android.permission.USE_FULL_SCREEN_INTENT',
+      // Stay quotation PDF save on API 24-28 only (stay_quotation ARCHITECTURE A-12); not a ring permission.
+      'android.permission.WRITE_EXTERNAL_STORAGE',
     });
+    expect(manifest, contains('android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"'));
   });
 }

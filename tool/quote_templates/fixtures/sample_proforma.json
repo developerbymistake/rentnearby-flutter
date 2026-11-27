@@ -174,7 +174,7 @@
  "footer": {
   "preparedBy": "Prepared by The Banyan Retreat.",
   "pagePattern": "Page {x} of {y}",
-  "notTaxInvoice": "This is not a tax invoice.",
+  "proformaNote": "This is not a tax invoice.",
   "forBusiness": "For The Banyan Retreat",
   "thankYou": "Thank you for choosing The Banyan Retreat",
   "kindLabel": "Proforma invoice"

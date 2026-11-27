@@ -296,8 +296,8 @@ class TaxiRouteCard extends StatelessWidget {
     final style = Ink3D.text(14, FontWeight.w600, Ink3D.body);
     final date = dateText;
     return WhiteCard3D(
-      margin: const EdgeInsets.fromLTRB(18, 8, 18, 0),
-      padding: const EdgeInsets.fromLTRB(14, 10, 10, 4),
+      margin: DS.insets(l: 18, t: 8, r: 18),
+      padding: DS.insets(l: 14, t: 10, r: 10, b: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

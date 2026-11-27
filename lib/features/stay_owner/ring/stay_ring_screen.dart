@@ -11,7 +11,7 @@ import '../../../services/system_settings_channel.dart';
 import '../../../services/taxi_ring_service.dart';
 import '../../../services/taxi_ring_session.dart';
 import '../../../widgets/ring/ring_call_parts.dart';
-import '../../taxi/requests/utils/taxi_countdown.dart';
+import '../../../widgets/ring/ring_countdown.dart';
 import '../strings/stay_ring_strings.dart';
 import 'stay_ring_api.dart';
 
@@ -101,7 +101,7 @@ class _StayRingScreenState extends State<StayRingScreen> {
   Duration _left() {
     final at = widget.expiresAt;
     if (at == null) return TaxiRingPush.maxRing;
-    final left = TaxiCountdown.remaining(at, offset: Duration.zero, now: _now());
+    final left = RingCountdown.remaining(at, offset: Duration.zero, now: _now());
     return left > TaxiRingPush.maxRing ? TaxiRingPush.maxRing : left;
   }
 
@@ -331,12 +331,12 @@ class _StayRingScreenState extends State<StayRingScreen> {
             valueListenable: _ticks,
             builder: (context, _, _) {
               final left = _left();
-              final spoken = TaxiCountdown.text(Duration(seconds: ((left.inSeconds + 9) ~/ 10) * 10));
+              final spoken = RingCountdown.text(Duration(seconds: ((left.inSeconds + 9) ~/ 10) * 10));
               return Semantics(
                 liveRegion: true,
                 label: spoken,
                 child: ExcludeSemantics(
-                  child: Text(TaxiCountdown.text(left), key: const ValueKey('ring_countdown'), style: Ink3D.text(28, FontWeight.w600, _onDark, letterSpacing: 1)),
+                  child: Text(RingCountdown.text(left), key: const ValueKey('ring_countdown'), style: Ink3D.text(28, FontWeight.w600, _onDark, letterSpacing: 1)),
                 ),
               );
             },

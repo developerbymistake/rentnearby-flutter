@@ -82,7 +82,7 @@ class FindBuddiesPostCard extends StatelessWidget {
           title: SocialStringsB.homePostTitle,
           subtitle: line,
           actionLabel: SocialStringsB.post,
-          margin: const EdgeInsets.only(left: 18, right: 18, bottom: 4),
+          margin: DS.insets(l: 18, r: 18, b: 4, scaled: false),
           semanticsLabel: '${SocialStringsB.homePostEyebrow} ${SocialStringsB.homePostTitle}. $line ${SocialStringsB.post}',
           onTap: () => PostTripEntry.open(context),
         ),

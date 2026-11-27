@@ -15,7 +15,7 @@ void main() {
       expect(j['number'], 'Q-0042');
       expect(j['numberLabel'], 'Quotation no');
       expect(j['validTill'], '19 Nov 2026');
-      expect((j['footer'] as Map)['notTaxInvoice'], '');
+      expect((j['footer'] as Map)['proformaNote'], '');
     });
 
     test('proforma: PI- number, not-a-tax-invoice line, payments and balance', () {
@@ -28,7 +28,7 @@ void main() {
       expect(j['kind'], 'Proforma');
       expect(j['number'], 'PI-0007');
       expect(j['validTill'], '');
-      expect((j['footer'] as Map)['notTaxInvoice'], StayQuoteDocStrings.notTaxInvoice);
+      expect((j['footer'] as Map)['proformaNote'], StayQuoteDocStrings.notTaxInvoice);
       expect(j['received'], '1,00,000');
       expect(j['balance'], '₹ 41,026');
       expect(j['balanceWords'], 'Rupees Forty-One Thousand Twenty-Six Only');

@@ -5,35 +5,35 @@ class DriverReadyStrings {
   static const String subtitle = 'Four quick checks so your phone rings';
   static const String missedLine = 'You missed 3 requests. Run a test ring to get requests again.';
 
-  static const String notificationsTitle = 'Notifications';
-  static const String notificationsDone = 'Notifications are on';
+  static const String notificationsTitle = RingReadyStrings.notificationsTitle;
+  static const String notificationsDone = RingReadyStrings.notificationsDone;
   static const String notificationsFix = 'Turn them on so requests can reach you';
 
-  static const String ringTitle = 'Ring sound';
-  static const String ringDone = 'The ring is not muted';
+  static const String ringTitle = RingReadyStrings.ringTitle;
+  static const String ringDone = RingReadyStrings.ringDone;
   static const String ringFix = 'Un-mute the Taxi requests sound';
 
-  static const String batteryTitle = 'Battery';
-  static const String batteryDone = 'Battery is not limiting the app';
-  static const String batteryFix = 'Let the app run in the background';
+  static const String batteryTitle = RingReadyStrings.batteryTitle;
+  static const String batteryDone = RingReadyStrings.batteryDone;
+  static const String batteryFix = RingReadyStrings.batteryFix;
 
-  static const String testTitle = 'Test ring';
-  static const String testDone = 'Your phone rang';
+  static const String testTitle = RingReadyStrings.testTitle;
+  static const String testDone = RingReadyStrings.testDone;
   static const String testFix = 'Did your phone ring? Run a test to see';
 
   static const String done = RingReadyStrings.done;
   static const String fix = RingReadyStrings.fix;
   static const String openSettings = RingReadyStrings.openSettings;
-  static const String runTest = 'Run test ring';
-  static const String runTestAgain = 'Test again';
-  static const String running = 'Ringing your phone...';
+  static const String runTest = RingReadyStrings.runTest;
+  static const String runTestAgain = RingReadyStrings.runTestAgain;
+  static const String running = RingReadyStrings.running;
   static const String testShown = 'Your phone rang.';
   static const String testNotShown = 'We did not see the ring.';
-  static const String testFailed = 'Could not send the test ring.';
+  static const String testFailed = RingReadyStrings.testFailed;
   static const String testNotSaved = 'Your phone rang, but we could not save it. Test again.';
 
-  static const String probeFailedTitle = 'Could not check your phone';
-  static const String probeFailedBody = 'Something went wrong while checking. Try again.';
+  static const String probeFailedTitle = RingReadyStrings.probeFailedTitle;
+  static const String probeFailedBody = RingReadyStrings.probeFailedBody;
   static const String retry = 'Try again';
 
   static const String stripTitle = 'Get ready for requests';

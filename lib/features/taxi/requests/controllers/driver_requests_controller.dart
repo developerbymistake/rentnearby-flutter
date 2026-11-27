@@ -10,7 +10,7 @@ import '../../../../services/taxi_ring_service.dart';
 import '../../../trip/utils/taxi_result.dart';
 import '../data/driver_request_repository.dart';
 import '../models/driver_request_models.dart';
-import '../utils/taxi_countdown.dart';
+import '../../../../widgets/ring/ring_countdown.dart';
 
 enum DriverRequestAction { list, more, detail, accept, decline, confirm, withdraw }
 
@@ -77,9 +77,9 @@ class DriverRequestsController extends GetxController with WidgetsBindingObserve
         _ => null,
       };
 
-  Duration remaining(DriverOffer o) => TaxiCountdown.remaining(deadlineOf(o), offset: clockOffset.value, now: _now());
+  Duration remaining(DriverOffer o) => RingCountdown.remaining(deadlineOf(o), offset: clockOffset.value, now: _now());
 
-  String countdownText(DriverOffer o) => TaxiCountdown.text(remaining(o));
+  String countdownText(DriverOffer o) => RingCountdown.text(remaining(o));
 
   Future<TaxiResult<T>> _run<T>(DriverRequestAction a, String? offerId, Future<TaxiResult<T>> Function() body) {
     final key = _key(a, offerId);
