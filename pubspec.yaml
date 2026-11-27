@@ -121,6 +121,11 @@ flutter:
     - assets/map_packs/
     - assets/sprites/
     - assets/sounds/
+    - assets/quote_templates/
+    - assets/quote_templates/thumbs/
+    - assets/fonts/Roboto-Regular.ttf
+    - assets/fonts/Roboto-Medium.ttf
+    - assets/fonts/Roboto-Bold.ttf
   fonts:
     - family: Poppins
       fonts:

@@ -86,7 +86,7 @@ void main() {
   });
 
   group('o_pl_2 stay Free', () {
-    testWidgets('every string, 14 rows, prices', (t) async {
+    testWidgets('every string, 15 rows, prices', (t) async {
       await _pump(t, Fx.free('Stay'));
       _has([
         'Stay plan', '2 photos', '2 room types', '1 job post', 'Not first in trip plans', 'Photos', '2 of 2', 'Room types 2 of 2',
@@ -94,7 +94,7 @@ void main() {
         'Money notes on each booking', 'Special prices', '₹400', '₹367', 'Save 8%', '₹317', 'Save 21%', 'Billed ₹1,100 every 3 months',
         'Billed ₹3,800 a year', 'Then ₹400/month. Cancel anytime in Google Play.',
       ]);
-      expect(find.textContaining('NEW'), findsNWidgets(11));
+      expect(find.textContaining('NEW'), findsNWidgets(12));
     });
   });
 

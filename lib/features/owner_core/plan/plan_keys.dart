@@ -1,6 +1,6 @@
 import '../../../models/my_plan_model.dart';
 
-enum PlanKey { photos, roomTypes, jobsPosts, routes, ringWeight, calendarEntries, blockedRanges, upcomingDays, monthsAhead, monthSummary, reminders, specialPrices }
+enum PlanKey { photos, roomTypes, jobsPosts, routes, ringWeight, calendarEntries, blockedRanges, upcomingDays, monthsAhead, monthSummary, reminders, specialPrices, quotationsPerMonth }
 
 extension PlanKeyWire on PlanKey {
   String get wire => switch (this) {
@@ -16,6 +16,7 @@ extension PlanKeyWire on PlanKey {
         PlanKey.monthSummary => 'MonthSummary',
         PlanKey.reminders => 'Reminders',
         PlanKey.specialPrices => 'SpecialPrices',
+        PlanKey.quotationsPerMonth => 'StayQuotationsPerMonth',
       };
 
   bool get isSwitch => this == PlanKey.monthSummary || this == PlanKey.reminders;
@@ -42,6 +43,7 @@ abstract final class PlanKeys {
     PlanKey.monthSummary: 0,
     PlanKey.reminders: 0,
     PlanKey.specialPrices: 1,
+    PlanKey.quotationsPerMonth: 2,
   };
 
   static const Map<PlanKey, int> plusSeed = {
@@ -57,6 +59,7 @@ abstract final class PlanKeys {
     PlanKey.monthSummary: 1,
     PlanKey.reminders: 1,
     PlanKey.specialPrices: 5,
+    PlanKey.quotationsPerMonth: 30,
   };
 
   static int valueOf(PlanLimitsModel l, PlanKey key) => switch (key) {
@@ -72,5 +75,6 @@ abstract final class PlanKeys {
         PlanKey.monthSummary => l.monthSummary ? 1 : 0,
         PlanKey.reminders => l.reminders ? 1 : 0,
         PlanKey.specialPrices => l.specialPrices,
+        PlanKey.quotationsPerMonth => l.quotationsPerMonth,
       };
 }

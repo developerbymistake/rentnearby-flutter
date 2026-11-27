@@ -13,6 +13,7 @@ import '../config/profile_photo_strings.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/profile_photo_controller.dart';
 import '../controllers/plan_controller.dart';
+import '../models/my_plan_model.dart';
 import '../controllers/tab_config_controller.dart';
 import '../features/buddy/buddy_strings.dart';
 import '../features/buddy/username_actions.dart';
@@ -817,12 +818,23 @@ class _DeleteAccountDialog extends StatefulWidget {
   final VoidCallback onConfirm;
   final VoidCallback onCancel;
 
+  static const paidTimeLost = 'Your plan ends now. The paid time left is lost.';
+
+  // A cancelled plan that still runs: deletion is allowed and the rest of the paid time goes with the account.
+  static bool paidTimeLeft(MyPlanModel plan, DateTime now) {
+    final play = plan.play;
+    if (play != null) return !play.autoRenewEnabled && (play.expiryAt?.isAfter(now) ?? false) && !play.expired;
+    return plan.isPaid && (plan.endsAt?.isAfter(now) ?? false);
+  }
+
   @override
   State<_DeleteAccountDialog> createState() => _DeleteAccountDialogState();
 }
 
 class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
   final TextEditingController _ctrl = TextEditingController();
+  late final bool _paidTimeLeft =
+      Get.isRegistered<PlanController>() && _DeleteAccountDialog.paidTimeLeft(Get.find<PlanController>().myPlan.value, DateTime.now());
 
   @override
   void dispose() {
@@ -857,6 +869,13 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
                   style: Ink3D.text(13, FontWeight.w500, _ProfileScreenState._bad.text, height: 1.5, letterSpacing: 0),
                 ),
               ),
+              if (_paidTimeLeft) ...[
+                Gap.v(10),
+                Text(
+                  _DeleteAccountDialog.paidTimeLost,
+                  style: Ink3D.text(13, FontWeight.w600, _ProfileScreenState._bad.text, height: 1.5, letterSpacing: 0),
+                ),
+              ],
               Gap.v(18),
               Text('Type DELETE to confirm', style: Ink3D.text(13, FontWeight.w600, Ink3D.grey, letterSpacing: 0)),
               Gap.v(8),

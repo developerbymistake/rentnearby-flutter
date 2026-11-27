@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=794">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
+<link rel="stylesheet" href="quote.css">
+<script src="quote.js"></script>
+</head>
+<body data-template="band">
+<div id="pages"></div>
+
+<template id="p1"><div class="a4 t2">
+  <div data-flow>
+    <div class="band">
+      <div class="lg" data-row><img data-img="logo" alt=""></div>
+      <div class="bz">
+        <b data-k="businessName"></b>
+        <i data-k="slogan"></i>
+        <span class="pre" data-k="address"></span>
+        <span class="dots"><span data-k="phone"></span><span data-k="email"></span></span>
+      </div>
+      <h1><span data-k="title"></span><small data-row><span data-l="gstin"></span> <span data-k="gstin"></span></small></h1>
+    </div>
+    <div class="meta">
+      <div data-row><small data-k="numberLabel"></small><b data-k="number"></b></div>
+      <div data-row><small data-l="date"></small><b data-k="date"></b></div>
+      <div data-row><small data-l="validTill"></small><b data-k="validTill"></b></div>
+      <div data-row><small data-l="quotationRef"></small><b data-k="quotationRef"></b></div>
+      <div data-row><small data-l="mealPlan"></small><b data-k="stay.mealCode"></b></div>
+    </div>
+    <div class="two">
+      <div>
+        <div class="k" data-l="preparedFor"></div>
+        <table>
+          <tr data-row><td data-l="guest"></td><td><b data-k="guest.name"></b></td></tr>
+          <tr data-row><td data-l="phone"></td><td data-k="guest.phone"></td></tr>
+          <tr data-row><td data-l="bookedBy"></td><td data-k="guest.bookedBy"></td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="k" data-l="stayDetails"></div>
+        <table>
+          <tr data-row><td data-l="checkIn"></td><td><b data-k="stay.checkIn"></b></td></tr>
+          <tr data-row><td data-l="checkOut"></td><td><b data-k="stay.checkOut"></b><span class="mid" data-k="stay.nights" data-self></span></td></tr>
+          <tr data-row><td data-l="guests"></td><td data-k="stay.guests"></td></tr>
+        </table>
+      </div>
+    </div>
+    <table class="it" data-sec="items">
+      <thead><tr><th class="c-no" data-l="srNo"></th><th class="l" data-l="description"></th><th class="r" data-l="rateInr"></th><th class="c-qty" data-l="paxQty"></th><th class="c-n" data-l="nights"></th><th class="r" data-l="totalInr"></th></tr></thead>
+      <tbody data-lines="row"></tbody>
+    </table>
+    <div class="lo keep" data-sec="totals">
+      <div class="wd">
+        <span data-l="amountInWords"></span><b data-k="totals.words"></b>
+        <div class="ml" data-row><span data-l="mealPlan"></span>: <span data-k="stay.mealPlan"></span></div>
+        <div data-kind="Proforma">
+          <table class="pay">
+            <thead><tr><th data-l="paymentsReceived"></th><th data-l="date"></th><th class="r" data-l="amountInr"></th></tr></thead>
+            <tbody data-pays="pay">
+              <tr data-row data-pays-end><td><b data-l="totalReceived"></b></td><td></td><td class="r"><b data-k="received"></b></td></tr>
+              <tr class="bl" data-row><td colspan="2" data-l="balanceBill"></td><td class="r" data-k="balance"></td></tr>
+            </tbody>
+          </table>
+          <div class="bw" data-row><span data-l="balanceInWords"></span>: <b data-k="balanceWords"></b></div>
+        </div>
+      </div>
+      <div class="tot">
+        <table>
+          <tr data-row><td data-l="subtotal"></td><td class="r" data-k="totals.subtotal"></td></tr>
+          <tr data-row><td data-l="lessDiscount"></td><td class="r" data-k="totals.discount"></td></tr>
+          <tr data-row><td data-l="taxable"></td><td class="r" data-k="totals.taxable"></td></tr>
+          <tr data-row><td data-k="totals.gstLabel"></td><td class="r" data-k="totals.gst"></td></tr>
+          <tr data-row><td data-l="roundOff"></td><td class="r" data-k="totals.roundOff"></td></tr>
+        </table>
+        <div class="gt"><span data-l="total"></span><b data-k="totals.total"></b></div>
+      </div>
+    </div>
+    <div data-sec="rest">
+      <p class="note-text pre" data-k="note"></p>
+      <div class="ft" data-any="terms,cancellation,bank.holder,bank.accountNo,bank.ifsc,bank.bank,bank.upi">
+        <div>
+          <div data-row><div class="k" data-l="terms"></div><ul data-list="terms"></ul></div>
+          <div data-any="bank.holder,bank.accountNo,bank.ifsc,bank.bank,bank.upi">
+            <div class="k mt12" data-l="bankUpi"></div>
+            <div class="bank">
+              <div data-k="bank.bank"></div>
+              <div data-row><span data-l="acName"></span>: <span data-k="bank.holder"></span></div>
+              <div class="dots">
+                <span data-row><span data-l="acNo"></span> <span data-k="bank.accountNo"></span></span><span data-row><span data-l="ifsc"></span> <span data-k="bank.ifsc"></span></span><span data-row><span data-l="upi"></span> <span data-k="bank.upi"></span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div data-row><div class="k" data-l="cancellation"></div><ul data-list="cancellation"></ul></div>
+      </div>
+    </div>
+  </div>
+  <div class="sg" data-floor data-sec="sign">
+    <div class="pb" data-row><span data-l="preparedBy"></span><b data-k="preparedBy"></b></div>
+    <div class="s">
+      <div class="sigbox"><img data-img="signature" data-self alt=""></div>
+      <div class="ln"><span data-l="authorisedSignatory"></span><span class="comma" data-k="businessName" data-self></span></div>
+    </div>
+  </div>
+  <div class="dsc" data-floor><span class="dots"><span data-k="footer.preparedBy"></span><span data-k="footer.notTaxInvoice"></span></span></div>
+  <div class="thx" data-floor><b data-k="footer.thankYou"></b><span class="dots"><span data-k="number"></span><span data-page></span></span></div>
+</div></template>
+
+<template id="p2"><div class="a4 t2">
+  <div data-flow>
+    <div class="band sm">
+      <div class="bz"><b data-k="businessName"></b></div>
+      <h1><span data-k="title"></span><small data-k="number"></small></h1>
+    </div>
+    <div class="cont" data-cont></div>
+    <div class="slot-items" data-slot="items"></div>
+    <div data-slot="totals"></div>
+    <div data-slot="rest"></div>
+    <div class="slot-sign" data-slot="sign"></div>
+  </div>
+  <div class="dsc" data-floor><span class="dots"><span data-k="footer.preparedBy"></span><span data-k="footer.notTaxInvoice"></span></span></div>
+  <div class="thx" data-floor><b data-k="footer.thankYou"></b><span class="dots"><span data-k="number"></span><span data-page></span></span></div>
+</div></template>
+
+<template id="row"><tr><td class="c" data-c="no"></td><td data-c="description"></td><td class="r" data-c="rate"></td><td class="c" data-c="qty"></td><td class="c" data-c="nights"></td><td class="r" data-c="amount"></td></tr></template>
+<template id="pay"><tr><td data-c="label"></td><td data-c="date"></td><td class="r" data-c="amount"></td></tr></template>
+</body>
+</html>

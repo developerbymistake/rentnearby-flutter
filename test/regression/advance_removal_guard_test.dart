@@ -7,6 +7,9 @@ const _allowedFiles = [
   'lib/screens/terms_of_service_screen.dart',
   // The private money note's server field and doc 6.2 line only (owner roles, REVIEW point 1); no payment flow.
   'lib/features/owner_core/money/money_wire.dart',
+  // The stay quotation document may record an advance received (a printed line, approved mock Q-frames); no in-app payment flow.
+  'lib/features/stay_owner/quotation/',
+  'lib/features/stay_owner/strings/stay_quote_strings.dart',
 ];
 
 final _word = RegExp(r'advance|proofsent|proof sent|holduntil|holdexpired', caseSensitive: false);

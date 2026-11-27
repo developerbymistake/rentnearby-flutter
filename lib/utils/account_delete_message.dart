@@ -64,6 +64,7 @@ class AccountDeleteMessage {
     'OpenTaxiRequest': 'You have an open taxi request. Cancel it first.',
     'OpenStayEnquiry': 'You have an open stay enquiry. Close it first.',
     'LiveListing': 'Take your listing offline first.',
+    'ActiveSubscription': 'You have an active subscription. Cancel it in Google Play first, then delete your account.',
   };
 
   static const fallback = 'You cannot delete your account right now. Finish your active items first.';

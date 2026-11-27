@@ -12,6 +12,7 @@ abstract final class StayOwnerDeps {
 
   static Widget Function() upcomingCard = _none;
   static Widget Function() planCard = _none;
+  static Widget Function() quotationsCard = _none;
   static Widget Function() hubCalendarRow = _none;
   static Widget Function() hubSpecialPricesRow = _none;
   static Widget Function() reminderRow = _none;
@@ -42,6 +43,7 @@ abstract final class StayOwnerDeps {
   static void debugReset() {
     upcomingCard = _none;
     planCard = _none;
+    quotationsCard = _none;
     hubCalendarRow = _none;
     hubSpecialPricesRow = _none;
     reminderRow = _none;

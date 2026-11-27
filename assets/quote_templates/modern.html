@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=794">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
+<link rel="stylesheet" href="quote.css">
+<script src="quote.js"></script>
+</head>
+<body data-template="modern">
+<div id="pages"></div>
+
+<template id="p1"><div class="a4 t3">
+  <div class="side" data-flow data-limit-page>
+    <div class="bz">
+      <img class="logo" data-img="logo" alt="">
+      <b data-k="businessName"></b>
+      <i data-k="slogan"></i>
+      <span>
+        <span class="ln pre" data-k="address"></span>
+        <span class="ln" data-k="phone"></span>
+        <span class="ln" data-k="email"></span>
+        <span class="ln" data-row><span data-l="gstin"></span> <span data-k="gstin"></span></span>
+      </span>
+    </div>
+    <div class="sk" data-l="guest"></div>
+    <p><b data-k="guest.name"></b></p>
+    <p data-k="guest.phone"></p>
+    <p data-row><small data-l="bookedBy"></small><span data-k="guest.bookedBy"></span></p>
+    <div class="sk" data-l="stay"></div>
+    <p data-row><small data-l="checkIn"></small><span data-k="stay.checkIn"></span></p>
+    <p data-row><small data-l="checkOut"></small><span data-k="stay.checkOut"></span></p>
+    <p data-row><small data-l="nights"></small><span data-k="stay.nights"></span></p>
+    <p data-row><small data-l="guests"></small><span data-k="stay.guests"></span></p>
+    <p data-row><small data-l="mealPlan"></small><span data-k="stay.mealPlan"></span></p>
+    <div data-any="bank.holder,bank.accountNo,bank.ifsc,bank.bank,bank.upi">
+      <div class="sk" data-l="payTo"></div>
+      <p data-k="bank.bank"></p>
+      <p data-row><small data-l="acName"></small><span data-k="bank.holder"></span></p>
+      <p data-row><small data-l="account"></small><span data-k="bank.accountNo"></span></p>
+      <p data-row><small data-l="ifsc"></small><span data-k="bank.ifsc"></span></p>
+      <p data-row><small data-l="upi"></small><span data-k="bank.upi"></span></p>
+    </div>
+  </div>
+  <div class="main">
+    <div data-flow>
+      <div class="ttl">
+        <div><small data-k="title"></small><b data-k="number"></b><div class="nti" data-k="footer.notTaxInvoice"></div></div>
+        <table>
+          <tr data-row><td data-l="date"></td><td><b data-k="date"></b></td></tr>
+          <tr data-row><td data-l="validTill"></td><td><b data-k="validTill"></b></td></tr>
+          <tr data-row><td data-l="quotationRef"></td><td><b data-k="quotationRef"></b></td></tr>
+        </table>
+      </div>
+      <table class="it" data-sec="items">
+        <thead><tr><th class="c-no" data-l="no"></th><th data-l="description"></th><th class="r c-rate" data-l="rate"></th><th class="c c-qty" data-l="qty"></th><th class="c c-n" data-l="nights"></th><th class="r c-amt" data-l="amount"></th></tr></thead>
+        <tbody data-lines="row"></tbody>
+      </table>
+      <div class="keep" data-sec="totals">
+        <table class="tot">
+          <tr data-row><td data-l="subtotal"></td><td class="r" data-k="totals.subtotal"></td></tr>
+          <tr data-row><td data-l="lessDiscount"></td><td class="r" data-k="totals.discount"></td></tr>
+          <tr data-row><td data-l="taxable"></td><td class="r" data-k="totals.taxable"></td></tr>
+          <tr data-row><td data-k="totals.gstLabel"></td><td class="r" data-k="totals.gst"></td></tr>
+          <tr data-row><td data-l="roundOff"></td><td class="r" data-k="totals.roundOff"></td></tr>
+        </table>
+        <div class="gt"><small data-l="total"></small><b data-k="totals.total"></b></div>
+        <div class="wd" data-k="totals.words"></div>
+        <div data-kind="Proforma">
+          <table class="pay">
+            <thead><tr><th data-l="paymentsReceived"></th><th data-l="date"></th><th class="r" data-l="amountInr"></th></tr></thead>
+            <tbody data-pays="pay">
+              <tr data-row data-pays-end><td><b data-l="totalReceived"></b></td><td></td><td class="r"><b data-k="received"></b></td></tr>
+              <tr class="bl" data-row><td colspan="2" data-l="balance"></td><td class="r" data-k="balance"></td></tr>
+            </tbody>
+          </table>
+          <div class="bw" data-k="balanceWords"></div>
+        </div>
+      </div>
+      <div data-sec="rest">
+        <p class="note-text pre" data-k="note"></p>
+        <div class="tm" data-any="terms,cancellation">
+          <div data-row><div class="sk m0" data-l="terms"></div><ul data-list="terms"></ul></div>
+          <div data-row><div class="sk m0" data-l="cancellationShort"></div><ul data-list="cancellation"></ul></div>
+        </div>
+      </div>
+    </div>
+    <div class="sg" data-floor data-sec="sign">
+      <div class="pb" data-row><span data-l="preparedBy"></span><b data-k="preparedBy"></b></div>
+      <div class="s">
+        <div class="sigbox"><img data-img="signature" data-self alt=""></div>
+        <div class="ln" data-l="authorisedSignatory"></div>
+      </div>
+    </div>
+    <div class="pg" data-floor>
+      <div class="dots"><span data-k="footer.preparedBy"></span><span data-k="footer.notTaxInvoice"></span></div>
+      <div class="r2"><span class="dots"><span data-k="number"></span><span data-k="footer.kindLabel"></span></span><span data-page></span></div>
+    </div>
+  </div>
+</div></template>
+
+<template id="p2"><div class="a4 t3">
+  <div class="side" data-flow data-limit-page>
+    <div class="bz"><img class="logo" data-img="logo" alt=""><b data-k="businessName"></b></div>
+  </div>
+  <div class="main">
+    <div data-flow>
+      <div class="ttl"><div><small data-k="title"></small><b data-k="number"></b><div class="nti" data-k="footer.notTaxInvoice"></div></div></div>
+      <div class="cont" data-cont></div>
+      <div class="slot-items" data-slot="items"></div>
+      <div data-slot="totals"></div>
+      <div data-slot="rest"></div>
+      <div class="slot-sign" data-slot="sign"></div>
+    </div>
+    <div class="pg" data-floor>
+      <div class="dots"><span data-k="footer.preparedBy"></span><span data-k="footer.notTaxInvoice"></span></div>
+      <div class="r2"><span class="dots"><span data-k="number"></span><span data-k="footer.kindLabel"></span></span><span data-page></span></div>
+    </div>
+  </div>
+</div></template>
+
+<template id="row"><tr><td data-c="no2"></td><td><span data-c="description"></span><small data-c="detail"></small></td><td class="r" data-c="rate"></td><td class="c" data-c="qty"></td><td class="c" data-c="nights"></td><td class="r amt" data-c="amount"></td></tr></template>
+<template id="pay"><tr><td data-c="label"></td><td data-c="date"></td><td class="r" data-c="amount"></td></tr></template>
+</body>
+</html>

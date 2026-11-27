@@ -16,10 +16,24 @@ import 'live_edit/stay_live_edit_screen.dart';
 import 'plan_visible/stay_plan_visible_screen.dart';
 import 'ring/stay_ring_ready_screen.dart';
 import 'ring/stay_ring_screen.dart';
+import 'quotation/screens/quote_business_screen.dart';
+import 'quotation/screens/quote_form_screen.dart';
+import 'quotation/screens/quote_list_screen.dart';
+import 'quotation/screens/quote_preview_screen.dart';
+import 'quotation/screens/quote_template_screen.dart';
+import 'quotation/stay_owner_only_middleware.dart';
 import 'special_prices/stay_special_prices_screen.dart';
 
 GetPage<dynamic> _page(String name, GetPageBuilder page) =>
     GetPage(name: name, page: page, customTransition: TemplateTransition(), transitionDuration: templateTransitionDuration);
+
+GetPage<dynamic> _quotePage(String name, GetPageBuilder page) => GetPage(
+      name: name,
+      page: page,
+      customTransition: TemplateTransition(),
+      transitionDuration: templateTransitionDuration,
+      middlewares: [StayOwnerOnlyMiddleware()],
+    );
 
 // Route and push ids are GUIDs; anything else is treated as missing and lands on the calendar.
 Widget stayEntryPage(Map<String, dynamic> args) {
@@ -45,6 +59,13 @@ final List<GetPage<dynamic>> stayOwnerPages = [
   // end A4
   _page(AppRoutes.stayEnquiryRing, () => stayRingPage(Get.arguments)),
   _page(AppRoutes.stayRingReady, () => const StayRingReadyScreen()),
+  // quotation pages
+  _quotePage(AppRoutes.stayQuotations, () => QuoteListScreen(args: OwnerArgs.current)),
+  _quotePage(AppRoutes.stayQuotationBusiness, () => QuoteBusinessScreen(args: OwnerArgs.current)),
+  _quotePage(AppRoutes.stayQuotationEdit, () => QuoteFormScreen(args: OwnerArgs.current)),
+  _quotePage(AppRoutes.stayQuotationTemplate, () => QuoteTemplateScreen(args: OwnerArgs.current)),
+  _quotePage(AppRoutes.stayQuotationPreview, () => QuotePreviewScreen(args: OwnerArgs.current)),
+  // end quotation
 ];
 
 // A ring launch without an enquiry id opens the Enquiries list.
