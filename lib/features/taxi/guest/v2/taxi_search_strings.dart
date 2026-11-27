@@ -5,7 +5,10 @@ abstract final class TaxiSearchErrors {
 abstract final class TaxiSearchStrings {
   static const from = 'From';
   static const to = 'To';
-  static const nearYou = 'Near you';
+  static const yourLocation = 'Your location';
+  static const toRequired = 'Choose where you are going';
+  static const change = 'Change';
+  static const changeLabel = 'Change route';
   static const toHint = 'Search a place';
   static const dateCaption = 'Date of journey';
   static const today = 'Today';

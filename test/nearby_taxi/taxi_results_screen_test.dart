@@ -2,6 +2,7 @@ import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/controllers/location_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/taxi_calm_card.dart';
 import 'package:bakhli/features/nearby/controllers/nearby_centre_controller.dart';
 import 'package:bakhli/features/taxi/guest/taxi_card.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_feed_repository.dart';
@@ -241,5 +242,94 @@ void main() {
     expect(find.text('Rishikesh'), findsNothing);
     await t.pumpWidget(const SizedBox());
     expect(made.last.isClosed, isTrue);
+  });
+
+  testWidgets('route card on top: From and To, Change chip, the date between the arrows, all in one white card', (t) async {
+    _setUp(arrange: (r) => r.routeFeed = _feed(2, free: 2));
+    await _open(t);
+    await _settle(t);
+    final card = find.byType(TaxiRouteCard);
+    expect(card, findsOneWidget);
+    final box = t.getRect(card);
+    for (final f in [
+      find.text('Delhi'),
+      find.text('Rishikesh'),
+      find.text('Change'),
+      find.text(TaxiSearchStrings.barText(TaxiJourneyDate.today(), isToday: true)),
+      find.byIcon(Icons.chevron_left_rounded).last,
+      find.byIcon(Icons.chevron_right_rounded),
+    ]) {
+      final d = find.descendant(of: card, matching: f);
+      expect(d, findsOneWidget);
+      final r = t.getRect(d);
+      expect(box.contains(r.topLeft) && box.contains(r.bottomRight - const Offset(0.01, 0.01)), isTrue);
+    }
+    expect(find.descendant(of: card, matching: find.byType(WhiteCard3D)), findsOneWidget);
+    expect(t.getCenter(find.descendant(of: card, matching: find.text('Delhi'))).dx,
+        lessThan(t.getCenter(find.descendant(of: card, matching: find.text('Rishikesh'))).dx));
+    final date = t.widget<Text>(find.text(TaxiSearchStrings.barText(TaxiJourneyDate.today(), isToday: true)));
+    expect(date.style?.color, Ink3D.title, reason: 'dark date text, no red pill');
+    expect(date.style?.fontSize, Ink3D.text(14, FontWeight.w600, Ink3D.title).fontSize);
+    expect(t.getRect(find.text('Change')).bottom, lessThanOrEqualTo(t.getRect(find.text(TaxiSearchStrings.barText(TaxiJourneyDate.today(), isToday: true))).top));
+    expect(t.getRect(card).bottom, lessThan(t.getRect(find.text('Nearest')).top));
+  });
+
+  testWidgets('Change goes back to the search card', (t) async {
+    _env();
+    _repo.routeFeed = _feed(1);
+    final original = TaxiResultsScreen.create;
+    addTearDown(() => TaxiResultsScreen.create = original);
+    TaxiResultsScreen.create = (a) => TaxiResultsController(args: a, repo: _repo, waysRepo: FakeWaysRepo(answer: false));
+    setGoldenView(t, const Size(360, 1600));
+    await t.pumpWidget(GetMaterialApp(theme: ThemeData(fontFamily: 'WorkSans'), home: const Scaffold(body: Text('search card'))));
+    Get.to<void>(
+      () => const TaxiResultsScreen(),
+      arguments: TaxiResultsArgs(
+        from: PlaceResult(name: 'Haldwani', subtitle: '', latLng: const LatLng(29.2, 79.5)),
+        fromNearYou: true,
+        to: PlaceResult(name: 'Rishikesh', subtitle: '', latLng: const LatLng(30.1, 78.3)),
+        date: TaxiJourneyDate.today(),
+      ).toMap(),
+    );
+    await _settle(t);
+    await t.pump(const Duration(milliseconds: 700));
+    expect(find.byType(TaxiRouteCard), findsOneWidget);
+    expect(find.descendant(of: find.byType(TaxiRouteCard), matching: find.text('Haldwani')), findsOneWidget);
+    expect(find.text('Near you'), findsNothing);
+    await t.tap(find.byKey(TaxiRouteCard.changeKey));
+    await t.pump(const Duration(seconds: 1));
+    await _settle(t);
+    expect(find.byType(TaxiRouteCard), findsNothing);
+    expect(find.text('search card'), findsOneWidget);
+    expect(t.takeException(), isNull);
+  });
+
+  testWidgets('day arrows inside the route card move the date', (t) async {
+    _setUp(arrange: (r) => r.routeFeed = _feed(1));
+    await _open(t);
+    await _settle(t);
+    final card = find.byType(TaxiRouteCard);
+    final tomorrow = TaxiJourneyDate.addDays(TaxiJourneyDate.today(), 1);
+    await t.tap(find.descendant(of: card, matching: find.byIcon(Icons.chevron_right_rounded)));
+    await t.pump();
+    expect(find.descendant(of: card, matching: find.text(TaxiSearchStrings.dayText(tomorrow))), findsOneWidget);
+    await t.tap(find.descendant(of: card, matching: find.byIcon(Icons.chevron_left_rounded)));
+    await t.pump();
+    expect(find.descendant(of: card, matching: find.text(TaxiSearchStrings.barText(TaxiJourneyDate.today(), isToday: true))), findsOneWidget);
+    await t.pump(const Duration(milliseconds: 300));
+    await _settle(t);
+  });
+
+  testWidgets('driver card: the taxi circle sits fully inside the card', (t) async {
+    _setUp(arrange: (r) => r.routeFeed = _feed(2, free: 2));
+    await _open(t);
+    await _settle(t);
+    final cards = find.byType(TaxiCalmCard);
+    expect(cards, findsWidgets);
+    final cardBox = t.getRect(find.descendant(of: cards.first, matching: find.byType(ClipRRect)).first);
+    final circle = t.getRect(find.descendant(of: cards.first, matching: find.byType(PhotoCircle)));
+    expect(circle.top, greaterThanOrEqualTo(cardBox.top));
+    expect(circle.left, greaterThanOrEqualTo(cardBox.left));
+    expect(circle.bottom, lessThanOrEqualTo(cardBox.bottom));
   });
 }

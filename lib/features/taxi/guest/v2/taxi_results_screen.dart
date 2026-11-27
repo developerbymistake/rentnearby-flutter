@@ -128,17 +128,18 @@ class _TaxiResultsScreenState extends State<TaxiResultsScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         TopBar3D(tone: _tone, title: TaxiSearchStrings.pageTitle, subtitle: TaxiSearchStrings.pageSubtitle, onBack: _back),
-        _places(c),
         Obx(() {
           c.date.value;
           final error = c.loadFailed.value && c.route.value == null;
-          if (error) return const SizedBox.shrink();
-          return _DateBar(
-            text: TaxiSearchStrings.barText(c.date.value, isToday: c.isToday),
+          return TaxiRouteCard(
+            fromName: c.from.name,
+            toName: c.to.name,
+            dateText: error ? null : TaxiSearchStrings.barText(c.date.value, isToday: c.isToday),
             canPrev: c.canPrev,
             canNext: c.canNext,
             onPrev: c.prevDay,
             onNext: c.nextDay,
+            onChange: _back,
           );
         }),
         Obx(() {
@@ -164,22 +165,6 @@ class _TaxiResultsScreenState extends State<TaxiResultsScreen> {
           );
         }),
       ],
-    );
-  }
-
-  Widget _places(TaxiResultsController c) {
-    final style = Ink3D.text(14, FontWeight.w600, Ink3D.body);
-    final fromName = c.fromNearYou ? TaxiSearchStrings.nearYou : c.from.name;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(12), DS.s(18), DS.gv(4)),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Flexible(child: Text(fromName, maxLines: 1, overflow: TextOverflow.ellipsis, style: style)),
-          SizedBox(width: DS.gh(12)),
-          Flexible(child: Text(c.to.name, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end, style: style)),
-        ],
-      ),
     );
   }
 
@@ -278,38 +263,109 @@ class _TaxiResultsScreenState extends State<TaxiResultsScreen> {
   }
 }
 
-class _DateBar extends StatelessWidget {
-  const _DateBar({required this.text, required this.canPrev, required this.canNext, required this.onPrev, required this.onNext});
+// Route summary on top of the results: From -> To, a Change chip back to the search card, the date between day arrows.
+class TaxiRouteCard extends StatelessWidget {
+  const TaxiRouteCard({
+    super.key,
+    required this.fromName,
+    required this.toName,
+    required this.dateText,
+    required this.canPrev,
+    required this.canNext,
+    required this.onPrev,
+    required this.onNext,
+    required this.onChange,
+  });
 
-  final String text;
+  final String fromName;
+  final String toName;
+  final String? dateText;
   final bool canPrev;
   final bool canNext;
   final VoidCallback onPrev;
   final VoidCallback onNext;
+  final VoidCallback onChange;
+
+  static const changeKey = ValueKey('taxi-route-change');
+
+  Widget _name(String text, TextStyle style) => Flexible(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: style));
 
   @override
   Widget build(BuildContext context) {
     final p = ListingPalette.coral;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(DS.s(12), DS.gv(8), DS.s(12), 0),
-      child: Row(
+    final style = Ink3D.text(14, FontWeight.w600, Ink3D.body);
+    final date = dateText;
+    return WhiteCard3D(
+      margin: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+      padding: const EdgeInsets.fromLTRB(14, 10, 10, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _ArrowButton(icon: Icons.chevron_left_rounded, label: TaxiSearchStrings.prevDay, onTap: canPrev ? onPrev : null),
-          Expanded(
-            child: Center(
-              child: Container(
-                padding: DS.sym(h: 16, v: 10),
-                decoration: BoxDecoration(gradient: p.gradient, borderRadius: DS.br(CardRadius.pill), boxShadow: DS.shadows(ShadowTokens.glow(p.g2))),
-                child: Text(
-                  text,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Ink3D.text(14, FontWeight.w600, DesignColors.textInverse, letterSpacing: 0),
+          Row(
+            children: [
+              Expanded(
+                child: Semantics(
+                  label: TaxiSearchStrings.routeSemantics(fromName, toName),
+                  excludeSemantics: true,
+                  child: Row(
+                    children: [
+                      Art3D(asset: ListingArt.roundPushpin, size: 24, shadowBlur: 3, shadowOffset: const Offset(1, 2)),
+                      Gap.h(6),
+                      _name(fromName, style),
+                      Padding(
+                        padding: DS.sym(h: 6),
+                        child: Icon(Icons.arrow_forward_rounded, size: DS.s(16), color: p.g2),
+                      ),
+                      Art3D(asset: ListingArt.search, size: 24, shadowBlur: 3, shadowOffset: const Offset(1, 2)),
+                      Gap.h(6),
+                      _name(toName, style),
+                    ],
+                  ),
                 ),
               ),
-            ),
+              Gap.h(8),
+              ConstrainedBox(
+                constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch)),
+                child: Center(
+                  widthFactor: 1,
+                  heightFactor: 1,
+                  child: Semantics(
+                    label: TaxiSearchStrings.changeLabel,
+                    button: true,
+                    onTap: onChange,
+                    excludeSemantics: true,
+                    child: ListingFilterChip(key: changeKey, tone: ListingTone.coral, label: TaxiSearchStrings.change, selected: false, onTap: onChange),
+                  ),
+                ),
+              ),
+            ],
           ),
-          _ArrowButton(icon: Icons.chevron_right_rounded, label: TaxiSearchStrings.nextDay, onTap: canNext ? onNext : null),
+          if (date != null) ...[
+            Container(height: DS.s(1), margin: EdgeInsets.only(top: DS.gv(6)), color: p.line),
+            Row(
+              children: [
+                _ArrowButton(icon: Icons.chevron_left_rounded, label: TaxiSearchStrings.prevDay, onTap: canPrev ? onPrev : null),
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ExcludeSemantics(child: Art3D(asset: ListingArt.calendar, size: 22, shadowBlur: 3, shadowOffset: const Offset(1, 2))),
+                      Gap.h(8),
+                      Flexible(
+                        child: Text(
+                          date,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Ink3D.text(14, FontWeight.w600, Ink3D.title, letterSpacing: 0),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _ArrowButton(icon: Icons.chevron_right_rounded, label: TaxiSearchStrings.nextDay, onTap: canNext ? onNext : null),
+              ],
+            ),
+          ],
         ],
       ),
     );

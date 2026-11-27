@@ -51,9 +51,11 @@ class PlaceSearchBarView extends StatelessWidget {
     this.busy = false,
     this.margin = EdgeInsets.zero,
     this.flat = false,
+    this.error,
   });
 
   final bool flat;
+  final String? error;
   final String? label;
   final String? caption;
   final String? hint;
@@ -73,6 +75,7 @@ class PlaceSearchBarView extends StatelessWidget {
     final height = DS.s(compact ? KitMetrics.touch : 56.0);
     final hintText = hint ?? NearbyStrings.searchPlaceHint;
     final cap = caption;
+    final err = error != null && error!.trim().isNotEmpty ? error!.trim() : null;
     final valueText = Text(
       has ? label! : hintText,
       maxLines: 1,
@@ -93,7 +96,8 @@ class PlaceSearchBarView extends StatelessWidget {
               Expanded(
                 child: Semantics(
                   button: true,
-                  label: cap == null ? (has ? label : hintText) : '$cap, ${has ? label : hintText}',
+                  liveRegion: err != null,
+                  label: [cap == null ? (has ? label : hintText) : '$cap, ${has ? label : hintText}', ?err].join('. '),
                   child: InkWell(
                     borderRadius: DS.circular(38),
                     onTap: busy ? null : onTap,
@@ -113,6 +117,7 @@ class PlaceSearchBarView extends StatelessWidget {
                                       children: [
                                         Text(cap, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11, FontWeight.w400, Ink3D.hint, letterSpacing: 0, height: 1.15)),
                                         valueText,
+                                        if (err != null) Text(err, maxLines: 2, overflow: TextOverflow.ellipsis, style: FieldMessage.errorStyle),
                                       ],
                                     ),
                             ),

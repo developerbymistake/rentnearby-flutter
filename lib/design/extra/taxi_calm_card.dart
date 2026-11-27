@@ -68,7 +68,12 @@ class TaxiCalmCard extends StatelessWidget {
 
   static double circleFor(double cardWidth) => classicCircleFor(cardWidth) * listingGrow;
 
-  static double listingBlockMin(double c) => DS.s(c * (1 - stickOut) + PhotoCircle.ring + ringGap - cardTopPad);
+  // Listing: the circle sits fully inside the card, same inset from the top as from the left.
+  static const double circleInset = 8;
+
+  static double circleTop(double c, {required bool listing}) => listing ? DS.s(circleInset) : -DS.s(c * stickOut);
+
+  static double listingBlockMin(double c) => DS.s(circleInset + c + PhotoCircle.ring + ringGap - cardTopPad);
 
   bool get _listing => layout == TaxiCalmLayout.listing;
 
@@ -260,8 +265,8 @@ class TaxiCalmCard extends StatelessWidget {
             children: [
               card,
               Positioned(
-                left: DS.s(8),
-                top: -DS.s(c * stickOut),
+                left: DS.s(circleInset),
+                top: circleTop(c, listing: _listing),
                 child: PhotoCircle(
                   url: photoUrl,
                   art: art,

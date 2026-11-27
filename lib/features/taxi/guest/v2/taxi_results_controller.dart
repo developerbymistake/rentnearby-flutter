@@ -47,7 +47,7 @@ class TaxiResultsArgs {
     final tName = raw['toName'];
     final day = TaxiJourneyDate.parse(raw['date']);
     return TaxiResultsArgs(
-      from: PlaceResult(name: fName is String && fName.trim().isNotEmpty ? fName.trim() : TaxiSearchStrings.nearYou, subtitle: '', latLng: LatLng(fLat, fLng)),
+      from: PlaceResult(name: fName is String && fName.trim().isNotEmpty ? fName.trim() : TaxiSearchStrings.yourLocation, subtitle: '', latLng: LatLng(fLat, fLng)),
       fromNearYou: nearYou,
       to: PlaceResult(name: tName is String ? tName.trim() : '', subtitle: '', latLng: LatLng(tLat, tLng)),
       date: day == null ? today : TaxiJourneyDate.clamp(day, today),

@@ -21,6 +21,7 @@ Future<void> _pump(
   VoidCallback? onDate,
   VoidCallback? search,
   bool clearFrom = true,
+  String? toError,
 }) =>
     pumpJourney(
       t,
@@ -39,6 +40,7 @@ Future<void> _pump(
               onSwap: onSwap ?? () {},
               onClearFrom: clearFrom ? () {} : null,
               onClearTo: to == null ? null : () {},
+              toError: toError,
             ),
             SearchTaxisButton(onPressed: search),
           ],
@@ -141,5 +143,35 @@ void main() {
     final text = t.widget<Text>(find.text(long));
     expect(text.maxLines, 1);
     expect(text.overflow, TextOverflow.ellipsis);
+  });
+
+  testWidgets('To error: one line under the To text in the field error style, red line under To', (t) async {
+    final h = t.ensureSemantics();
+    await _pump(t, w: 360, s: 1, to: null);
+    expect(find.text('Choose where you are going'), findsNothing);
+    Color lineColor() => t
+        .widgetList<Container>(find.descendant(of: find.byType(TaxiSearchCard), matching: find.byType(Container)))
+        .where((c) => c.margin == EdgeInsets.only(left: TaxiSearchCard.textStart, right: DS.s(14)))
+        .single
+        .color!;
+    expect(lineColor(), isNot(Form3D.errorText));
+    await _pump(t, w: 360, s: 1, to: null, toError: 'Choose where you are going');
+    final err = find.text('Choose where you are going');
+    expect(err, findsOneWidget);
+    expect(t.widget<Text>(err).style, FieldMessage.errorStyle);
+    expect(t.getTopLeft(err).dy, greaterThanOrEqualTo(t.getBottomLeft(find.text('Search a place')).dy - 0.5));
+    expect(t.getTopLeft(err).dx, closeTo(t.getTopLeft(find.text('Search a place')).dx, 0.5));
+    expect(lineColor(), Form3D.errorText);
+    expect(find.bySemanticsLabel('To, Search a place. Choose where you are going'), findsOneWidget);
+    h.dispose();
+  });
+
+  testWidgets('From/To divider starts under the text, Swap stays inside the card edge', (t) async {
+    await _pump(t, w: 360, s: 1);
+    final outer = t.getRect(find.byType(TaxiSearchCard));
+    final card = Rect.fromLTRB(outer.left + DS.s(18), outer.top, outer.right - DS.s(18), outer.bottom);
+    final swap = _touchOf(t, Icons.swap_vert_rounded);
+    expect(card.right - swap.right, closeTo(DS.s(TaxiSearchCard.swapInset), 0.5));
+    expect(TaxiSearchCard.textStart, closeTo(t.getTopLeft(find.text('Delhi')).dx - card.left, 0.5));
   });
 }

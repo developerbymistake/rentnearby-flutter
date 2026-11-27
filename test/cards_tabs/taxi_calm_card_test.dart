@@ -135,6 +135,18 @@ void main() {
     expect(circle.bottom + DS.s(PhotoCircle.ring), lessThanOrEqualTo(line + 0.5));
   });
 
+  _sized('the circle sits fully inside the card, same size and left inset as before', (t, w, s) async {
+    await _pump(t, TaxiCard(item: _taxi(dayRate: 2500, dayKm: 30), distance: _near(NearbyLabel.inCity, 1, 'Haldwani'), onOpen: () {}),
+        width: w, scale: s);
+    final card = t.getRect(find.byType(ClipRRect).first);
+    final circle = t.getRect(find.byType(PhotoCircle));
+    expect(circle.top - card.top, closeTo(DS.s(TaxiCalmCard.circleInset), 0.5));
+    expect(circle.left - card.left, closeTo(DS.s(TaxiCalmCard.circleInset), 0.5));
+    expect(circle.width, closeTo(DS.s(TaxiCalmCard.circleFor(card.width)), 0.5));
+    expect(circle.bottom, lessThanOrEqualTo(card.bottom));
+    expect(t.getTopLeft(find.text('Rakesh Singh')).dx, greaterThan(circle.right));
+  });
+
   _sized('long name, many chips and long fare unit fit the listing header', (t, w, s) async {
     await _pump(
       t,
@@ -208,11 +220,11 @@ void main() {
   });
 
   for (final w in _sizes) {
-    testWidgets('circle sticks out 10% above the card at ${w.toInt()}', (t) async {
+    testWidgets('circle sits inside the card, 8 dp from the top edge, at ${w.toInt()}', (t) async {
       await _pump(t, TaxiCard(item: _taxi(), onOpen: () {}), width: w);
       final circle = t.getRect(find.byType(PhotoCircle));
       final cardTop = t.getTopLeft(find.byType(ClipRRect).first).dy;
-      expect(cardTop - circle.top, closeTo(circle.height * 0.10, 1.0));
+      expect(circle.top - cardTop, closeTo(DS.s(8), 1.0));
       final cardWidth = t.getSize(find.byType(ClipRRect).first).width;
       expect(circle.height, closeTo(DS.s(TaxiCalmCard.circleFor(cardWidth)), 0.5));
     });

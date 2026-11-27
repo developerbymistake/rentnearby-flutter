@@ -12,6 +12,8 @@ import 'package:bakhli/features/taxi/guest/v2/taxi_search_card.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_list_controller_v2.dart';
 import 'package:bakhli/features/taxi/guest/v2/taxi_list_screen_v2.dart';
+import 'package:bakhli/models/city_model.dart';
+import 'package:bakhli/models/place_result_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -57,7 +59,9 @@ void main() {
   for (final w in [300.0, 360.0]) {
     testWidgets('taxi tab has the search card (From, To, Date) and Search taxis at $w dp', (t) async {
       Get.reset();
-      (Get.put<LocationController>(JLoc()) as JLoc).userLocation.value = const LatLng(29.2, 79.5);
+      final loc = Get.put<LocationController>(JLoc()) as JLoc;
+      loc.userLocation.value = const LatLng(29.2, 79.5);
+      loc.autoCity.value = CityModel(id: 'hld', districtId: 'd', name: 'Haldwani', latitude: 29.21, longitude: 79.51);
       Get.put<AuthController>(JAuth());
       Get.put<TabConfigController>(JTabs());
       Get.put(NearbyCentreController());
@@ -68,12 +72,14 @@ void main() {
       expect(find.textContaining('Showing near'), findsNothing);
       expect(find.text('Search any place'), findsNothing);
       expect(find.byType(TextField), findsNothing);
-      expect(find.bySemanticsLabel('From, Near you'), findsOneWidget);
+      expect(find.bySemanticsLabel('From, Haldwani'), findsOneWidget);
+      expect(find.bySemanticsLabel('From, Near you'), findsNothing);
+      expect(find.text('Taxis near Haldwani'), findsOneWidget);
       expect(find.bySemanticsLabel('To, Search a place'), findsOneWidget);
       expect(find.text('Date of journey'), findsOneWidget);
       expect(find.text('Today'), findsOneWidget);
       expect(find.text('Search taxis'), findsOneWidget);
-      expect(t.widget<PrimaryButton>(find.descendant(of: find.byType(SearchTaxisButton), matching: find.byType(PrimaryButton))).onPressed, isNull);
+      expect(t.widget<PrimaryButton>(find.descendant(of: find.byType(SearchTaxisButton), matching: find.byType(PrimaryButton))).onPressed, isNotNull);
       expect(find.text('Ask'), findsNothing);
       expect(find.text('Ramesh Kumar'), findsOneWidget);
       expect(find.text('Call'), findsOneWidget);
@@ -89,4 +95,29 @@ void main() {
       });
     });
   }
+
+  testWidgets('Search taxis with To empty shows the field error under To; picking a place clears it', (t) async {
+    Get.reset();
+    final loc = Get.put<LocationController>(JLoc()) as JLoc;
+    loc.userLocation.value = const LatLng(29.2, 79.5);
+    loc.autoCity.value = CityModel(id: 'hld', districtId: 'd', name: 'Haldwani', latitude: 29.21, longitude: 79.51);
+    Get.put<AuthController>(JAuth());
+    Get.put<TabConfigController>(JTabs());
+    Get.put(NearbyCentreController());
+    final c = Get.put(TaxiListControllerV2(root: false, repo: _Repo()), tag: TaxiListControllerV2.tag);
+    await pumpJourney(t, const TaxiListScreenV2(root: false), width: 360, scale: 1.0, height: 760);
+    expect(find.text('Choose where you are going'), findsNothing);
+    await t.tap(find.text('Search taxis'));
+    await t.pump(const Duration(milliseconds: 300));
+    final err = find.text('Choose where you are going');
+    expect(err, findsOneWidget);
+    expect(t.widget<Text>(err).style?.fontSize, FieldMessage.errorStyle.fontSize);
+    expect(t.widget<Text>(err).style?.color, Form3D.errorText);
+    expect(t.getTopLeft(err).dy, greaterThan(t.getBottomLeft(find.text('Search a place')).dy - 0.5));
+    expect(t.getBottomLeft(err).dy, lessThan(t.getTopLeft(find.text('Date of journey')).dy));
+    c.setTo(PlaceResult(name: 'Nainital', subtitle: '', latLng: const LatLng(29.39, 79.45)));
+    await t.pump(const Duration(milliseconds: 300));
+    expect(find.text('Choose where you are going'), findsNothing);
+    expect(t.takeException(), isNull);
+  });
 }
