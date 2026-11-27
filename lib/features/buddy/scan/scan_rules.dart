@@ -6,6 +6,13 @@ abstract final class ScanRules {
 
   static bool isBakhliUsername(String? text) => text != null && pattern.hasMatch(text);
 
+  static String normalize(String text) {
+    final t = text.trim();
+    return t.toLowerCase().startsWith(_prefix.toLowerCase()) ? '$_prefix${t.substring(_prefix.length)}' : t;
+  }
+
+  static const String _prefix = 'Bakhli#';
+
   static ScanVerdict classify(String? text, String? ownUsername) {
     if (!isBakhliUsername(text)) return ScanVerdict.notBakhli;
     if (ownUsername != null && text == ownUsername) return ScanVerdict.own;

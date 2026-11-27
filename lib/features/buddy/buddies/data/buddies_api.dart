@@ -2,7 +2,6 @@ import '../../../../services/api_service.dart';
 import '../../shared/buddy_api_base.dart';
 import '../../shared/buddy_json.dart';
 import '../../shared/buddy_result.dart';
-import '../../shared/models/person_models.dart';
 import '../models/buddy_models.dart';
 
 class BuddiesApi {
@@ -13,33 +12,9 @@ class BuddiesApi {
   Future<BuddyResult<FindResult>> find(String query, {required String source}) => BuddyApiBase.run(
       () async => FindResult.fromJson(BuddyApiBase.dataOf(await ApiService.post('/buddies/find', {'query': query, 'source': source}))));
 
-  Future<BuddyResult<SendRequestResult>> sendRequest(String toUserId, {required String source, required String clientRequestId}) =>
-      BuddyApiBase.run(() async => SendRequestResult.fromJson(BuddyApiBase.dataOf(
-          await ApiService.post('/buddies/requests', {'toUserId': toUserId, 'source': source, 'clientRequestId': clientRequestId}))));
-
-  Future<BuddyResult<BuddyCursorPage<ReceivedRequest>>> received({String? cursor}) => BuddyApiBase.run(() async => BuddyApiBase.pageOf(
-      await BuddyApiBase.read(() => ApiService.get('/buddies/requests', params: BuddyApiBase.query({'box': 'received', 'cursor': cursor}))),
-      ReceivedRequest.fromJson));
-
-  Future<BuddyResult<BuddyCursorPage<SentRequest>>> sent({String? cursor}) => BuddyApiBase.run(() async => BuddyApiBase.pageOf(
-      await BuddyApiBase.read(() => ApiService.get('/buddies/requests', params: BuddyApiBase.query({'box': 'sent', 'cursor': cursor}))),
-      SentRequest.fromJson));
-
-  Future<BuddyResult<BuddyPerson>> accept(String requestId) => BuddyApiBase.run(() async => BuddyPerson.fromJson(
-      BuddyJson.map(BuddyApiBase.dataOf(await ApiService.post('/buddies/requests/$requestId/accept', const {}))['buddy'])));
-
-  Future<BuddyResult<void>> decline(String requestId) =>
-      BuddyApiBase.run(() async => ApiService.post('/buddies/requests/$requestId/decline', const {}));
-
-  Future<BuddyResult<void>> cancel(String requestId) =>
-      BuddyApiBase.run(() async => ApiService.post('/buddies/requests/$requestId/cancel', const {}));
-
   Future<BuddyResult<BuddyList>> buddies({String? cursor, int limit = 50, String? forTripId}) => BuddyApiBase.run(() async => BuddyList.fromJson(
       BuddyApiBase.dataOf(await BuddyApiBase.read(
           () => ApiService.get('/buddies', params: BuddyApiBase.query({'cursor': cursor, 'limit': limit, 'forTripId': forTripId}))))));
-
-  Future<BuddyResult<void>> markSeen(List<String> userIds) =>
-      BuddyApiBase.run(() async => ApiService.post('/buddies/seen', {'userIds': userIds}));
 
   Future<BuddyResult<void>> remove(String userId) => BuddyApiBase.run(() async => ApiService.deleteJson('/buddies/$userId'));
 

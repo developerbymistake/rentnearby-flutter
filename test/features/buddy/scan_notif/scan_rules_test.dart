@@ -20,6 +20,13 @@ class FakeGate implements ScanPermissionGate {
 }
 
 void main() {
+  test('normalize trims and fixes the Bakhli# prefix case, other text is only trimmed', () {
+    expect(ScanRules.normalize('  bakhli#12345678 '), 'Bakhli#12345678');
+    expect(ScanRules.normalize('BAKHLI#12345678'), 'Bakhli#12345678');
+    expect(ScanRules.isBakhliUsername(ScanRules.normalize('Bakhli#1234567')), isFalse);
+    expect(ScanRules.normalize(' hello '), 'hello');
+  });
+
   group('ScanRules', () {
     test('accepts exactly Bakhli# and 8 ASCII digits', () {
       expect(ScanRules.isBakhliUsername('Bakhli#12345678'), isTrue);

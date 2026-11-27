@@ -24,13 +24,14 @@ class FeedPage {
 class PublicTripsApi {
   const PublicTripsApi();
 
-  Future<BuddyResult<FeedPage>> feed({String? cursor, String? q, String who = 'any', bool near = false, double? lat, double? lng}) =>
+  Future<BuddyResult<FeedPage>> feed({String? cursor, String? q, String who = 'any', String travel = 'any', bool near = false, double? lat, double? lng}) =>
       BuddyApiBase.run(() async => FeedPage.fromJson(BuddyApiBase.dataOf(await BuddyApiBase.read(() => ApiService.get(
             '/social/trips/feed',
             params: BuddyApiBase.query({
               'cursor': cursor,
               'q': q == null || q.trim().isEmpty ? null : q.trim(),
               'who': who == 'any' ? null : who,
+              'travel': travel == 'any' ? null : travel,
               'near': near ? true : null,
               'lat': near ? lat : null,
               'lng': near ? lng : null,

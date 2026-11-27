@@ -68,8 +68,8 @@ void main() {
   });
 
   test('nested shapes parse the photo of each person', () {
-    final r = ReceivedRequest.fromJson({'requestId': 'r', 'person': {...person, 'photoUrl': _url}});
-    expect(r.person.photoUrl, _url);
+    final r = FindResult.fromJson({'found': true, 'person': {...person, 'photoUrl': _url}});
+    expect(r.person!.photoUrl, _url);
     final s = TripSharingBlock.fromJson({
       'firstTravellers': [
         {'userId': 'u1', 'initial': 'A', 'name': 'Aman', 'photoUrl': _url},

@@ -8,6 +8,8 @@ import 'package:bakhli/features/social/b/wizard/post_trip_controller.dart';
 import 'package:bakhli/features/social/b/wizard/post_trip_screen.dart';
 import 'package:bakhli/features/social/b/wizard/post_when_step.dart';
 import 'package:bakhli/features/social/b/wizard/post_wizard_parts.dart';
+import 'package:bakhli/features/buddy/shared/widgets/segment_tabs.dart';
+import 'package:bakhli/features/social/shared/social_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -92,6 +94,32 @@ void main() {
     await settle(t);
     expect(_next(t).enabled, isTrue);
     await drain(t);
+  });
+
+  testWidgets('When: How will you travel? is one tab row like Who can join, Public transport picked by default, Bike can be picked', (t) async {
+    final server = installServer();
+    putSocialMe(server, socialMeWith());
+    final c = PostTripController(persist: false);
+    await pumpSocial(t, PostTripScreen(controller: c), pages: _pages);
+    await t.tap(find.byKey(const ValueKey('post_city_101')));
+    await settle(t);
+    await t.tap(find.byKey(WizardBottomBar.nextKey));
+    await settle(t);
+    final travel = find.byKey(PostWhenStep.travelKey);
+    await t.ensureVisible(travel);
+    await settle(t);
+    expect(find.text(SocialStringsB.howTravel), findsOneWidget);
+    for (final label in SocialStringsB.travelLabels) {
+      expect(find.descendant(of: travel, matching: find.text(label)), findsOneWidget, reason: label);
+    }
+    expect(t.widget<SegmentTabs>(travel).selected, 0);
+    expect(c.draft.value.travelMode, TravelModes.public);
+    await t.tap(find.descendant(of: travel, matching: find.text('Bike')));
+    await settle(t);
+    expect(c.draft.value.travelMode, 'bike');
+    expect(t.widget<SegmentTabs>(travel).selected, 1);
+    await drain(t);
+    expect(t.takeException(), isNull);
   });
 
   testWidgets('When with Plus: no lock, Women is set', (t) async {

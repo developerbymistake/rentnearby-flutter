@@ -11,10 +11,10 @@ import '../../shared/widgets/person_row.dart';
 import '../../shared/widgets/small_pill.dart';
 import '../buddies_strings.dart';
 import '../controllers/blocked_people_controller.dart';
-import '../controllers/buddies_controller.dart';
+import '../controllers/buddy_list_state.dart';
 import '../data/buddies_api.dart';
 import '../widgets/buddy_empty_state.dart';
-import '../widgets/my_buddies_tab.dart';
+import '../widgets/buddy_list_states.dart';
 
 class BlockedPeopleScreen extends StatefulWidget {
   const BlockedPeopleScreen({super.key, this.api = const BuddiesApi()});

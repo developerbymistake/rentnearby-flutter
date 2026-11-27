@@ -23,6 +23,7 @@ Map<String, dynamic> publicTripJson({
   bool notOpen = false,
   bool sample = false,
   Map<String, dynamic>? mutuals,
+  String? travelMode,
 }) =>
     {
       'tripId': id,
@@ -45,6 +46,7 @@ Map<String, dynamic> publicTripJson({
       'mutuals': mutuals,
       'sample': sample,
       'notOpen': notOpen,
+      'travelMode': travelMode,
     };
 
 Map<String, dynamic> socialMeWith({bool isPlus = false, bool genderOnly = false, bool nearMe = false, int joinUsed = 0, int publicUsed = 0, String gender = 'Male'}) {

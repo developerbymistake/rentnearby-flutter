@@ -3,6 +3,7 @@ import 'package:get_storage/get_storage.dart';
 import '../../../buddy/shared/buddy_json.dart';
 import '../../../trip/models/trip_city_model.dart';
 import '../../shared/social_formats.dart';
+import '../../shared/social_models.dart';
 import '../social_strings_b.dart';
 
 class PostDraft {
@@ -17,6 +18,7 @@ class PostDraft {
     this.text = '',
     this.chips = const [],
     this.textEdited = false,
+    this.travelMode = TravelModes.public,
   });
 
   static const String within = 'within';
@@ -36,6 +38,7 @@ class PostDraft {
   final String text;
   final List<String> chips;
   final bool textEdited;
+  final String travelMode;
 
   bool get isExact => whenKind == exact;
 
@@ -55,6 +58,7 @@ class PostDraft {
     String? text,
     List<String>? chips,
     bool? textEdited,
+    String? travelMode,
   }) =>
       PostDraft(
         cities: cities ?? this.cities,
@@ -67,6 +71,7 @@ class PostDraft {
         text: text ?? this.text,
         chips: chips ?? this.chips,
         textEdited: textEdited ?? this.textEdited,
+        travelMode: travelMode ?? this.travelMode,
       );
 
   static String dateText(DateTime d) =>
@@ -81,6 +86,7 @@ class PostDraft {
         'joinGender': joinGender,
         'seats': seats,
         'text': text.trim(),
+        'travelMode': travelMode,
       };
 
   String autoText() {
@@ -105,6 +111,7 @@ class PostDraft {
         'text': text,
         'chips': chips,
         'textEdited': textEdited,
+        'travelMode': travelMode,
       };
 
   factory PostDraft.fromStore(Map<String, dynamic> j) {
@@ -131,8 +138,11 @@ class PostDraft {
       text: BuddyJson.str(j['text']),
       chips: BuddyJson.strings(j['chips']),
       textEdited: BuddyJson.boolean(j['textEdited']),
+      travelMode: _travel(j['travelMode']),
     );
   }
+
+  static String _travel(Object? v) => TravelModes.parse(v) ?? TravelModes.public;
 }
 
 abstract final class PostDraftStore {

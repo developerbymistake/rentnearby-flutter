@@ -16,12 +16,12 @@ class _Quiet extends AuthController {
   void onInit() {}
 }
 
-UserModel _user({required bool canCorrect, String? stayStatus}) => UserModel.fromJson({
+UserModel _user({required bool canCorrect, String? stayStatus, String role = UserRoleKeys.seeker}) => UserModel.fromJson({
       'id': 'u1',
       'phoneNumber': '9876543210',
       'createdAt': '2026-11-22T10:00:00Z',
       'roleConfirmed': true,
-      'role': UserRoleKeys.seeker,
+      'role': role,
       'canCorrectRole': canCorrect,
       'stayStatus': stayStatus,
     });
@@ -65,5 +65,66 @@ void main() {
     await t.pumpAndSettle();
     expect(find.textContaining('role'), findsOneWidget);
     expect(Get.arguments, {'correction': true, 'hasDraft': true});
+  });
+  group('menu Change role (owner order 2026-11-27: Seekers cannot change role)', () {
+    Future<void> openMenu(WidgetTester t, {required bool isDraft}) async {
+      await t.pumpWidget(GetMaterialApp(
+        initialRoute: '/start',
+        getPages: [
+          GetPage(
+            name: '/start',
+            page: () => Scaffold(
+              body: Builder(
+                builder: (c) => TextButton(onPressed: () => OnboardingExit.openMenu(c, isDraft: isDraft, hasDraft: false), child: const Text('menu')),
+              ),
+            ),
+          ),
+          GetPage(name: AppRoutes.roleSelect, page: () => const Scaffold(body: Text('correction'))),
+          GetPage(name: AppRoutes.roleChange, page: () => const Scaffold(body: Text('role request'))),
+        ],
+      ));
+      await t.tap(find.text('menu'));
+      await t.pumpAndSettle();
+    }
+
+    testWidgets('a Seeker sees only Log out', (t) async {
+      final a = Get.put<AuthController>(_Quiet());
+      a.roleKey.value = UserRoleKeys.seeker;
+      a.user.value = _user(canCorrect: false);
+      await openMenu(t, isDraft: true);
+      expect(find.text('Log out'), findsOneWidget);
+      expect(find.text('Change role'), findsNothing);
+    });
+
+    testWidgets('R4: a Seeker still allowed the one-time correction keeps it, and it opens the correction, not a request', (t) async {
+      final a = Get.put<AuthController>(_Quiet());
+      a.roleKey.value = UserRoleKeys.seeker;
+      a.user.value = _user(canCorrect: true);
+      await openMenu(t, isDraft: true);
+      await t.tap(find.text('Change role'));
+      await t.pumpAndSettle();
+      expect(find.text('correction'), findsOneWidget);
+      expect(find.text('role request'), findsNothing);
+    });
+
+    testWidgets('a stay owner keeps Change role and it opens the role request', (t) async {
+      final a = Get.put<AuthController>(_Quiet());
+      a.roleKey.value = UserRoleKeys.stayOwner;
+      a.user.value = _user(canCorrect: false, role: UserRoleKeys.stayOwner);
+      await openMenu(t, isDraft: false);
+      await t.tap(find.text('Change role'));
+      await t.pumpAndSettle();
+      expect(find.text('role request'), findsOneWidget);
+    });
+
+    testWidgets('a draft owner allowed to correct keeps the one-time correction', (t) async {
+      final a = Get.put<AuthController>(_Quiet());
+      a.roleKey.value = UserRoleKeys.taxiDriver;
+      a.user.value = _user(canCorrect: true, role: UserRoleKeys.taxiDriver);
+      await openMenu(t, isDraft: true);
+      await t.tap(find.text('Change role'));
+      await t.pumpAndSettle();
+      expect(find.text('correction'), findsOneWidget);
+    });
   });
 }

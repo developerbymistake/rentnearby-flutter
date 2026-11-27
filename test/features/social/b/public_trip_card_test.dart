@@ -1,3 +1,4 @@
+import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/social/b/social_strings_b.dart';
 import 'package:bakhli/features/social/shared/social_models.dart';
 import 'package:bakhli/features/social/shared/social_strings.dart';
@@ -74,5 +75,46 @@ void main() {
     await pumpSocial(t, _host(SizedBox(width: 290, child: PublicTripCard(trip: trip, mode: PublicTripCardMode.rail))));
     expect(find.text('3 seats left'), findsOneWidget);
     expect(find.text('3 of 3 seats left'), findsNothing);
+  });
+  testWidgets('T1: a post without a travel mode shows no travel chip on any card', (t) async {
+    final trip = PublicTrip.fromJson(publicTripJson());
+    expect(trip.travelMode, isNull);
+    await pumpSocial(t, _host(Column(children: [PublicTripCard(trip: trip), SizedBox(width: 290, child: PublicTripCard(trip: trip, mode: PublicTripCardMode.rail))])));
+    expect(find.byKey(PublicTripCard.travelKey), findsNothing);
+    for (final label in SocialStringsB.travelLabels) {
+      expect(find.text(label), findsNothing, reason: label);
+    }
+  });
+
+  for (final (code, label) in [('public', 'Public transport'), ('bike', 'Bike'), ('car', 'Own car'), ('taxi', 'Taxi')]) {
+    testWidgets('T2: travel mode $code shows the $label chip with its 3D art on the feed, rail and profile cards', (t) async {
+      final trip = PublicTrip.fromJson(publicTripJson(travelMode: code));
+      await pumpSocial(
+        t,
+        _host(Column(children: [
+          PublicTripCard(trip: trip),
+          SizedBox(width: 290, child: PublicTripCard(trip: trip, mode: PublicTripCardMode.rail)),
+          PublicTripCard(trip: trip, mode: PublicTripCardMode.profile),
+        ])),
+        size: const Size(392, 2400),
+      );
+      expect(find.byKey(PublicTripCard.travelKey), findsNWidgets(3));
+      expect(find.text(label), findsNWidgets(3));
+      expect(find.descendant(of: find.byKey(PublicTripCard.travelKey).first, matching: find.byType(Art3D)), findsOneWidget);
+      expect(t.takeException(), isNull);
+    });
+  }
+
+  testWidgets('T2: the chip fits the rail card at a large text size', (t) async {
+    final trip = PublicTrip.fromJson(publicTripJson(travelMode: 'public', joinGender: 'F'));
+    await pumpSocial(t, _host(SizedBox(width: 290, child: PublicTripCard(trip: trip, mode: PublicTripCardMode.rail))), textScale: 1.3);
+    expect(find.text('Public transport'), findsOneWidget);
+    expect(t.takeException(), isNull);
+  });
+
+  test('an unknown travel mode from the server is dropped', () {
+    expect(PublicTrip.fromJson(publicTripJson(travelMode: 'plane')).travelMode, isNull);
+    expect(PublicTrip.fromJson({...publicTripJson()}..remove('travelMode')).travelMode, isNull);
+    expect(PublicTrip.fromJson(publicTripJson(travelMode: 'car')).copyWith(myJoin: 'requested').travelMode, 'car');
   });
 }

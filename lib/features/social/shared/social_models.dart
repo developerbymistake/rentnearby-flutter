@@ -110,6 +110,16 @@ class TripWhen {
   }
 }
 
+abstract final class TravelModes {
+  static const String public = 'public';
+  static const String bike = 'bike';
+  static const String car = 'car';
+  static const String taxi = 'taxi';
+  static const List<String> codes = [public, bike, car, taxi];
+
+  static String? parse(Object? v) => v is String && codes.contains(v) ? v : null;
+}
+
 class PublicTrip {
   const PublicTrip({
     required this.tripId,
@@ -132,6 +142,7 @@ class PublicTrip {
     this.mutuals = Mutuals.none,
     this.sample = false,
     this.notOpen = false,
+    this.travelMode,
   });
 
   final String tripId;
@@ -154,6 +165,7 @@ class PublicTrip {
   final Mutuals mutuals;
   final bool sample;
   final bool notOpen;
+  final String? travelMode;
 
   PublicTrip copyWith({String? myJoin, bool? iFollowOwner, int? seatsLeft, int? waitingRequests}) => PublicTrip(
         tripId: tripId,
@@ -176,6 +188,7 @@ class PublicTrip {
         mutuals: mutuals,
         sample: sample,
         notOpen: notOpen,
+        travelMode: travelMode,
       );
 
   factory PublicTrip.fromJson(Map<String, dynamic> j) => PublicTrip(
@@ -199,6 +212,7 @@ class PublicTrip {
         mutuals: Mutuals.fromJson(BuddyJson.mapOrNull(j['mutuals'])),
         sample: BuddyJson.boolean(j['sample']),
         notOpen: BuddyJson.boolean(j['notOpen']),
+        travelMode: TravelModes.parse(j['travelMode']),
       );
 }
 

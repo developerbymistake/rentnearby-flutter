@@ -54,7 +54,7 @@ class TravelBuddiesController extends GetxController {
     final f = filter.value;
     if (items.isEmpty && mine.isEmpty) state.value = FeedLoad.loading;
     final near = f.near && _lat != null && _lng != null;
-    final r = await _api.feed(q: f.q, who: f.who, near: near, lat: near ? _lat : null, lng: near ? _lng : null);
+    final r = await _api.feed(q: f.q, who: f.who, travel: f.travel, near: near, lat: near ? _lat : null, lng: near ? _lng : null);
     if (gen != _gen) return;
     loadingMore.value = false;
     switch (r) {
@@ -84,7 +84,7 @@ class TravelBuddiesController extends GetxController {
     final head = ++_headGen;
     final f = filter.value;
     final near = f.near && _lat != null && _lng != null;
-    final r = await _api.feed(q: f.q, who: f.who, near: near, lat: near ? _lat : null, lng: near ? _lng : null);
+    final r = await _api.feed(q: f.q, who: f.who, travel: f.travel, near: near, lat: near ? _lat : null, lng: near ? _lng : null);
     if (gen != _gen || head != _headGen) return;
     if (r case BuddyOk<FeedPage>(:final value)) {
       mine.assignAll(value.mine);
@@ -102,7 +102,7 @@ class TravelBuddiesController extends GetxController {
     loadingMore.value = true;
     final f = filter.value;
     final near = f.near && _lat != null && _lng != null;
-    final r = await _api.feed(cursor: cursor, q: f.q, who: f.who, near: near, lat: near ? _lat : null, lng: near ? _lng : null);
+    final r = await _api.feed(cursor: cursor, q: f.q, who: f.who, travel: f.travel, near: near, lat: near ? _lat : null, lng: near ? _lng : null);
     if (gen != _gen) return;
     loadingMore.value = false;
     if (r case BuddyOk<FeedPage>(:final value)) {

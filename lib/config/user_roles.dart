@@ -37,6 +37,8 @@ class RoleCapabilities {
 
   bool get isOwner => canListStays || canListTaxis;
 
+  bool get canRequestRoleChange => isOwner;
+
   String? get deletionLine => canListStays
       ? 'Your stay, jobs, calendar and money notes will be deleted.'
       : canListTaxis
@@ -53,6 +55,7 @@ class RoleRequestErrorTypes {
   static const String correctionNotAllowed = 'RoleCorrectionNotAllowed';
   static const String requestPending = 'RoleRequestPending';
   static const String locked = 'RoleLocked';
+  static const String notAllowed = 'RoleChangeNotAllowed';
 }
 
 class RoleRequestStatus {

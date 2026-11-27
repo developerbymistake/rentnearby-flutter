@@ -180,6 +180,10 @@ class PostTripController extends GetxController {
 
   void setSeats(int n) => _update(draft.value.copyWith(seats: n));
 
+  void setTravelMode(String code) {
+    if (TravelModes.codes.contains(code)) _update(draft.value.copyWith(travelMode: code));
+  }
+
   void setJoinGender(String code) {
     if (!SocialStringsB.joinCodes.contains(code)) return;
     if (!allowedJoin(code)) {

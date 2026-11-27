@@ -160,4 +160,23 @@ void main() {
     expect(find.text(SocialStringsB.postGone), findsOneWidget);
     await drain(t);
   });
+  testWidgets('T2: the details card shows Travel by with the chip; T1: no row when the post has no travel mode', (t) async {
+    final server = installServer();
+    putSocialMe(server, socialMeWith());
+    server.on('GET', _path, publicTripJson(travelMode: 'car'));
+    await pumpSocial(t, const TripPostScreen(tripId: 'trip-1'), pages: _pages);
+    expect(find.text(SocialStringsB.factTravelBy), findsOneWidget);
+    expect(find.descendant(of: find.byKey(TripPostScreen.travelKey), matching: find.text('Own car')), findsOneWidget);
+    await drain(t);
+  });
+
+  testWidgets('T1: a post without a travel mode has no Travel by row', (t) async {
+    final server = installServer();
+    putSocialMe(server, socialMeWith());
+    server.on('GET', _path, publicTripJson());
+    await pumpSocial(t, const TripPostScreen(tripId: 'trip-1'), pages: _pages);
+    expect(find.text(SocialStringsB.factTravelBy), findsNothing);
+    expect(find.byKey(TripPostScreen.travelKey), findsNothing);
+    await drain(t);
+  });
 }

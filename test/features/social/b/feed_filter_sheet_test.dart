@@ -132,4 +132,29 @@ void main() {
     await settle(t);
     expect(_result?.near, isTrue);
   });
+  testWidgets('T3: Travel by is one tab row Any | Public transport | Bike | Own car | Taxi; Any is the default and the pick is returned', (t) async {
+    await _open(t, _host(limits: _freeLimits));
+    final travel = find.byKey(FeedFilterSheet.travelKey);
+    await t.ensureVisible(travel);
+    await settle(t);
+    expect(find.text(SocialStringsB.travelByCaps), findsOneWidget);
+    expect(t.widget<SegmentTabs>(travel).labels, [SocialStringsB.travelAny, ...SocialStringsB.travelLabels]);
+    expect(t.widget<SegmentTabs>(travel).selected, 0);
+    await t.tap(find.descendant(of: travel, matching: find.text('Bike')));
+    await settle(t);
+    expect(t.widget<SegmentTabs>(travel).selected, 2);
+    await t.ensureVisible(find.byKey(FeedFilterSheet.showKey));
+    await t.tap(find.byKey(FeedFilterSheet.showKey));
+    await settle(t);
+    expect(_result?.travel, 'bike');
+    expect(_result?.count, 1);
+    await drain(t);
+  });
+
+  test('FeedFilter: travel takes part in equality and the count', () {
+    expect(FeedFilter.none.travel, FeedFilter.any);
+    expect(FeedFilter.none.copyWith(travel: 'taxi') == FeedFilter.none, isFalse);
+    expect(FeedFilter.none.copyWith(travel: 'taxi').count, 1);
+    expect(FeedFilter.travelValues, [FeedFilter.any, ...TravelModes.codes]);
+  });
 }

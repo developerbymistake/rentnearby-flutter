@@ -109,6 +109,7 @@ enum NoteToneColor { indigo, teal, rose, danger, amber }
 abstract final class BuddyArt {
   static const String dir = 'assets/images/design/travel3d/';
   static const String panda = '${dir}panda.png';
+  static const String automobile = '${dir}automobile.png';
   static const String luggage = '${dir}luggage.png';
   static const String moneyBag = '${dir}money_bag.png';
   static const String locked = '${dir}locked.png';

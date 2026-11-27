@@ -142,7 +142,7 @@ void main() {
     await drain(t);
   });
 
-  testWidgets('as the login gate step 1 has no back; Log out sits only in the menu', (t) async {
+  testWidgets('as the login gate step 1 has no back; Log out sits only in the menu, no Change role for a Seeker', (t) async {
     installServer();
     await pumpSocial(t, const OnboardingScreen(), pages: _pages);
     expect(find.byIcon(Icons.chevron_left_rounded), findsNothing);
@@ -150,7 +150,7 @@ void main() {
     expect(find.byKey(OnboardingHeader.menuKey), findsOneWidget);
     await _tap(t, find.byKey(OnboardingHeader.menuKey));
     expect(find.text(ProfilePhotoStrings.logOut), findsOneWidget);
-    expect(find.text('Change role'), findsOneWidget);
+    expect(find.text('Change role'), findsNothing, reason: 'R1: Seekers cannot change role (owner order 2026-11-27)');
     await drain(t);
   });
 

@@ -2,6 +2,7 @@ import 'package:bakhli/config/app_routes.dart';
 import 'package:bakhli/config/user_roles.dart';
 import 'package:bakhli/controllers/plan_controller.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/features/buddy/buddy_strings.dart';
 import 'package:bakhli/features/social/a/profile/profile_sections.dart';
 import 'package:bakhli/features/social/a/profile/seeker_profile_screen.dart';
 import 'package:bakhli/features/social/a/social_strings_a.dart';
@@ -150,6 +151,35 @@ void main() {
     expect(find.bySemanticsLabel(SocialStringsA.changePhoto), findsNothing);
     final gear = t.widget<RoundIconButton3D>(find.descendant(of: find.byKey(SeekerProfileScreen.settingsKey), matching: find.byType(RoundIconButton3D)));
     expect(gear.tint, ListingPalette.coral.g1);
+    await drain(t);
+  });
+  testWidgets('Q1: My QR opens the QR sheet with my name and username', (t) async {
+    final server = installServer();
+    server.on('GET', '/social/me', socialMeJson(profile: myProfileJson()));
+    putSeeker();
+    Get.put(SocialMeController(), permanent: true);
+    await pumpSocial(t, const SeekerProfileScreen(), pages: _pages);
+    expect(find.text(SocialStringsA.myQr), findsOneWidget);
+    expect(find.byKey(SeekerProfileScreen.editKey), findsOneWidget);
+    await t.tap(find.byKey(SeekerProfileScreen.myQrKey));
+    await settle(t);
+    expect(find.text(BuddyStrings.qrTitle), findsNWidgets(2));
+    expect(find.text(BuddyStrings.qrSubtitle), findsOneWidget);
+    expect(find.bySemanticsLabel(BuddyStrings.qrLabel), findsOneWidget);
+    expect(find.text('Bakhli#${'me'.hashCode.abs()}'), findsNWidgets(2));
+    expect(find.text('Rahul Verma'), findsNWidgets(2));
+    await drain(t);
+  });
+
+  testWidgets('Q1: My QR is off while the username is not there yet', (t) async {
+    final server = installServer();
+    server.on('GET', '/social/me', socialMeJson(profile: {...myProfileJson(), 'username': null}));
+    putSeeker();
+    Get.put(SocialMeController(), permanent: true);
+    await pumpSocial(t, const SeekerProfileScreen(), pages: _pages);
+    await t.tap(find.byKey(SeekerProfileScreen.myQrKey), warnIfMissed: false);
+    await settle(t);
+    expect(find.text(BuddyStrings.qrSubtitle), findsNothing);
     await drain(t);
   });
 }

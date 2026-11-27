@@ -6,8 +6,6 @@ import '../../../../controllers/auth_controller.dart';
 import '../../../../design/design.dart';
 import '../../../../screens/profile/profile_rows.dart';
 import '../../../../screens/profile_screen.dart';
-import '../../../../utils/app_date_format.dart';
-import '../../../../widgets/role_option_card.dart';
 import '../../../buddy/buddies/controllers/buddy_summary_controller.dart';
 import '../../../buddy/shared/buddy_look.dart';
 import '../../../buddy/shared/widgets/buddy_page.dart';
@@ -126,35 +124,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       });
 
-  Widget _roleRow() => Obx(() {
-        final roleKey = _auth.roleKey.value;
-        final u = _auth.user.value;
-        final locked = _auth.roleChangeLocked;
-        final blockedUntil = u?.roleRequestBlockedUntil;
-        final String sub;
-        if (locked) {
-          sub = RoleVisuals.displayName(roleKey);
-        } else if (u?.hasPendingRoleRequest ?? false) {
-          sub = SocialStringsA.requestPending;
-        } else if (blockedUntil != null) {
-          sub = SocialStringsA.tryAgainAfter(AppDateFormat.dateTime(blockedUntil));
-        } else if (u?.hasRejectedRoleRequest ?? false) {
-          sub = SocialStringsA.requestRejected;
-        } else if (!_auth.roleTabActive) {
-          sub = SocialStringsA.paused;
-        } else {
-          sub = SocialStringsA.nowRole(RoleVisuals.displayName(roleKey));
-        }
-        return IconRow3D(
-          art: ListingArt.panda,
-          title: locked ? SocialStringsA.currentRole : SocialStringsA.changeRole,
-          subtitle: sub,
-          divider: true,
-          trailing: locked ? null : Icon(Icons.chevron_right_rounded, size: DS.s(22), color: DesignColors.textDisabled),
-          onTap: locked ? null : () => Get.toNamed(AppRoutes.roleChange),
-        );
-      });
-
   Widget _profileState() {
     final me = SocialMeController.maybe;
     if (me != null && me.failed.value && !me.loading.value) {
@@ -189,7 +158,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             _section(SocialStringsA.accountLabel, [
               _phoneRow(),
-              _roleRow(),
               IconRow3D(
                 key: SettingsScreen.plusKey,
                 art: ListingArt.moneyBag,

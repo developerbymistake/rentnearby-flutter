@@ -73,63 +73,6 @@ class FindResult {
   }
 }
 
-class SendRequestResult {
-  const SendRequestResult({required this.state, this.requestId, this.expiresAt, this.buddy});
-
-  final String state;
-  final String? requestId;
-  final DateTime? expiresAt;
-  final BuddyPerson? buddy;
-
-  bool get accepted => state == 'accepted';
-
-  factory SendRequestResult.fromJson(Map<String, dynamic> j) {
-    final b = BuddyJson.mapOrNull(j['buddy']);
-    return SendRequestResult(
-      state: BuddyJson.str(j['state'], 'pending'),
-      requestId: BuddyJson.strOrNull(j['requestId']),
-      expiresAt: BuddyJson.time(j['expiresAt']),
-      buddy: b == null ? null : BuddyPerson.fromJson(b),
-    );
-  }
-}
-
-class ReceivedRequest {
-  const ReceivedRequest({required this.requestId, required this.person, this.createdAt});
-
-  final String requestId;
-  final BuddyPerson person;
-  final DateTime? createdAt;
-
-  factory ReceivedRequest.fromJson(Map<String, dynamic> j) => ReceivedRequest(
-        requestId: BuddyJson.str(j['requestId']),
-        person: BuddyPerson.fromJson(BuddyJson.map(j['person'])),
-        createdAt: BuddyJson.time(j['createdAt']),
-      );
-}
-
-class SentRequest {
-  const SentRequest({required this.requestId, required this.person, required this.state, this.createdAt, this.expiresAt, required this.canCancel});
-
-  final String requestId;
-  final BuddyPerson person;
-  final String state;
-  final DateTime? createdAt;
-  final DateTime? expiresAt;
-  final bool canCancel;
-
-  bool get waiting => state == 'waiting';
-
-  factory SentRequest.fromJson(Map<String, dynamic> j) => SentRequest(
-        requestId: BuddyJson.str(j['requestId']),
-        person: BuddyPerson.fromJson(BuddyJson.map(j['person'])),
-        state: BuddyJson.str(j['state'], 'ended'),
-        createdAt: BuddyJson.time(j['createdAt']),
-        expiresAt: BuddyJson.time(j['expiresAt']),
-        canCancel: BuddyJson.boolean(j['canCancel']),
-      );
-}
-
 abstract final class BuddyTripState {
   static const String none = 'None';
   static const String invited = 'Invited';
