@@ -50,31 +50,33 @@ void main() {
 
   testWidgets('direct chat: title with the first name, intro, the five rows with exact copy, footer, Understood', (t) async {
     await openSheet(t);
-    expect(find.text('Keep it safe with Kavya'), findsOneWidget);
-    expect(find.text('Every buddy agrees to these.'), findsOneWidget);
+    expect(find.text('Chat safely with Kavya'), findsOneWidget);
+    expect(find.text('Please follow these guidelines in every chat.'), findsOneWidget);
     for (final r in SafetyGuidelinesSheet.rows) {
       expect(find.text(r.title), findsOneWidget, reason: r.title);
       expect(find.text(r.line), findsOneWidget, reason: r.line);
     }
     expect(SafetyGuidelinesSheet.rows, hasLength(5));
-    expect(find.text('Never send or ask for money'), findsOneWidget);
-    expect(find.text('No transfers, deposits or booking fees in chat. Split costs in person.'), findsOneWidget);
-    expect(find.text('Passport, bank, home address, OTPs: never in chat. Phone numbers, emails and links are hidden here.'), findsOneWidget);
-    expect(find.text('Messages disappear after 24 hours'), findsOneWidget);
-    expect(find.text('Report a chat from the menu (⋮).'), findsOneWidget);
+    expect(find.text('No requests for money'), findsOneWidget);
+    expect(find.text('Do not send or ask for money, deposits or booking fees in chat. Share costs in person.'), findsOneWidget);
+    expect(find.text('Never share passport, bank, address or OTP details. Phone numbers, emails and links are hidden in chat.'), findsOneWidget);
+    expect(find.text('Messages expire in 24 hours'), findsOneWidget);
+    expect(find.text('Respectful language only'), findsOneWidget);
+    expect(find.text('Abusive, offensive, sexual or threatening messages are not allowed. Reported accounts are reviewed and may be suspended.'), findsOneWidget);
+    expect(find.text('You can report a chat from the menu (⋮).'), findsOneWidget);
     expect(find.byKey(SafetyGuidelinesSheet.understoodKey), findsOneWidget);
-    expect(find.text('Understood'), findsOneWidget);
+    expect(find.text('I understand'), findsOneWidget);
     expect(find.byKey(SafetyGuidelinesSheet.closeKey), findsNothing);
     await drain(t);
   });
 
   testWidgets('group chat title and a missing name never print the word null', (t) async {
     await openSheet(t, group: true);
-    expect(find.text('Keep your trip chat safe'), findsOneWidget);
-    expect(find.text('Keep it safe with Kavya'), findsNothing);
+    expect(find.text('Chat safely with your trip group'), findsOneWidget);
+    expect(find.text('Chat safely with Kavya'), findsNothing);
     await drain(t);
-    expect(SocialSafetyStrings.title(''), 'Keep it safe');
-    expect(SocialSafetyStrings.title('  Meera '), 'Keep it safe with Meera');
+    expect(SocialSafetyStrings.title(''), 'Chat safely');
+    expect(SocialSafetyStrings.title('  Meera '), 'Chat safely with Meera');
   });
 
   testWidgets('Understood saves on the server then closes with true', (t) async {

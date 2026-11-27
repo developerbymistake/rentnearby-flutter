@@ -30,7 +30,7 @@ void main() {
     await t.pump();
     await t.tap(find.byKey(const ValueKey('dm_send')));
     await t.pump(const Duration(milliseconds: 400));
-    expect(find.text('Keep it safe with Kavya'), findsOneWidget);
+    expect(find.text('Chat safely with Kavya'), findsOneWidget);
 
     await t.tapAt(const Offset(10, 10));
     await t.pump(const Duration(milliseconds: 400));
@@ -73,12 +73,12 @@ void main() {
     final trip = roomOf(kind: 'T', trip: {'tripId': 't1', 'title': 'Manali', 'memberCount': 3, 'photoUrls': []});
     final api = FakeChatApi()..roomResult = BuddyOk(trip);
     await pumpSocial(t, DmRoomScreen(tripId: 't1', controller: controller(api, FakeTransport(), roomId: null, tripId: 't1')));
-    expect(find.text('Keep your trip chat safe'), findsOneWidget);
+    expect(find.text('Chat safely with your trip group'), findsOneWidget);
     await t.tap(find.byKey(SafetyGuidelinesSheet.understoodKey));
     await t.pump(const Duration(milliseconds: 400));
     await t.pump(const Duration(milliseconds: 400));
     expect(me.accepts, 1);
-    expect(find.text('Keep your trip chat safe'), findsNothing);
+    expect(find.text('Chat safely with your trip group'), findsNothing);
     await disposeSocial(t);
   });
 
