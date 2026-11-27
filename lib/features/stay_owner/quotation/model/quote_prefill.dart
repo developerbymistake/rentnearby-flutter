@@ -113,7 +113,9 @@ class QuotePrefill {
     final a = checkIn;
     final b = checkOut;
     final datesOk = a != null && b != null && b.isAfter(a);
-    final room = QuoteLimits.maxLines - draft.lines.length;
+    // The same enquiry chosen again only refreshes the fields: its offer lines are already in the form.
+    final again = draft.enquiryId == enquiryId;
+    final room = again ? 0 : QuoteLimits.maxLines - draft.lines.length;
     return draft.copyWith(
       guestName: guestName.isEmpty ? null : guestName,
       guestPhone: guestPhone.isEmpty ? null : guestPhone,

@@ -66,6 +66,7 @@ class FakeQuoteApi implements QuoteApi {
   OwnerResult<Uint8List> imageResult = OwnerOk(Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3]));
   OwnerResult<QuoteTermsAccepted> termsResult = OwnerOk(QuoteTermsAccepted(acceptedVersion: 1, acceptedAt: DateTime.utc(2026, 11, 27, 9)));
   OwnerResult<String?> nameResult = const OwnerOk('The Banyan Riverside Retreat');
+  OwnerResult<QuoteReserveResult>? reserveResult;
   String? lastEtag;
 
   @override
@@ -116,7 +117,9 @@ class FakeQuoteApi implements QuoteApi {
   @override
   Future<OwnerResult<QuoteReserveResult>> reserve({required String documentId, required QuoteKind kind}) async {
     calls.add('reserve');
-    throw UnimplementedError();
+    final r = reserveResult;
+    if (r == null) throw UnimplementedError();
+    return r;
   }
 
   @override

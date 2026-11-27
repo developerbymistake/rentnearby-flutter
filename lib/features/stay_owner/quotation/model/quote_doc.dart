@@ -125,12 +125,12 @@ abstract final class QuoteDocBuilder {
       ],
       'totals': {
         'subtotal': QuoteMoney.group(t.subtotal),
-        'discount': t.discount > 0 ? '-${QuoteMoney.group(t.discount)}' : '',
+        'discount': t.discount > 0 ? QuoteMoney.minusGroup(t.discount) : '',
         'taxable': t.hasGst ? QuoteMoney.group(t.taxable) : '',
         'gstLabel': t.hasGst ? StayQuoteDocStrings.gstAt(QuoteMoney.bpText(t.gstBp)) : '',
         'gst': t.hasGst ? QuoteMoney.paise(t.gstPaise) : '',
         'roundOff': t.roundOffPaise != 0 ? QuoteMoney.signedPaise(t.roundOffPaise) : '',
-        'total': '₹ ${QuoteMoney.group(t.total)}',
+        'total': QuoteMoney.inrSpaced(t.total),
         'words': QuoteWords.rupees(t.total),
       },
       'payments': proforma
@@ -144,7 +144,7 @@ abstract final class QuoteDocBuilder {
             ]
           : const <Map<String, String>>[],
       'received': proforma && d.payments.isNotEmpty ? QuoteMoney.group(t.received) : '',
-      'balance': proforma ? '₹ ${QuoteMoney.group(t.balance)}' : '',
+      'balance': proforma ? QuoteMoney.inrSpaced(t.balance) : '',
       'balanceWords': proforma ? QuoteWords.rupees(t.balance) : '',
       'note': QuoteTextClean.block(d.note, QuoteLimits.note),
       'terms': terms(d, b),

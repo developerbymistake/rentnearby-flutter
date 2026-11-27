@@ -32,6 +32,7 @@ abstract final class StayQuoteStrings {
   static String plusLine(int used, int limit) => 'Plus · ${ofUsed(used, limit)}';
   static String offLine(int used, int limit) => used >= limit ? allUsed(limit) : '$used of $limit used this month';
   static String resetsFree(DateTime resets) => 'Resets on 1 ${monthsShort[resets.month - 1]} · Preview is always free';
+  static String resetsFull(DateTime resets) => 'Resets on 1 ${monthsShort[resets.month - 1]} · Preview still works';
   static String plusTill(int limit, DateTime end) => '$limit quotations a month · Plus till ${dayMonthYear(end)}';
   static String plusEndsOn(int limit, DateTime end) => '$limit quotations a month · Plus ends on ${dayMonthYear(end)}';
   static String plusEnded(DateTime end) => 'Plus ended on ${dayMonthYear(end)}';
@@ -101,12 +102,17 @@ abstract final class StayQuoteStrings {
   static const quickExtra = 'Extra person';
   static const quickBreakfast = 'Breakfast';
   static const quickPackage = 'Package';
+  static const quickRoomChip = '+ Room';
+  static const quickExtraChip = '+ Extra person';
+  static const quickBreakfastChip = '+ Breakfast';
+  static const quickPackageChip = '+ Package';
   static const quickRoomText = 'Room, double occupancy';
   static const subtotal = 'Subtotal';
   static const totals = 'Totals';
   static String subtotalLines(int n) => 'Subtotal (${lines(n)})';
   static const discount = 'Discount';
   static const gst = 'GST';
+  static const percentSuffix = '%';
   static const yourRate = 'Your rate';
   static const taxable = 'Taxable value';
   static String gstPercent(String p) => 'GST $p%';
@@ -123,10 +129,10 @@ abstract final class StayQuoteStrings {
   static const docOnly = 'Changes apply to this document only. Your saved policy stays the same.';
   static const noSavedText = 'Nothing saved in Business details yet.';
   static const paymentsReceived = 'Payments received';
-  static const payAdvance = 'Advance';
-  static const payBank = 'Bank';
-  static const payCash = 'Cash';
-  static const payUpi = 'UPI';
+  static const payAdvance = '+ Advance';
+  static const payBank = '+ Bank';
+  static const payCash = '+ Cash';
+  static const payUpi = '+ UPI';
   static const payAdvanceLabel = 'Advance cash';
   static const payBankLabel = 'Bank transfer';
   static const payCashLabel = 'Cash';
@@ -159,9 +165,11 @@ abstract final class StayQuoteStrings {
   static const add = 'Add';
   static const save = 'Save';
   static String lineMath(String rate, int qty, int nights) => '$rate × $qty × $nights';
-  static String lineSub(String rate, int qty, int nights) => '$rate rate · $qty · ${StayQuoteStrings.nights(nights)}';
+  static String lineSub(String rate, int qty, int nights) => '$rate rate · ${StayQuoteStrings.qty} $qty · ${StayQuoteStrings.nights(nights)}';
   static const errDescription = 'Enter a description.';
   static const errRate = 'Enter a rate up to ₹99,99,999.';
+  static String errQty(int max) => 'Enter a quantity from 1 to $max.';
+  static String errNights(int max) => 'Enter nights from 1 to $max.';
 
   // Payment sheet
   static const payment = 'Payment received';
@@ -208,7 +216,7 @@ abstract final class StayQuoteStrings {
   static const termsNeeded = 'Accept the terms for quotations first.';
 
   // Limits
-  static String limitTitle(int used, int limit) => '$used of $limit quotations used';
+  static String limitTitle(int used, int limit) => used > limit ? allUsed(limit) : '$used of $limit quotations used';
   static String limitBody(int free, int plus) => 'The Free plan makes $free quotations a month. Plus makes $plus quotations a month.';
   static String perMonth(int n) => '$n a month';
   static const freePlan = 'Free plan';

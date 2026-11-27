@@ -62,6 +62,8 @@ void main() {
       expect(RegExp(r'\b(print|debugPrint)\(').hasMatch(src), isFalse, reason: p);
       expect(src.contains('LogInterceptor'), isFalse, reason: p);
       expect(src.contains('share_plus'), isFalse, reason: p);
+      expect(RegExp(r'''['"]₹''').hasMatch(src), isFalse, reason: 'rupee literal in $p');
+      expect(src.contains("'%'"), isFalse, reason: 'percent literal in $p');
     }
   });
 

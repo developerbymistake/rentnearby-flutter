@@ -9,6 +9,7 @@ import '../../../owner_core/plan/plan_gate.dart';
 import '../../../owner_core/strings/owner_shared_strings.dart';
 import '../../strings/stay_quote_strings.dart';
 import '../../widgets/stay_widgets.dart';
+import '../controllers/quote_hub_controller.dart';
 import '../data/quote_models.dart';
 import '../model/quote_usage_view.dart';
 import 'quote_line_card.dart';
@@ -16,15 +17,25 @@ import 'quote_line_card.dart';
 abstract final class QuoteUsageSource {
   static MyPlanModel get plan => Get.isRegistered<PlanController>() ? Get.find<PlanController>().myPlan.value : const MyPlanModel();
 
+  static DateTime? get _planLoaded => Get.isRegistered<PlanController>() ? Get.find<PlanController>().loadedAt : null;
+
+  // The hub count wins when it is fresher (after a download); a hub saved before /plans/me last loaded with another limit is stale.
+  static QuoteUsage? reconcile(QuoteUsage? hub, int planLimit, {DateTime? hubSavedAt, DateTime? planLoadedAt}) {
+    if (hub == null || hub.limit == planLimit) return hub;
+    final planNewer = planLoadedAt != null && (hubSavedAt == null || hubSavedAt.isBefore(planLoadedAt));
+    return planNewer ? null : hub;
+  }
+
   // Plan state from /plans/me; the count from the hub when it is fresher (after a download), else /plans/me.
-  static QuoteUsageView view({QuoteUsage? hub, DateTime? now}) {
+  static QuoteUsageView view({QuoteUsage? hub, DateTime? hubSavedAt, DateTime? planLoadedAt, DateTime? now}) {
     final me = PlanGate.debugPlan ?? plan;
     final l = me.limits;
+    final u = reconcile(hub, l.quotationsPerMonth, hubSavedAt: hubSavedAt ?? QuoteHubController.maybe?.savedAt, planLoadedAt: planLoadedAt ?? _planLoaded);
     return QuoteUsageView.of(
       state: PlanCardStates.ofPlan(me, now: now),
-      used: hub?.used ?? l.quotationsUsed,
-      limit: hub?.limit ?? l.quotationsPerMonth,
-      resetsAt: hub?.resetsAt ?? l.quotationsResetsAt,
+      used: u?.used ?? l.quotationsUsed,
+      limit: u?.limit ?? l.quotationsPerMonth,
+      resetsAt: u?.resetsAt ?? l.quotationsResetsAt,
       endsAt: me.play?.expiryAt ?? me.endsAt,
     );
   }

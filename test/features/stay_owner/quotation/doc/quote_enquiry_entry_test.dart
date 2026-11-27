@@ -1,8 +1,14 @@
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/features/stay/enquiries/stay_enquiries_controller.dart';
 import 'package:bakhli/features/stay_owner/quotation/model/quote_draft.dart';
 import 'package:bakhli/features/stay_owner/quotation/model/quote_prefill.dart';
+import 'package:bakhli/features/stay_owner/quotation/widgets/quote_enquiry_pick_sheet.dart';
+import 'package:bakhli/features/stay_owner/strings/stay_quote_strings.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/features/trip/models/trip_offer_model.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
 
 TripEnquiryModel enquiry({TripOfferModel? offer}) => TripEnquiryModel(
       id: 'enq-1',
@@ -75,6 +81,80 @@ void main() {
 
     test('no offer: no lines', () {
       expect(QuotePrefill.fromEnquiry(enquiry()).lines, isEmpty);
+    });
+  });
+
+  group('I1 Choose an enquiry loads New, Offered and Confirmed through the owner list', () {
+    final soon = DateTime.now().add(const Duration(days: 10));
+    TripEnquiryModel e(String id, String status, String name, {DateTime? out}) => TripEnquiryModel(
+          id: id,
+          status: status,
+          checkIn: soon,
+          checkOut: out ?? soon.add(const Duration(days: 2)),
+          traveller: TripPartyModel(id: 't$id', name: name),
+        );
+
+    final pages = <String, List<TripEnquiryModel>>{
+      StayEnquiryBucket.newOnes: [e('a', TripEnquiryStatuses.asked, 'Asha')],
+      StayEnquiryBucket.offered: [e('b', TripEnquiryStatuses.offered, 'Bina'), e('a', TripEnquiryStatuses.asked, 'Asha')],
+      StayEnquiryBucket.confirmed: [
+        e('c', TripEnquiryStatuses.confirmedByBoth, 'Chetan'),
+        e('d', TripEnquiryStatuses.confirmedByBoth, 'Old stay', out: DateTime.now().subtract(const Duration(days: 3))),
+      ],
+    };
+    Future<List<TripEnquiryModel>> loader(String bucket) async => pages[bucket] ?? const [];
+
+    test('pages merged in bucket order, de-duplicated, an ended confirmed stay left out', () async {
+      final asked = <String>[];
+      final list = await QuoteEnquiryPickSheet.loadOpen(loader: (b) {
+        asked.add(b);
+        return loader(b);
+      });
+      expect(asked, [StayEnquiryBucket.newOnes, StayEnquiryBucket.offered, StayEnquiryBucket.confirmed]);
+      expect(list.map((x) => x.id).toList(), ['a', 'b', 'c']);
+    });
+
+    test('a failed bucket does not hide the others', () async {
+      final list = await QuoteEnquiryPickSheet.loadOpen(loader: (b) async {
+        if (b == StayEnquiryBucket.newOnes) throw StateError('offline');
+        return pages[b] ?? const [];
+      });
+      expect(list.map((x) => x.id).toList(), ['b', 'a', 'c']);
+    });
+
+    group('sheet', () {
+      setUp(DS.applyApproved);
+      tearDown(() {
+        DS.debugReset();
+        Get.reset();
+      });
+
+      Future<void> open(WidgetTester t, QuoteEnquiryLoader l) async {
+        await t.pumpWidget(GetMaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (c) => Center(child: ElevatedButton(onPressed: () => QuoteEnquiryPickSheet.pick(c, loader: l), child: const Text('go'))),
+            ),
+          ),
+        ));
+        await t.tap(find.text('go'));
+        await t.pumpAndSettle();
+      }
+
+      testWidgets('lists New, Offered and Confirmed rows with no Enquiries tab controller', (t) async {
+        expect(Get.isRegistered<StayEnquiriesController>(), isFalse);
+        await open(t, loader);
+        expect(find.text('Asha'), findsOneWidget);
+        expect(find.text('Bina'), findsOneWidget);
+        expect(find.text('Chetan'), findsOneWidget);
+        expect(find.text('Old stay'), findsNothing);
+        expect(Get.isRegistered<StayEnquiriesController>(), isFalse);
+      });
+
+      testWidgets('no enquiries: the empty line', (t) async {
+        await open(t, (_) async => const []);
+        expect(find.text(StayQuoteStrings.noEnquiries), findsOneWidget);
+      });
     });
   });
 }

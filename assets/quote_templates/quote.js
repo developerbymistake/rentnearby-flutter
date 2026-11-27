@@ -333,6 +333,7 @@
         done(id, { ok: false, pages: 0, fit: 0, reason: 'RenderFailed' });
         return true;
       }
+      document.title = data && typeof data.number === 'string' ? data.number.slice(0, 40) : '';
       var start = Math.max(0, Math.min(MAX_LEVEL, minLevel | 0));
       try {
         onePage();

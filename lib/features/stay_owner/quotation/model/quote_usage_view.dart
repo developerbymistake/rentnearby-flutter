@@ -1,6 +1,7 @@
 import '../../../../models/my_plan_model.dart';
 import '../../../owner_core/plan/plan_card_state.dart';
 import '../../strings/stay_quote_strings.dart';
+import '../data/quote_models.dart' show QuoteTime;
 
 class QuoteUsageView {
   const QuoteUsageView({required this.used, required this.limit, this.top, required this.line1, this.line2, this.seePlus = false});
@@ -23,7 +24,9 @@ class QuoteUsageView {
     DateTime? resetsAt,
     DateTime? endsAt,
   }) {
-    final reset = resetsAt == null ? StayQuoteStrings.resetsSoon : StayQuoteStrings.resetsFree(resetsAt.toLocal());
+    // The server resets at 1st 00:00 IST: read the month in IST, never in the phone's zone.
+    final reset = resetsAt == null ? StayQuoteStrings.resetsSoon : StayQuoteStrings.resetsFree(QuoteTime.toIst(resetsAt));
+    final fullLine = resetsAt == null ? StayQuoteStrings.resetsSoon : StayQuoteStrings.resetsFull(QuoteTime.toIst(resetsAt));
     switch (state) {
       case PlanCardState.paymentOff:
         return QuoteUsageView(used: used, limit: limit, line1: StayQuoteStrings.offLine(used, limit));
@@ -35,14 +38,14 @@ class QuoteUsageView {
           used: used,
           limit: limit,
           line1: StayQuoteStrings.plusLine(used, limit),
-          line2: endsAt == null ? null : StayQuoteStrings.plusTill(limit, endsAt.toLocal()),
+          line2: used >= limit ? fullLine : (endsAt == null ? null : StayQuoteStrings.plusTill(limit, endsAt.toLocal())),
         );
       case PlanCardState.cancelled:
         return QuoteUsageView(
           used: used,
           limit: limit,
           line1: StayQuoteStrings.plusLine(used, limit),
-          line2: endsAt == null ? null : StayQuoteStrings.plusEndsOn(limit, endsAt.toLocal()),
+          line2: used >= limit ? fullLine : (endsAt == null ? null : StayQuoteStrings.plusEndsOn(limit, endsAt.toLocal())),
         );
       case PlanCardState.ended:
       case PlanCardState.onHold:

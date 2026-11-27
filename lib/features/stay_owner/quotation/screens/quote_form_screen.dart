@@ -115,6 +115,13 @@ class _QuoteFormScreenState extends State<QuoteFormScreen> with WidgetsBindingOb
     _phone.text = d.guestPhone;
   }
 
+  // G14: after Business details the form reads the new GSTIN, logo, terms and bank at once.
+  Future<void> _openBusiness(QuoteFormController c) async {
+    await Get.toNamed<dynamic>(AppRoutes.stayQuotationBusiness);
+    if (!mounted) return;
+    await c.refreshBusiness(_source);
+  }
+
   Future<void> _pickStay(QuoteFormController c) async {
     final d = c.draft.value;
     final r = await TemplateCalendarPopup.pickRange(context, initialStart: d.checkIn, initialEnd: d.checkOut, tone: StayCalKit.green);
@@ -323,7 +330,15 @@ class _QuoteFormScreenState extends State<QuoteFormScreen> with WidgetsBindingOb
           selected: d.meal == QuoteMeal.none ? null : meals.indexOf(d.meal),
           onTap: (i) => c.setMeal(meals[i]),
         ),
-        if (d.meal != QuoteMeal.none) Padding(padding: DS.insets(t: 4), child: Text(_mealSub(d.meal), style: QuoteText.small)),
+        Padding(
+          padding: DS.insets(t: 4),
+          child: Row(children: [
+            for (var i = 0; i < meals.length; i++) ...[
+              if (i > 0) Gap.h(10),
+              Expanded(child: Text(_mealSub(meals[i]), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis, style: QuoteText.small)),
+            ],
+          ]),
+        ),
       ]),
     );
   }
@@ -345,10 +360,10 @@ class _QuoteFormScreenState extends State<QuoteFormScreen> with WidgetsBindingOb
           Text(StayQuoteStrings.quickAdd, style: QuoteText.label.copyWith(color: Ink3D.grey)),
           Gap.v(4),
           Wrap(spacing: DS.s(6), runSpacing: DS.s(6), children: [
-            QuoteChipTap(label: StayQuoteStrings.quickRoom, onTap: () => _line(c, preset: StayQuoteStrings.quickRoomText)),
-            QuoteChipTap(label: StayQuoteStrings.quickExtra, onTap: () => _line(c, preset: StayQuoteStrings.quickExtra)),
-            QuoteChipTap(label: StayQuoteStrings.quickBreakfast, onTap: () => _line(c, preset: StayQuoteStrings.quickBreakfast)),
-            QuoteChipTap(label: StayQuoteStrings.quickPackage, onTap: () => _line(c, preset: StayQuoteStrings.quickPackage)),
+            QuoteChipTap(label: StayQuoteStrings.quickRoomChip, onTap: () => _line(c, preset: StayQuoteStrings.quickRoomText)),
+            QuoteChipTap(label: StayQuoteStrings.quickExtraChip, onTap: () => _line(c, preset: StayQuoteStrings.quickExtra)),
+            QuoteChipTap(label: StayQuoteStrings.quickBreakfastChip, onTap: () => _line(c, preset: StayQuoteStrings.quickBreakfast)),
+            QuoteChipTap(label: StayQuoteStrings.quickPackageChip, onTap: () => _line(c, preset: StayQuoteStrings.quickPackage)),
           ]),
         ],
         Divider(height: DS.s(20), thickness: DS.s(1), color: StayLook.rowLine),
@@ -369,7 +384,7 @@ class _QuoteFormScreenState extends State<QuoteFormScreen> with WidgetsBindingOb
               tone: ListingTone.forest,
               controller: _discount,
               label: StayQuoteStrings.discount,
-              prefixText: '₹ ',
+              prefixText: QuoteMoney.fieldPrefix,
               keyboardType: TextInputType.number,
               errorText: c.errors[QuoteFieldKeys.discount],
               inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
@@ -384,7 +399,7 @@ class _QuoteFormScreenState extends State<QuoteFormScreen> with WidgetsBindingOb
                 controller: _gst,
                 label: StayQuoteStrings.gst,
                 hint: StayQuoteStrings.yourRate,
-                suffixText: '%',
+                suffixText: StayQuoteStrings.percentSuffix,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 errorText: c.errors[QuoteFieldKeys.gst],
                 inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')), LengthLimitingTextInputFormatter(5)],
@@ -395,14 +410,14 @@ class _QuoteFormScreenState extends State<QuoteFormScreen> with WidgetsBindingOb
         ]),
         if (!c.gstAllowed)
           InkWell(
-            onTap: () => Get.toNamed(AppRoutes.stayQuotationBusiness),
+            onTap: () => _openBusiness(c),
             child: Padding(padding: DS.sym(v: 8), child: Text(StayQuoteStrings.gstHint, style: QuoteText.hint)),
           ),
         Gap.v(6),
-        if (t.discount > 0) QuoteSumRow(label: StayQuoteStrings.discount, value: '-${QuoteMoney.inr(t.discount)}'),
+        if (t.discount > 0) QuoteSumRow(label: StayQuoteStrings.discount, value: QuoteMoney.minusInr(t.discount)),
         if (t.hasGst) ...[
           QuoteSumRow(label: StayQuoteStrings.taxable, value: QuoteMoney.inr(t.taxable)),
-          QuoteSumRow(label: StayQuoteStrings.gstPercent(QuoteMoney.bpText(t.gstBp)), value: '₹${QuoteMoney.paise(t.gstPaise)}'),
+          QuoteSumRow(label: StayQuoteStrings.gstPercent(QuoteMoney.bpText(t.gstBp)), value: QuoteMoney.inrPaise(t.gstPaise)),
         ],
         if (t.roundOffPaise != 0) QuoteSumRow(label: StayQuoteStrings.roundOff, value: QuoteMoney.signedPaise(t.roundOffPaise)),
         QuoteSumRow(label: StayQuoteStrings.total, value: QuoteMoney.inr(t.total), strong: true),

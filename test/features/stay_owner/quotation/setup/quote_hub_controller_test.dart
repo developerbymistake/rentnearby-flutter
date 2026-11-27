@@ -2,7 +2,9 @@ import 'package:bakhli/features/owner_core/data/owner_result.dart';
 import 'package:bakhli/features/stay_owner/quotation/controllers/quote_hub_controller.dart';
 import 'package:bakhli/features/stay_owner/quotation/data/quote_asset_store.dart';
 import 'package:bakhli/features/stay_owner/quotation/data/quote_models.dart';
+import 'package:bakhli/features/stay_owner/quotation/model/quote_source.dart';
 import 'package:bakhli/features/stay_owner/strings/stay_quote_setup_strings.dart';
+import 'package:bakhli/models/my_plan_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -181,5 +183,58 @@ void main() {
     other.api.hubResult = const OwnerOffline();
     expect(await other.hub.load(), isFalse);
     expect(other.hub.hub.value, isNull);
+  });
+
+  testWidgets('B1 ensureReady sends If-None-Match on every entry and applies a new usage', (tester) async {
+    final t = _Harness();
+    final ctx = await _context(tester);
+    expect(await tester.runAsync(() => t.hub.ensureReady(ctx)), isTrue);
+    final first = t.api.calls.where((c) => c == 'hub').length;
+    t.api.hubResult = OwnerOk(QuoteHubResponse(notModified: false, etag: '"e2"', hub: QuoteHub.fromJson(hubJson(used: 3, limit: 30))));
+    expect(await tester.runAsync(() => t.hub.ensureReady(ctx)), isTrue);
+    expect(t.api.calls.where((c) => c == 'hub').length, first + 1);
+    expect(t.api.lastEtag, '"e1"');
+    expect(t.hub.usage!.limit, 30);
+    expect(t.hub.usage!.used, 3);
+  });
+
+  test('B1 a plan change on /plans/me forces a hub reload without the ETag', () async {
+    final t = _Harness();
+    await t.hub.load();
+    t.hub.onPlanChanged(const MyPlanModel(limits: PlanLimitsModel(quotationsPerMonth: 2)));
+    final before = t.api.calls.where((c) => c == 'hub').length;
+    t.hub.onPlanChanged(const MyPlanModel(limits: PlanLimitsModel(quotationsPerMonth: 2, quotationsUsed: 1)));
+    expect(t.api.calls.where((c) => c == 'hub').length, before);
+    t.api.hubResult = OwnerOk(QuoteHubResponse(notModified: false, etag: '"e3"', hub: QuoteHub.fromJson(hubJson(used: 2, limit: 30))));
+    t.hub.onPlanChanged(const MyPlanModel(planId: 'plus', isPaid: true, limits: PlanLimitsModel(quotationsPerMonth: 30)));
+    await Future<void>.delayed(Duration.zero);
+    await t.hub.load();
+    expect(t.api.calls.where((c) => c == 'hub').length, greaterThan(before));
+    expect(t.hub.usage!.limit, 30);
+  });
+
+  test('I4 a month-limit refusal copies the server numbers into the hub', () async {
+    final t = _Harness();
+    await t.hub.load();
+    t.api.reserveResult = const OwnerRefused<QuoteReserveResult>(
+      type: 'QuotationMonthLimit',
+      statusCode: 409,
+      data: {'key': 'StayQuotationsPerMonth', 'limit': 2, 'used': 7, 'canUpgrade': true, 'resetsAt': '2026-11-30T18:30:00Z'},
+    );
+    final out = await AppQuoteSource(hub: t.hub).reserve('doc-1', QuoteKind.quotation);
+    expect(out, isA<QuoteReserveRefused>());
+    expect(t.hub.usage!.used, 7);
+    expect(t.hub.usage!.limit, 2);
+    expect(t.hub.savedAt, t.clock);
+  });
+
+  testWidgets('I3 feature entry fetches a missing logo back (logout, reinstall, second phone)', (tester) async {
+    final t = _Harness();
+    t.api.hubResult = OwnerOk(QuoteHubResponse(notModified: false, etag: '"e1"', hub: QuoteHub.fromJson(hubJson(hasLogo: true))));
+    final ctx = await _context(tester);
+    expect(await tester.runAsync(() => t.hub.ensureReady(ctx)), isTrue);
+    await tester.runAsync(() => t.hub.fetchMissingImages());
+    expect(t.api.calls, contains('image:logo'));
+    expect(t.engine.calls, contains('putImage:u1:logo:3'));
   });
 }

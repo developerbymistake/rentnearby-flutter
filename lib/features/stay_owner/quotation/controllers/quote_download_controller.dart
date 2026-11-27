@@ -123,7 +123,8 @@ class QuoteDownloadController extends GetxController {
     final saved = form.draft.value.reservationFor(kind);
     final inWindow = saved != null && saved.freeAt(_now());
     final usage = source.usage;
-    if (!inWindow && usage != null && usage.full) {
+    // The cached hub may predate a plan change (Plus bought, Plus lapsed): only a hub that agrees with /plans/me may refuse locally.
+    if (!inWindow && usage != null && usage.full && usage.limit == source.planLimit) {
       return QuoteDownloadLimit(used: usage.used, limit: usage.limit, canUpgrade: usage.canUpgrade, resetsAt: usage.resetsAt);
     }
 
@@ -157,16 +158,16 @@ class QuoteDownloadController extends GetxController {
     form.applyReservation(kind, reservation);
     await form.saveNow();
 
-    if (r.assetsVersion != b.assetsVersion) {
-      try {
-        await source.ensureImages(r.assetsVersion);
-      } catch (_) {}
-    }
+    // Always: the files are wiped at logout and missing on a reinstall or a second phone; files already there are skipped.
+    try {
+      await source.ensureImages(r.assetsVersion);
+    } catch (_) {}
+    await form.refreshBusiness(source);
     final logo = r.assetsVersion > 0 && await source.hasImage(QuoteImageKind.logo, r.assetsVersion);
     final signature = r.assetsVersion > 0 && await source.hasImage(QuoteImageKind.signature, r.assetsVersion);
 
     final fileName = QuoteFileName.of(r.display, form.draft.value.guestName);
-    final doc = form.doc(number: r.display, businessName: r.businessName, logo: logo, signature: signature);
+    final doc = form.doc(number: r.display, businessName: r.businessName, logo: logo, signature: signature, assetsVersion: r.assetsVersion);
     QuoteFile file;
     try {
       file = await _render(template, doc, fileName);

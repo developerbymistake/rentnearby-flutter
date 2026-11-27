@@ -1,5 +1,9 @@
 import 'package:bakhli/features/owner_core/plan/plan_card_state.dart';
+import 'package:bakhli/features/owner_core/plan/plan_gate.dart';
+import 'package:bakhli/features/stay_owner/quotation/data/quote_models.dart';
 import 'package:bakhli/features/stay_owner/quotation/model/quote_usage_view.dart';
+import 'package:bakhli/features/stay_owner/quotation/widgets/quote_usage_line.dart';
+import 'package:bakhli/models/my_plan_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -52,6 +56,46 @@ void main() {
       expect(v(PlanCardState.plus, 30, 30).line1, 'Plus · All 30 used this month');
       expect(v(PlanCardState.paymentOff, 31, 30).line1, 'All 30 used this month');
       expect(v(PlanCardState.free, 7, 2).fraction, 1);
+    });
+  });
+
+  group('B1 / m1 / m8', () {
+    tearDown(() => PlanGate.debugPlan = null);
+
+    test('m1 the reset month is read in IST, whatever the phone zone (1st 00:00 IST = last day 18:30 UTC)', () {
+      final x = QuoteUsageView.of(state: PlanCardState.free, used: 1, limit: 2, resetsAt: DateTime.utc(2026, 11, 30, 18, 30));
+      expect(x.line2, 'Resets on 1 Dec · Preview is always free');
+    });
+
+    test('m8 Plus with all used: the reset line replaces the plan line', () {
+      final x = QuoteUsageView.of(state: PlanCardState.plus, used: 30, limit: 30, resetsAt: DateTime.utc(2026, 11, 30, 18, 30), endsAt: ends);
+      expect(x.line2, 'Resets on 1 Dec · Preview still works');
+    });
+
+    test('reconcile: a hub saved before /plans/me loaded with another limit is dropped; a fresher hub wins', () {
+      const hub = QuoteUsage(used: 7, limit: 30);
+      final saved = DateTime.utc(2026, 11, 20);
+      expect(QuoteUsageSource.reconcile(hub, 2, hubSavedAt: saved, planLoadedAt: saved.add(const Duration(minutes: 1))), isNull);
+      expect(QuoteUsageSource.reconcile(hub, 2, hubSavedAt: saved, planLoadedAt: saved.subtract(const Duration(minutes: 1))), same(hub));
+      expect(QuoteUsageSource.reconcile(hub, 30, hubSavedAt: saved, planLoadedAt: saved.add(const Duration(minutes: 1))), same(hub));
+    });
+
+    test('B1 after a lapse, a stale hub limit 30 prints Free plan · x of 2', () {
+      PlanGate.debugPlan = MyPlanModel(
+        paymentEnabled: true,
+        endsAt: DateTime.utc(2026, 11, 20),
+        limits: const PlanLimitsModel(quotationsPerMonth: 2, quotationsUsed: 1),
+      );
+      final saved = DateTime.utc(2026, 11, 21);
+      final v = QuoteUsageSource.view(
+        hub: const QuoteUsage(used: 1, limit: 30),
+        hubSavedAt: saved,
+        planLoadedAt: saved.add(const Duration(hours: 1)),
+        now: DateTime.utc(2026, 11, 22),
+      );
+      expect(v.limit, 2);
+      expect(v.line1, startsWith('Free plan · '));
+      expect(v.line1, contains('1 of 2 used'));
     });
   });
 }

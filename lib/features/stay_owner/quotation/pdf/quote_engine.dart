@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -94,9 +95,13 @@ class QuoteEngine implements QuoteEngineApi {
   static const int maxJsonBytes = 256 * 1024;
   static const int maxImageBytes = 200 * 1024;
 
+  // Above the native watchdogs (render 30 s, other steps 12 s), so Kotlin normally answers first.
+  static const Duration jobTimeout = Duration(seconds: 40);
+
   static QuoteEngineApi instance = QuoteEngine();
 
   final MethodChannel _channel;
+  int _jobSeq = 0;
 
   Future<T?> _call<T>(String method, [Map<String, Object?>? args]) async {
     if (defaultTargetPlatform != TargetPlatform.android || kIsWeb) {
@@ -109,6 +114,23 @@ class QuoteEngine implements QuoteEngineApi {
     } on MissingPluginException {
       throw const QuoteEngineException(QuoteEngineFailure.unsupported);
     }
+  }
+
+  // A job that never answers ends as renderFailed and is cancelled natively, so it can never publish a file later.
+  Future<T?> _job<T>(String method, Map<String, Object?> args) async {
+    final id = ++_jobSeq;
+    try {
+      return await _call<T>(method, {...args, 'job': id}).timeout(jobTimeout);
+    } on TimeoutException {
+      unawaited(_cancel(id));
+      throw const QuoteEngineException(QuoteEngineFailure.renderFailed, 'timeout');
+    }
+  }
+
+  Future<void> _cancel(int id) async {
+    try {
+      await _channel.invokeMethod<void>('cancel', {'job': id});
+    } catch (_) {}
   }
 
   static String encode(QuoteDoc doc) {
@@ -135,17 +157,17 @@ class QuoteEngine implements QuoteEngineApi {
   Future<void> clearUser(String userId) => _call<void>('clearUser', {'userId': userId});
 
   @override
-  Future<void> warmUp(String template) => _call<void>('warmUp', {'template': template});
+  Future<void> warmUp(String template) => _job<void>('warmUp', {'template': template});
 
   @override
   Future<QuoteLayout> layout(String template, QuoteDoc doc) async {
-    final m = await _call<Map<Object?, Object?>>('layout', {'template': template, 'json': encode(doc)});
+    final m = await _job<Map<Object?, Object?>>('layout', {'template': template, 'json': encode(doc)});
     return QuoteLayout.fromMap(m ?? const {});
   }
 
   @override
   Future<QuotePreview> preview(String template, QuoteDoc doc, {required int widthPx, required bool watermark}) async {
-    final m = await _call<Map<Object?, Object?>>('preview', {'template': template, 'json': encode(doc), 'widthPx': widthPx, 'watermark': watermark});
+    final m = await _job<Map<Object?, Object?>>('preview', {'template': template, 'json': encode(doc), 'widthPx': widthPx, 'watermark': watermark});
     final raw = (m?['pages'] as List?) ?? const [];
     return QuotePreview(
       fit: (m?['fit'] as num?)?.toInt() ?? 0,
@@ -159,7 +181,7 @@ class QuoteEngine implements QuoteEngineApi {
   @override
   Future<QuoteFile> render(String template, QuoteDoc doc, {required String fileName}) async {
     final safe = fileName.toLowerCase().endsWith('.pdf') ? fileName : '$fileName.pdf';
-    final m = await _call<Map<Object?, Object?>>('render', {'template': template, 'json': encode(doc), 'fileName': safe});
+    final m = await _job<Map<Object?, Object?>>('render', {'template': template, 'json': encode(doc), 'fileName': safe});
     if (m == null) throw const QuoteEngineException(QuoteEngineFailure.renderFailed);
     return QuoteFile(
       uri: m['uri'] as String? ?? '',

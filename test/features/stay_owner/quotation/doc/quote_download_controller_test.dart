@@ -47,7 +47,8 @@ void main() {
     final r = await dl.download();
     expect(r, isA<QuoteDownloadSaved>());
     expect(engine.calls.where((c) => c == 'layout' || c == 'render').toList(), ['layout', 'render']);
-    expect(source.log, ['reserve']);
+    // Images are always ensured after the reserve (files already on the phone are skipped by the store).
+    expect(source.log, ['reserve', 'images:3']);
     expect(engine.lastRendered!.toJson()['number'], 'Q-0042');
     expect(engine.lastRendered!.toJson()['businessName'], 'The Banyan Retreat');
     expect(engine.lastRendered!.toJson()['logo'], isTrue);
@@ -190,5 +191,31 @@ void main() {
     source.outcomes.add(QuoteReserved(FakeSource.ok(assets: 4)));
     await dl.download();
     expect(source.log, ['reserve', 'images:4']);
+    expect(engine.lastRendered!.toJson()['assetsVersion'], 4);
+  });
+
+  test('I3 images are fetched when missing even with the same assets version (logout, reinstall, second phone)', () async {
+    final dl = make();
+    source.outcomes.add(QuoteReserved(FakeSource.ok(assets: 3)));
+    await dl.download();
+    expect(source.log, contains('images:3'));
+    expect(engine.lastRendered!.toJson()['logo'], isTrue);
+    expect(engine.lastRendered!.toJson()['assetsVersion'], 3);
+  });
+
+  test('B1 hub says 2/2 but the plan is now Plus (30): no local sheet, reserve is called', () async {
+    final dl = make(usage: const QuoteUsage(used: 2, limit: 2, canUpgrade: true));
+    source.planLimit0 = 30;
+    source.outcomes.add(QuoteReserved(FakeSource.ok(used: 3, limit: 30)));
+    expect(await dl.download(), isA<QuoteDownloadSaved>());
+    expect(source.reserves.length, 1);
+  });
+
+  test('I5 the business is refreshed after the reserve: a GSTIN removed elsewhere drops GST from the PDF', () async {
+    final dl = make();
+    source.business0 = sampleBusiness(gstin: '');
+    await dl.download();
+    expect(form.gstAllowed, isFalse);
+    expect(form.draft.value.gstBp, 0);
   });
 }

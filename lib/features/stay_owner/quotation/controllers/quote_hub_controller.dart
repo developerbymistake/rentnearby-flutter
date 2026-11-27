@@ -6,6 +6,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../../config/app_routes.dart';
 import '../../../../controllers/auth_controller.dart';
+import '../../../../controllers/plan_controller.dart';
+import '../../../../models/my_plan_model.dart';
 import '../../../../utils/app_toast.dart';
 import '../../../owner_core/data/owner_result.dart';
 import '../../strings/stay_quote_setup_strings.dart';
@@ -61,6 +63,48 @@ class QuoteHubController extends GetxController {
   DateTime? _savedAt;
   Future<bool>? _loadFlight;
   Future<bool>? _readyFlight;
+  String? _planKey;
+  Worker? _planWorker;
+  Future<void>? _imagesFlight;
+  int? _imagesVersion;
+
+  DateTime? get savedAt => _savedAt;
+
+  @override
+  void onInit() {
+    super.onInit();
+    if (Get.isRegistered<PlanController>()) {
+      final plans = Get.find<PlanController>();
+      onPlanChanged(plans.myPlan.value);
+      _planWorker = ever<MyPlanModel>(plans.myPlan, onPlanChanged);
+    }
+  }
+
+  @override
+  void onClose() {
+    _planWorker?.dispose();
+    super.onClose();
+  }
+
+  static String planKeyOf(MyPlanModel me) => [
+        me.planId,
+        me.isPaid,
+        me.source,
+        me.status,
+        me.state,
+        me.play?.state,
+        me.paymentEnabled,
+        me.endsAt?.toUtc().toIso8601String(),
+        me.limits.quotationsPerMonth,
+      ].join('|');
+
+  // Resubscribe, a lapse mid-month or the payment switch changes /plans/me: the hub usage must follow at once (Q16).
+  void onPlanChanged(MyPlanModel me) {
+    final key = planKeyOf(me);
+    final previous = _planKey;
+    _planKey = key;
+    if (previous != null && previous != key && hub.value != null) unawaited(load(force: true));
+  }
 
   QuoteAssetStore get store => _store ??= QuoteAssetStore(api: api);
 
@@ -166,8 +210,9 @@ class QuoteHubController extends GetxController {
   Future<bool> ensureReady(BuildContext context, {int? appTemplateVersion}) =>
       _readyFlight ??= _ready(context, appTemplateVersion).whenComplete(() => _readyFlight = null);
 
+  // Every feature entry asks the server (the ETag makes it a 304 most of the time), so a plan change is never missed.
   Future<bool> _ready(BuildContext context, int? appTemplateVersion) async {
-    if (hub.value == null || fromCache.value) await load();
+    await load();
     final h = hub.value;
     if (h == null) {
       _tell(offline.value ? QuoteSetupStrings.connectOnce : QuoteSetupStrings.couldNotLoad);
@@ -193,7 +238,31 @@ class QuoteHubController extends GetxController {
       if (!context.mounted || !await _termsPrompt(context, this)) return false;
       if (hub.value?.profile == null && !await _openBusiness()) return false;
     }
-    return hub.value?.terms.accepted ?? false;
+    final ok = hub.value?.terms.accepted ?? false;
+    if (ok && !offline.value) unawaited(fetchMissingImages());
+    return ok;
+  }
+
+  // Logo and signature files are wiped at logout and missing on a new phone: fetch them back (existing files are skipped).
+  Future<void> fetchMissingImages({int? assetsVersion}) {
+    final version = assetsVersion ?? hub.value?.profile?.assetsVersion;
+    final running = _imagesFlight;
+    if (running != null && _imagesVersion == version) return running;
+    _imagesVersion = version;
+    late final Future<void> run;
+    run = _fetchImages(version).whenComplete(() {
+      if (identical(_imagesFlight, run)) _imagesFlight = null;
+    });
+    return _imagesFlight = run;
+  }
+
+  Future<void> _fetchImages(int? version) async {
+    final uid = userId;
+    final p = hub.value?.profile;
+    if (uid == null || p == null) return;
+    try {
+      await store.ensureImages(uid, p, assetsVersion: version);
+    } catch (_) {}
   }
 
   // Called by the terms sheet; only a 200 lets the owner in.
@@ -240,6 +309,15 @@ class QuoteHubController extends GetxController {
   void applyPendingName(String? pendingName) {
     final h = hub.value;
     if (h != null) _update(h.copyWith(stay: h.stay.withPendingName(pendingName)));
+  }
+
+  // A month-limit refusal carries the server's fresh numbers: the hub shows them at once.
+  void applyUsage(QuoteUsage usage) {
+    final h = hub.value;
+    if (h == null) return;
+    _update(h.copyWith(usage: usage));
+    fromCache.value = false;
+    _savedAt = _clock();
   }
 
   // After every 200 of /reserve: the fresh count, and a hub reload when the images changed elsewhere.

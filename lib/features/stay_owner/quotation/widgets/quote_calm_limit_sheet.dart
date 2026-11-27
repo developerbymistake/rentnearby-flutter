@@ -9,6 +9,7 @@ import '../../../owner_core/plan/plan_keys.dart';
 import '../../../owner_core/plan/plan_limit_sheet.dart';
 import '../../calendar/widgets/stay_calendar_widgets.dart';
 import '../../strings/stay_quote_strings.dart';
+import '../data/quote_models.dart' show QuoteTime;
 import 'quote_line_card.dart';
 
 abstract final class QuoteLimitSheets {
@@ -29,7 +30,7 @@ abstract final class QuoteLimitSheets {
         GateRow(label: StayQuoteStrings.freePlan, value: StayQuoteStrings.perMonth(free)),
         GateRow(label: StayQuoteStrings.plusLabel, value: StayQuoteStrings.perMonth(plus), highlight: true),
       ],
-      tip: resetsAt == null ? StayQuoteStrings.limitTipNoDate : StayQuoteStrings.limitTip(resetsAt.toLocal()),
+      tip: resetsAt == null ? StayQuoteStrings.limitTipNoDate : StayQuoteStrings.limitTip(QuoteTime.toIst(resetsAt)),
     );
   }
 
@@ -52,7 +53,7 @@ class QuoteCalmLimitSheet extends StatelessWidget {
       tone: ListingTone.forest,
       art: ListingArt.calendar,
       title: StayQuoteStrings.allUsed(limit),
-      subtitle: r == null ? StayQuoteStrings.calmBodyNoDate(limit) : StayQuoteStrings.calmBody(limit, r.toLocal()),
+      subtitle: r == null ? StayQuoteStrings.calmBodyNoDate(limit) : StayQuoteStrings.calmBody(limit, QuoteTime.toIst(r)),
       footer: PrimaryButton(label: StayQuoteStrings.ok, tone: StayCalKit.green, onPressed: () => Navigator.of(context).pop()),
       child: Padding(
         padding: DS.insets(t: 10, b: 8),

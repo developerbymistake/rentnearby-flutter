@@ -1,6 +1,8 @@
 import 'package:bakhli/features/stay_owner/quotation/controllers/quote_form_controller.dart';
 import 'package:bakhli/features/stay_owner/quotation/data/quote_models.dart';
+import 'package:bakhli/features/stay_owner/quotation/model/quote_business.dart';
 import 'package:bakhli/features/stay_owner/quotation/model/quote_draft.dart';
+import 'package:bakhli/features/stay_owner/quotation/model/quote_prefill.dart';
 import 'package:bakhli/features/stay_owner/strings/stay_quote_strings.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -135,5 +137,58 @@ void main() {
     c.setGuestName('AB');
     expect(timers.timers.length, 2);
     expect(timers.timers.first.cancelled, isTrue);
+  });
+
+  test('m5 a bad GST text keeps its error after the next edit, until it is fixed', () {
+    final c = make();
+    expect(c.setGstText('29'), isFalse);
+    c.setGuestName('Harshit');
+    expect(c.errors[QuoteFieldKeys.gst], StayQuoteStrings.errGst);
+    expect(c.validate(), isFalse);
+    expect(c.setGstText('12'), isTrue);
+    c.setGuestName('Harshit R');
+    expect(c.errors.containsKey(QuoteFieldKeys.gst), isFalse);
+  });
+
+  test('m6 quantity and nights errors have their own text', () {
+    expect(QuoteFormController.lineError(description: 'Room', rate: 100, qty: 0, nights: 1), StayQuoteStrings.errQty(QuoteLimits.maxQty));
+    expect(QuoteFormController.lineError(description: 'Room', rate: 100, qty: 1, nights: 0), StayQuoteStrings.errNights(QuoteLimits.maxNights));
+    expect(QuoteFormController.lineError(description: 'Room', rate: -1, qty: 1, nights: 1), StayQuoteStrings.errRate);
+  });
+
+  test('m12 the same enquiry chosen twice does not add its lines twice', () {
+    final c = make();
+    const p = QuotePrefill(
+      enquiryId: 'enq-1',
+      guestName: 'Harshit',
+      lines: [QuotePrefillLine(description: 'Deluxe room', rate: 10000, qty: 5, nights: 2)],
+    );
+    c.applyPrefill(p);
+    c.applyPrefill(p);
+    expect(c.draft.value.lines.length, 1);
+  });
+
+  test('I5 refreshBusiness: a GSTIN saved in Business details shows the GST field at once', () async {
+    final c = make(gstin: '');
+    expect(c.gstAllowed, isFalse);
+    final source = FakeSource(business0: sampleBusiness());
+    await c.refreshBusiness(source);
+    expect(c.gstAllowed, isTrue);
+  });
+
+  test('I5 refreshBusiness keeps the bank lines when the secure copy cannot be read but a bank is saved', () async {
+    final c = make();
+    final source = FakeSource(business0: sampleBusiness().copyWith(bank: const QuoteBankLines()), bankSaved0: true);
+    await c.refreshBusiness(source);
+    expect(c.business.value.bank.accountNo, '30987654521');
+    source.bankSaved0 = false;
+    await c.refreshBusiness(source);
+    expect(c.business.value.bank.isEmpty, isTrue);
+  });
+
+  test('I4 doc(assetsVersion:) prints the version the download resolved', () {
+    final c = make();
+    expect(c.doc().toJson()['assetsVersion'], 3);
+    expect(c.doc(assetsVersion: 4).toJson()['assetsVersion'], 4);
   });
 }

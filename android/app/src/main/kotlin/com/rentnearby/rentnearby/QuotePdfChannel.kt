@@ -52,10 +52,12 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.nio.ByteBuffer
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 
 // Phone-side quotation PDFs (ARCHITECTURE 8): one offscreen WebView, our bundled A4 templates, silent print (E1)
-// with an image-PDF fallback (E2). Every WebView call runs on the main thread, one at a time.
+// with an image-PDF fallback (E2). Every WebView call runs on the main thread, one job at a time.
 class QuotePdfChannel private constructor(private val activity: Activity, messenger: BinaryMessenger) :
     MethodChannel.MethodCallHandler, ComponentCallbacks2 {
 
@@ -70,7 +72,11 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
         private const val MAX_JSON = 256 * 1024
         private const val MAX_IMAGE = 200 * 1024
         private const val MAX_QUEUE = 4
+        private const val MAX_NAME = 76
+        private const val LOW_RAM_WIDTH = 720
         private const val JS_TIMEOUT_MS = 8000L
+        private const val RENDER_TIMEOUT_MS = 30_000L
+        private const val STEP_TIMEOUT_MS = 12_000L
         private const val RASTER_SCALE = 2.5f
         private val TEMPLATES = setOf("classic", "band", "modern")
         private val FONTS = setOf(
@@ -88,20 +94,87 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
 
     private data class Layout(val ok: Boolean, val pages: Int, val fit: Int, val reason: String?)
 
+    private class Target(val uri: Uri?, val file: File?, val pfd: ParcelFileDescriptor)
+
+    private class Published(val uri: Uri, val displayName: String, val bytes: Long)
+
+    // One queued call. A job is live only while it is `current` and unanswered; every async continuation checks
+    // that, so a failed, timed-out or cancelled job can never touch the WebView, the next job or Downloads.
+    private inner class Job(val token: Int?, private val timeoutMs: Long, private val result: MethodChannel.Result, private val body: (Job) -> Unit) {
+        var answered = false
+            private set
+        val targets = ArrayList<Target>()
+        val signals = ArrayList<CancellationSignal>()
+        private val watchdog = Runnable {
+            if (!answered) {
+                destroyWebView()
+                done(null, Fail("RenderFailed", "timeout"))
+            }
+        }
+
+        val alive: Boolean get() = !answered && current === this
+
+        fun start() {
+            current = this
+            main.postDelayed(watchdog, timeoutMs)
+            guard { body(this) }
+        }
+
+        // For a job that never started (dispose, cancel, logout): answer once, no queue step.
+        fun refuse(fail: Fail) {
+            if (answered) return
+            answered = true
+            result.error(fail.code, fail.message, null)
+        }
+
+        fun done(value: Any?, fail: Fail?) {
+            if (answered) return
+            answered = true
+            main.removeCallbacks(watchdog)
+            if (fail != null) signals.forEach { runCatching { it.cancel() } }
+            signals.clear()
+            targets.forEach { dropTarget(it) }
+            targets.clear()
+            if (current === this) {
+                current = null
+                running = false
+            }
+            if (fail != null) result.error(fail.code, fail.message, null) else result.success(value)
+            main.post { next() }
+        }
+
+        // Async WebView callbacks must never throw into the framework: a failure ends this job only.
+        fun guard(block: () -> Unit) {
+            if (!alive) return
+            try {
+                block()
+            } catch (e: Fail) {
+                done(null, e)
+            } catch (e: OutOfMemoryError) {
+                done(null, Fail("RenderFailed", "memory"))
+            } catch (e: Exception) {
+                done(null, Fail("RenderFailed", e.javaClass.simpleName))
+            }
+        }
+    }
+
     private val channel = MethodChannel(messenger, NAME)
     private val main = Handler(Looper.getMainLooper())
     private val io = Executors.newSingleThreadExecutor()
-    private val queue = ArrayDeque<() -> Unit>()
+    private val queue = ArrayDeque<Job>()
     private var running = false
+    private var current: Job? = null
+    private var releaseWhenIdle = false
+    private var trimWhenIdle = false
     private var webView: WebView? = null
     private var holder: FrameLayout? = null
     private var template: String? = null
     private var pageReady = false
     private var onReady: (() -> Unit)? = null
-    private var onGone: ((Fail) -> Unit)? = null
-    private val bytesCache = HashMap<String, ByteArray>()
-    private var imgUser: String? = null
-    private var imgVersion = 0
+    private var shot: Bitmap? = null
+    private val bytesCache = ConcurrentHashMap<String, ByteArray>()
+    @Volatile private var imgUser: String? = null
+    @Volatile private var imgVersion = 0
     private var seq = 0
 
     init {
@@ -117,15 +190,19 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
                 "storageDir" -> result.success(mapOf("path" to root().absolutePath))
                 "putImage" -> putImage(call, result)
                 "clearUser" -> clearUser(call, result)
-                "warmUp" -> enqueue(result) { done -> warmUp(call.argument<String>("template"), done) }
-                "layout" -> enqueue(result) { done -> layoutCall(call, done) }
-                "preview" -> enqueue(result) { done -> previewCall(call, done) }
-                "render" -> enqueue(result) { done -> renderCall(call, done) }
+                "warmUp" -> enqueue(call, result, STEP_TIMEOUT_MS) { job -> warmUp(job, call.argument<String>("template")) }
+                "layout" -> enqueue(call, result, STEP_TIMEOUT_MS) { job -> layoutCall(job, call) }
+                "preview" -> enqueue(call, result, STEP_TIMEOUT_MS) { job -> previewCall(job, call) }
+                "render" -> enqueue(call, result, RENDER_TIMEOUT_MS) { job -> renderCall(job, call) }
+                "cancel" -> {
+                    cancel(call.argument<Int>("job"))
+                    result.success(null)
+                }
                 "open" -> open(call.argument<String>("uri"), result)
                 "delete" -> delete(call.argument<String>("uri"), result)
                 "dispose" -> {
-                    if (!running) destroyWebView()
-                    bytesCache.clear()
+                    dropQueued(Fail("Busy"))
+                    if (running) releaseWhenIdle = true else release()
                     result.success(null)
                 }
                 else -> result.notImplemented()
@@ -137,50 +214,58 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
         }
     }
 
-    private fun enqueue(result: MethodChannel.Result, job: ((Any?, Fail?) -> Unit) -> Unit) {
+    private fun enqueue(call: MethodCall, result: MethodChannel.Result, timeoutMs: Long, body: (Job) -> Unit) {
         if (queue.size >= MAX_QUEUE) {
             result.error("Busy", "busy", null)
             return
         }
-        queue.addLast {
-            var answered = false
-            val done: (Any?, Fail?) -> Unit = { value, fail ->
-                if (!answered) {
-                    answered = true
-                    onGone = null
-                    if (fail != null) result.error(fail.code, fail.message, null) else result.success(value)
-                    running = false
-                    main.post { next() }
-                }
-            }
-            onGone = { f -> done(null, f) }
-            try {
-                job(done)
-            } catch (e: Fail) {
-                done(null, e)
-            } catch (e: Exception) {
-                done(null, Fail("RenderFailed", e.javaClass.simpleName))
-            }
-        }
+        releaseWhenIdle = false
+        queue.addLast(Job(call.argument<Int>("job"), timeoutMs, result, body))
         next()
-    }
-
-    // Async WebView callbacks must never throw into the framework: a failure ends the running call.
-    private fun guard(block: () -> Unit) {
-        try {
-            block()
-        } catch (e: Fail) {
-            onGone?.invoke(e)
-        } catch (e: Exception) {
-            onGone?.invoke(Fail("RenderFailed", e.javaClass.simpleName))
-        }
     }
 
     private fun next() {
         if (running) return
-        val job = queue.removeFirstOrNull() ?: return
+        val job = queue.removeFirstOrNull()
+        if (job == null) {
+            if (releaseWhenIdle || trimWhenIdle) release()
+            return
+        }
         running = true
-        job()
+        job.start()
+    }
+
+    private fun dropQueued(fail: Fail) {
+        while (queue.isNotEmpty()) queue.removeFirst().refuse(fail)
+    }
+
+    // Dart gave up on this job (its own time limit): a queued one is removed, a running one is stopped.
+    private fun cancel(token: Int?) {
+        if (token == null) return
+        queue.firstOrNull { it.token == token }?.let {
+            queue.remove(it)
+            it.refuse(Fail("RenderFailed", "cancelled"))
+        }
+        val job = current
+        if (job != null && job.token == token) {
+            destroyWebView()
+            job.done(null, Fail("RenderFailed", "cancelled"))
+        }
+    }
+
+    private fun release() {
+        releaseWhenIdle = false
+        trimWhenIdle = false
+        destroyWebView()
+        releaseShot()
+        bytesCache.clear()
+    }
+
+    private fun background(block: () -> Unit): Boolean = try {
+        io.execute(block)
+        true
+    } catch (e: RejectedExecutionException) {
+        false
     }
 
     // ---------- files ----------
@@ -218,20 +303,33 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
         }
     }
 
+    // Logout: the previous owner's jobs end here and his files go.
     private fun clearUser(call: MethodCall, result: MethodChannel.Result) {
         val dir = userDir(call.argument<String>("userId") ?: throw Fail("RenderFailed", "user"))
-        if (!running) destroyWebView()
+        dropQueued(Fail("RenderFailed", "cleared"))
+        destroyWebView()
+        current?.done(null, Fail("RenderFailed", "cleared"))
+        imgUser = null
+        imgVersion = 0
+        releaseShot()
+        bytesCache.clear()
         io.execute {
-            dir.deleteRecursively()
-            File(activity.cacheDir, "quote").deleteRecursively()
-            main.post { result.success(null) }
+            val failed = try {
+                dir.deleteRecursively()
+                File(activity.cacheDir, "quote").deleteRecursively()
+                false
+            } catch (t: Throwable) {
+                true
+            }
+            main.post { if (failed) result.error("NoSpace", "clear", null) else result.success(null) }
         }
     }
 
     private fun imageFile(name: String): File? {
         val user = imgUser ?: return null
-        if (imgVersion <= 0 || !USER_ID.matches(user)) return null
-        val f = File(File(root(), user), "${name}_$imgVersion.jpg")
+        val version = imgVersion
+        if (version <= 0 || !USER_ID.matches(user)) return null
+        val f = File(File(root(), user), "${name}_$version.jpg")
         return if (f.isFile && f.length() in 3..MAX_IMAGE.toLong()) f else null
     }
 
@@ -273,6 +371,8 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
             builtInZoomControls = false
             textZoom = 100
             cacheMode = WebSettings.LOAD_NO_CACHE
+            // The view sits off-screen: without pre-raster Chromium may never draw it or answer VisualStateCallback.
+            offscreenPreRaster = true
         }
         view.isVerticalScrollBarEnabled = false
         view.isHorizontalScrollBarEnabled = false
@@ -288,13 +388,13 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
                 pageReady = true
                 val r = onReady
                 onReady = null
-                if (r != null) guard(r)
+                r?.invoke()
             }
 
             override fun onRenderProcessGone(v: WebView, detail: RenderProcessGoneDetail?): Boolean {
                 if (v === webView) {
                     destroyWebView()
-                    onGone?.invoke(Fail("RenderFailed", "renderer gone"))
+                    current?.done(null, Fail("RenderFailed", "renderer gone"))
                 } else {
                     (v.parent as? ViewGroup)?.removeView(v)
                     v.destroy()
@@ -367,7 +467,7 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
         }
     }
 
-    private fun loadTemplate(name: String, then: () -> Unit) {
+    private fun loadTemplate(job: Job, name: String, then: () -> Unit) {
         if (name !in TEMPLATES) throw Fail("RenderFailed", "template")
         val view = ensureWebView()
         if (template == name && pageReady) {
@@ -376,17 +476,17 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
         }
         template = name
         pageReady = false
-        onReady = then
+        onReady = { job.guard(then) }
         val html = String(asset("assets/quote_templates/$name.html"), Charsets.UTF_8)
         view.loadDataWithBaseURL(ORIGIN, html, "text/html", "utf-8", null)
     }
 
-    private fun warmUp(name: String?, done: (Any?, Fail?) -> Unit) {
+    private fun warmUp(job: Job, name: String?) {
         if (lowRam() || name == null) {
-            done(null, null)
+            job.done(null, null)
             return
         }
-        loadTemplate(name) { done(null, null) }
+        loadTemplate(job, name) { job.done(null, null) }
     }
 
     // ---------- fill + fit ----------
@@ -398,62 +498,64 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
         imgVersion = o.optInt("assetsVersion", 0)
     }
 
-    private fun fill(call: MethodCall, minFit: Int, then: (Layout) -> Unit) {
+    private fun fill(job: Job, call: MethodCall, minFit: Int, then: (Layout) -> Unit) {
         val name = call.argument<String>("template") ?: throw Fail("RenderFailed", "template")
         val json = call.argument<String>("json") ?: throw Fail("RenderFailed", "json")
         val utf8 = json.toByteArray(Charsets.UTF_8)
         if (utf8.size > MAX_JSON) throw Fail("TooLong")
         parseDoc(json)
         val b64 = Base64.encodeToString(utf8, Base64.NO_WRAP)
-        loadTemplate(name) {
+        loadTemplate(job, name) {
             val view = webView ?: throw Fail("RenderFailed", "gone")
             val id = ++seq
             view.evaluateJavascript("window.__quote&&__quote.render('$b64',$minFit,$id)", null)
-            poll(view, id, System.currentTimeMillis() + JS_TIMEOUT_MS, then)
+            poll(job, view, id, System.currentTimeMillis() + JS_TIMEOUT_MS, then)
         }
     }
 
-    private fun poll(view: WebView, id: Int, until: Long, then: (Layout) -> Unit) {
-        if (view !== webView) return
+    private fun poll(job: Job, view: WebView, id: Int, until: Long, then: (Layout) -> Unit) {
+        if (view !== webView || !job.alive) return
         view.evaluateJavascript("window.__quoteState||''") { raw ->
-            if (view !== webView) return@evaluateJavascript
-            val state = try {
-                val s = JSONTokener(raw ?: "").nextValue() as? String
-                if (s.isNullOrEmpty()) null else JSONObject(s)
-            } catch (_: Exception) {
-                null
-            }
-            if (state != null && state.optInt("id") == id) {
-                val layout = Layout(state.optBoolean("ok"), state.optInt("pages"), state.optInt("fit"), state.optString("reason").ifEmpty { null })
-                view.postVisualStateCallback(id.toLong(), object : WebView.VisualStateCallback() {
-                    override fun onComplete(requestId: Long) {
-                        if (view === webView) guard { then(layout) }
-                    }
-                })
-            } else if (System.currentTimeMillis() > until) {
-                onGone?.invoke(Fail("RenderFailed", "timeout"))
-            } else {
-                main.postDelayed({ poll(view, id, until, then) }, 16)
+            job.guard {
+                if (view !== webView) return@guard
+                val state = try {
+                    val s = JSONTokener(raw ?: "").nextValue() as? String
+                    if (s.isNullOrEmpty()) null else JSONObject(s)
+                } catch (_: Exception) {
+                    null
+                }
+                if (state != null && state.optInt("id") == id) {
+                    val layout = Layout(state.optBoolean("ok"), state.optInt("pages"), state.optInt("fit"), state.optString("reason").ifEmpty { null })
+                    view.postVisualStateCallback(id.toLong(), object : WebView.VisualStateCallback() {
+                        override fun onComplete(requestId: Long) {
+                            if (view === webView) job.guard { then(layout) }
+                        }
+                    })
+                } else if (System.currentTimeMillis() > until) {
+                    job.done(null, Fail("RenderFailed", "timeout"))
+                } else {
+                    main.postDelayed({ poll(job, view, id, until, then) }, 16)
+                }
             }
         }
     }
 
     private fun layoutMap(l: Layout) = mapOf("ok" to l.ok, "pages" to l.pages, "fit" to l.fit, "reason" to l.reason)
 
-    private fun layoutCall(call: MethodCall, done: (Any?, Fail?) -> Unit) = fill(call, 0) { l -> done(layoutMap(l), null) }
+    private fun layoutCall(job: Job, call: MethodCall) = fill(job, call, 0) { l -> job.done(layoutMap(l), null) }
 
     // ---------- preview ----------
 
-    private fun resize(w: Int, h: Int, then: () -> Unit) {
+    private fun resize(job: Job, w: Int, h: Int, then: () -> Unit) {
         val view = webView ?: throw Fail("RenderFailed", "gone")
         view.layoutParams = FrameLayout.LayoutParams(w, h)
         view.requestLayout()
         val id = ++seq
         view.post {
-            if (view !== webView) return@post
+            if (view !== webView || !job.alive) return@post
             view.postVisualStateCallback(id.toLong(), object : WebView.VisualStateCallback() {
                 override fun onComplete(requestId: Long) {
-                    if (view === webView) guard(then)
+                    if (view === webView) job.guard(then)
                 }
             })
         }
@@ -480,45 +582,58 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
         c.restore()
     }
 
-    private fun previewCall(call: MethodCall, done: (Any?, Fail?) -> Unit) {
-        val widthPx = (call.argument<Int>("widthPx") ?: 1080).coerceIn(200, 1080)
+    // One reusable page bitmap per size (ARCHITECTURE 8.6); only the executor recycles it, after any pending copy.
+    private fun shotBitmap(w: Int, h: Int): Bitmap {
+        shot?.let { if (it.width == w && it.height == h && !it.isRecycled) return it }
+        releaseShot()
+        return Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also { shot = it }
+    }
+
+    private fun releaseShot() {
+        val b = shot ?: return
+        shot = null
+        if (!background { b.recycle() }) b.recycle()
+    }
+
+    private fun previewCall(job: Job, call: MethodCall) {
+        val maxWidth = if (lowRam()) LOW_RAM_WIDTH else 1080
+        val widthPx = (call.argument<Int>("widthPx") ?: 1080).coerceIn(200, maxWidth)
         val mark = call.argument<Boolean>("watermark") == true
-        fill(call, 0) { l ->
+        fill(job, call, 0) { l ->
             if (!l.ok && l.pages == 0) {
-                done(null, Fail(l.reason ?: "RenderFailed"))
+                job.done(null, Fail(l.reason ?: "RenderFailed"))
                 return@fill
             }
             val pages = l.pages.coerceIn(1, 2)
             val pageH = Math.round(widthPx * PAGE_H.toFloat() / PAGE_W)
-            resize(widthPx, pageH * pages) {
-                val view = webView ?: return@resize done(null, Fail("RenderFailed", "gone"))
-                val bitmaps = ArrayList<Bitmap>()
-                try {
-                    for (i in 0 until pages) {
-                        val b = Bitmap.createBitmap(widthPx, pageH, Bitmap.Config.ARGB_8888)
-                        val c = Canvas(b)
-                        c.drawColor(Color.WHITE)
-                        c.translate(0f, -(i * pageH).toFloat())
-                        view.draw(c)
-                        if (mark) watermark(b, "PREVIEW")
-                        bitmaps.add(b)
+            val out = ArrayList<Map<String, Any>>(pages)
+            fun shoot(i: Int) {
+                val view = webView ?: throw Fail("RenderFailed", "gone")
+                val b = shotBitmap(widthPx, pageH)
+                val c = Canvas(b)
+                c.drawColor(Color.WHITE)
+                c.save()
+                c.translate(0f, -(i * pageH).toFloat())
+                view.draw(c)
+                c.restore()
+                if (mark) watermark(b, "PREVIEW")
+                val queued = background {
+                    val rgba: ByteArray? = try {
+                        ByteArray(b.byteCount).also { b.copyPixelsToBuffer(ByteBuffer.wrap(it)) }
+                    } catch (t: Throwable) {
+                        null
                     }
-                } catch (e: OutOfMemoryError) {
-                    bitmaps.forEach { it.recycle() }
-                    done(null, Fail("RenderFailed", "memory"))
-                    return@resize
-                }
-                io.execute {
-                    val out = bitmaps.map { b ->
-                        val buf = ByteBuffer.allocate(b.byteCount)
-                        b.copyPixelsToBuffer(buf)
-                        val m = mapOf("width" to b.width, "height" to b.height, "rgba" to buf.array())
-                        b.recycle()
-                        m
+                    main.post {
+                        job.guard {
+                            if (rgba == null) throw Fail("RenderFailed", "memory")
+                            out.add(mapOf("width" to widthPx, "height" to pageH, "rgba" to rgba))
+                            if (i + 1 < pages) shoot(i + 1) else job.done(mapOf("pages" to out, "fit" to l.fit), null)
+                        }
                     }
-                    main.post { done(mapOf("pages" to out, "fit" to l.fit), null) }
                 }
+                if (!queued) throw Fail("RenderFailed", "closed")
             }
+            resize(job, widthPx, pageH * pages) { shoot(0) }
         }
     }
 
@@ -528,13 +643,23 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
         var n = (raw ?: "").replace(BAD_NAME, "").trim().trimStart('.')
         if (n.lowercase().endsWith(".pdf")) n = n.dropLast(4)
         if (n.isEmpty()) n = "Quotation"
-        if (n.length > 76) n = n.take(76)
+        if (n.codePointCount(0, n.length) > MAX_NAME) n = n.substring(0, n.offsetByCodePoints(0, MAX_NAME)).trim()
         return "$n.pdf"
     }
 
-    private class Target(val uri: Uri?, val file: File?, val pfd: ParcelFileDescriptor)
+    private fun openTarget(job: Job, name: String): Target {
+        val t = try {
+            createTarget(name)
+        } catch (e: Fail) {
+            throw e
+        } catch (e: Exception) {
+            throw Fail("NoSpace")
+        }
+        job.targets.add(t)
+        return t
+    }
 
-    private fun openTarget(name: String): Target {
+    private fun createTarget(name: String): Target {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val values = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, name)
@@ -555,6 +680,11 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
         return Target(null, f, pfd)
     }
 
+    private fun dropTarget(job: Job, t: Target) {
+        job.targets.remove(t)
+        dropTarget(t)
+    }
+
     private fun dropTarget(t: Target) {
         closeQuietly(t.pfd)
         t.uri?.let {
@@ -566,7 +696,7 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
         t.file?.delete()
     }
 
-    // Opens the written file and checks page count and A4 size; a stray blank page is a failure.
+    // Opens the written file and checks page count and A4 size; a stray blank page is a failure. Executor only.
     private fun verify(t: Target, pages: Int): Boolean {
         return try {
             val read = (if (t.uri != null) activity.contentResolver.openFileDescriptor(t.uri, "r") else ParcelFileDescriptor.open(t.file, ParcelFileDescriptor.MODE_READ_ONLY))
@@ -590,7 +720,16 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
         }
     }
 
-    private fun printE1(name: String, t: Target, then: (Boolean) -> Unit) {
+    private fun checkFile(job: Job, t: Target, written: Boolean, pages: Int, then: (Boolean) -> Unit) {
+        if (!written) return then(false)
+        val queued = background {
+            val good = verify(t, pages)
+            main.post { job.guard { then(good) } }
+        }
+        if (!queued) then(false)
+    }
+
+    private fun printE1(job: Job, name: String, t: Target, then: (Boolean) -> Unit) {
         val view = webView ?: return then(false)
         val attrs = PrintAttributes.Builder()
             .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
@@ -599,28 +738,31 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
             .setColorMode(PrintAttributes.COLOR_MODE_COLOR)
             .build()
         val adapter = view.createPrintDocumentAdapter(name)
-        QuotePdfPrinter(attrs).print(adapter, t.pfd, CancellationSignal(), object : QuotePdfPrinter.Callback {
+        val signal = CancellationSignal()
+        job.signals.add(signal)
+        QuotePdfPrinter(attrs).print(adapter, t.pfd, signal, object : QuotePdfPrinter.Callback {
             override fun onDone() {
-                main.post { guard { then(true) } }
+                main.post { job.guard { then(true) } }
             }
 
             override fun onFailed(reason: String) {
-                main.post { guard { then(false) } }
+                main.post { job.guard { then(false) } }
             }
         })
     }
 
     // E2: the same WebView drawn page by page into one reused bitmap at 2.5x (one retry at 2x on low memory).
-    private fun printE2(pages: Int, t: Target, scale: Float, then: (Boolean) -> Unit) {
+    private fun printE2(job: Job, pages: Int, t: Target, scale: Float, then: (Boolean) -> Unit) {
         val w = Math.round(PAGE_W * scale)
         val h = Math.round(PAGE_H * scale)
-        resize(w, h * pages) {
+        resize(job, w, h * pages) {
             val view = webView ?: return@resize then(false)
             var bitmap: Bitmap? = null
             val doc = PdfDocument()
-            try {
-                bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-                val bc = Canvas(bitmap)
+            val bmp: Bitmap = try {
+                val b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                bitmap = b
+                val bc = Canvas(b)
                 val paint = Paint(Paint.FILTER_BITMAP_FLAG)
                 for (i in 0 until pages) {
                     bc.save()
@@ -631,27 +773,33 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
                     val page = doc.startPage(PdfDocument.PageInfo.Builder(PDF_W, PDF_H, i + 1).create())
                     page.canvas.save()
                     page.canvas.scale(PDF_W.toFloat() / w, PDF_H.toFloat() / h)
-                    page.canvas.drawBitmap(bitmap, 0f, 0f, paint)
+                    page.canvas.drawBitmap(b, 0f, 0f, paint)
                     page.canvas.restore()
                     doc.finishPage(page)
                 }
-                val bmp = bitmap
-                io.execute {
-                    val ok = try {
-                        FileOutputStream(t.pfd.fileDescriptor).use { doc.writeTo(it) }
-                        true
-                    } catch (e: Exception) {
-                        false
-                    } finally {
-                        doc.close()
-                        bmp.recycle()
-                    }
-                    main.post { guard { then(ok) } }
-                }
+                b
             } catch (e: OutOfMemoryError) {
                 doc.close()
                 bitmap?.recycle()
-                if (scale > 2f) printE2(pages, t, 2f, then) else then(false)
+                if (scale > 2f) printE2(job, pages, t, 2f, then) else then(false)
+                return@resize
+            }
+            val queued = background {
+                val ok = try {
+                    FileOutputStream(t.pfd.fileDescriptor).use { doc.writeTo(it) }
+                    true
+                } catch (e: Exception) {
+                    false
+                } finally {
+                    doc.close()
+                    bmp.recycle()
+                }
+                main.post { job.guard { then(ok) } }
+            }
+            if (!queued) {
+                doc.close()
+                bmp.recycle()
+                then(false)
             }
         }
     }
@@ -663,16 +811,42 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
         }
     }
 
-    private fun publish(t: Target, name: String): Pair<String, Long> {
+    private fun removeUri(uri: Uri) {
+        try {
+            if (uri.authority == "downloads") {
+                val dm = activity.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                dm.remove(ContentUris.parseId(uri))
+            } else {
+                activity.contentResolver.delete(uri, null, null)
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun queryName(uri: Uri): String? = try {
+        activity.contentResolver.query(uri, arrayOf(MediaStore.MediaColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+            if (c.moveToFirst()) c.getString(0) else null
+        }
+    } catch (_: Exception) {
+        null
+    }
+
+    // Executor only. The earlier copy (replace) goes first so the new file keeps the plain name.
+    private fun publish(t: Target, name: String, replace: Uri?): Published {
         if (t.uri != null) {
             closeQuietly(t.pfd)
+            if (replace != null && replace != t.uri) removeUri(replace)
             val size = activity.contentResolver.openFileDescriptor(t.uri, "r")?.use { it.statSize } ?: 0L
-            activity.contentResolver.update(t.uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
-            return Pair(t.uri.toString(), size)
+            activity.contentResolver.update(t.uri, ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+                put(MediaStore.MediaColumns.IS_PENDING, 0)
+            }, null, null)
+            return Published(t.uri, queryName(t.uri) ?: name, size)
         }
         closeQuietly(t.pfd)
         val src = t.file ?: throw Fail("RenderFailed", "file")
         try {
+            if (replace != null) removeUri(replace)
             @Suppress("DEPRECATION")
             val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).apply { mkdirs() }
             var out = File(dir, name)
@@ -685,8 +859,11 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
             val dm = activity.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             @Suppress("DEPRECATION")
             val id = dm.addCompletedDownload(out.name, out.name, true, "application/pdf", out.absolutePath, out.length(), false)
-            val uri = dm.getUriForDownloadedFile(id) ?: throw Fail("RenderFailed", "uri")
-            return Pair(uri.toString(), out.length())
+            val uri = dm.getUriForDownloadedFile(id) ?: run {
+                dm.remove(id)
+                throw Fail("RenderFailed", "uri")
+            }
+            return Published(uri, out.name, out.length())
         } catch (e: SecurityException) {
             throw Fail("StorageDenied")
         } finally {
@@ -694,45 +871,39 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
         }
     }
 
-    private fun renderCall(call: MethodCall, done: (Any?, Fail?) -> Unit) {
+    private fun renderCall(job: Job, call: MethodCall) {
         val name = safeName(call.argument<String>("fileName"))
+        val replace = call.argument<String>("replaceUri")?.let { raw -> Uri.parse(raw).takeIf { it.scheme == "content" } }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
             activity.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             throw Fail("StorageDenied")
         }
         fun attempt(minFit: Int, retried: Boolean) {
-            fill(call, minFit) { l ->
+            fill(job, call, minFit) { l ->
                 if (!l.ok) {
-                    done(null, Fail(l.reason ?: "RenderFailed"))
+                    job.done(null, Fail(l.reason ?: "RenderFailed"))
                     return@fill
                 }
-                val t = try {
-                    openTarget(name)
-                } catch (e: Fail) {
-                    done(null, e)
-                    return@fill
-                } catch (e: Exception) {
-                    done(null, Fail("NoSpace"))
-                    return@fill
-                }
-                printE1(name, t) { printed ->
-                    if (printed && verify(t, l.pages)) {
-                        finishRender(t, name, l, "print", done)
-                    } else if (!retried && l.fit < 2) {
-                        dropTarget(t)
-                        attempt(l.fit + 1, true)
-                    } else {
-                        dropTarget(t)
-                        val t2 = try {
-                            openTarget(name)
-                        } catch (e: Exception) {
-                            done(null, if (e is Fail) e else Fail("NoSpace"))
-                            return@printE1
-                        }
-                        printE2(l.pages, t2, RASTER_SCALE) { ok ->
-                            if (ok && verify(t2, l.pages)) finishRender(t2, name, l, "raster", done) else {
-                                dropTarget(t2)
-                                done(null, Fail("RenderFailed", "verify"))
+                val t = openTarget(job, name)
+                printE1(job, name, t) { printed ->
+                    checkFile(job, t, printed, l.pages) { good ->
+                        if (good) {
+                            finishRender(job, t, name, l, "print", replace)
+                        } else if (!retried && l.fit < 2) {
+                            dropTarget(job, t)
+                            attempt(l.fit + 1, true)
+                        } else {
+                            dropTarget(job, t)
+                            val t2 = openTarget(job, name)
+                            printE2(job, l.pages, t2, RASTER_SCALE) { ok ->
+                                checkFile(job, t2, ok, l.pages) { good2 ->
+                                    if (good2) {
+                                        finishRender(job, t2, name, l, "raster", replace)
+                                    } else {
+                                        dropTarget(job, t2)
+                                        job.done(null, Fail("RenderFailed", "verify"))
+                                    }
+                                }
                             }
                         }
                     }
@@ -742,17 +913,35 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
         attempt(0, false)
     }
 
-    private fun finishRender(t: Target, name: String, l: Layout, engine: String, done: (Any?, Fail?) -> Unit) {
-        try {
-            val (uri, size) = publish(t, name)
-            resize(PAGE_W, PAGE_H) {}
-            done(mapOf("uri" to uri, "displayName" to name, "pages" to l.pages, "engine" to engine, "bytes" to size), null)
-        } catch (e: Fail) {
+    // The target leaves the job's list before publishing; if the job died meanwhile the published file is removed.
+    private fun finishRender(job: Job, t: Target, name: String, l: Layout, engine: String, replace: Uri?) {
+        job.targets.remove(t)
+        webView?.layoutParams = FrameLayout.LayoutParams(PAGE_W, PAGE_H)
+        val queued = background {
+            val outcome: Any = try {
+                publish(t, name, replace)
+            } catch (e: Fail) {
+                dropTarget(t)
+                e
+            } catch (e: Exception) {
+                dropTarget(t)
+                Fail("NoSpace")
+            }
+            main.post {
+                if (outcome is Published) {
+                    if (job.alive) {
+                        job.done(mapOf("uri" to outcome.uri.toString(), "displayName" to outcome.displayName, "pages" to l.pages, "engine" to engine, "bytes" to outcome.bytes), null)
+                    } else {
+                        background { removeUri(outcome.uri) }
+                    }
+                } else if (outcome is Fail) {
+                    job.done(null, outcome)
+                }
+            }
+        }
+        if (!queued) {
             dropTarget(t)
-            done(null, e)
-        } catch (e: Exception) {
-            dropTarget(t)
-            done(null, Fail("NoSpace"))
+            throw Fail("RenderFailed", "closed")
         }
     }
 
@@ -793,15 +982,7 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
             return
         }
         io.execute {
-            try {
-                if (uri.authority == "downloads") {
-                    val dm = activity.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-                    dm.remove(ContentUris.parseId(uri))
-                } else {
-                    activity.contentResolver.delete(uri, null, null)
-                }
-            } catch (_: Exception) {
-            }
+            removeUri(uri)
             main.post { result.success(null) }
         }
     }
@@ -810,10 +991,8 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
 
     @Suppress("DEPRECATION")
     override fun onTrimMemory(level: Int) {
-        if (running) return
         if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW || level == ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {
-            destroyWebView()
-            bytesCache.clear()
+            if (running) trimWhenIdle = true else release()
         }
     }
 
@@ -821,13 +1000,16 @@ class QuotePdfChannel private constructor(private val activity: Activity, messen
 
     @Deprecated("Deprecated in Java")
     override fun onLowMemory() {
-        if (!running) destroyWebView()
+        if (running) trimWhenIdle = true else release()
     }
 
     fun dispose() {
         activity.unregisterComponentCallbacks(this)
         channel.setMethodCallHandler(null)
+        dropQueued(Fail("RenderFailed", "closed"))
         destroyWebView()
+        current?.done(null, Fail("RenderFailed", "closed"))
+        release()
         io.shutdown()
     }
 }

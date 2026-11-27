@@ -58,4 +58,26 @@ class QuoteBusiness {
   final QuoteUsage? usage;
 
   bool get hasGstin => gstin.trim().isNotEmpty;
+
+  QuoteBusiness copyWith({bool? hasLogo, bool? hasSignature, int? assetsVersion, QuoteBankLines? bank}) => QuoteBusiness(
+        name: name,
+        approved: approved,
+        slogan: slogan,
+        address: address,
+        phone: phone,
+        email: email,
+        gstin: gstin,
+        preparedBy: preparedBy,
+        termsText: termsText,
+        cancellationText: cancellationText,
+        hasLogo: hasLogo ?? this.hasLogo,
+        hasSignature: hasSignature ?? this.hasSignature,
+        assetsVersion: assetsVersion ?? this.assetsVersion,
+        bank: bank ?? this.bank,
+        nextQuotation: nextQuotation,
+        nextProforma: nextProforma,
+        previewWatermark: previewWatermark,
+        minTemplateVersion: minTemplateVersion,
+        usage: usage,
+      );
 }

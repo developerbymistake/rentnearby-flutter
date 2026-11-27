@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
+import 'package:get/get.dart';
 
+import '../../../../controllers/plan_controller.dart';
 import '../../../owner_core/data/owner_result.dart';
 import '../controllers/quote_hub_controller.dart';
 import '../data/quote_models.dart';
@@ -34,12 +36,20 @@ abstract class QuoteSource {
   String get businessName;
   QuoteBusiness? business({QuoteBank? bank});
   QuoteUsage? get usage;
+  // The month limit /plans/me says now (null while the plan is not loaded); the local pre-check runs only when the hub agrees.
+  int? get planLimit;
+  // Business details hold a bank block (the secure copy may still be missing on this phone).
+  bool get bankSaved;
   bool get offline;
   Future<bool> ensureReady(BuildContext context, {int? appTemplateVersion});
   Future<QuoteBank?> bank();
   Future<bool> hasImage(QuoteImageKind kind, int version);
   Future<void> ensureImages(int assetsVersion);
   Future<QuoteReserveOutcome> reserve(String documentId, QuoteKind kind);
+  // Forced hub reload (after a limit sheet: the owner may have bought Plus).
+  Future<void> refreshUsage();
+  // Calls onChange whenever the hub (Business details, images, numbers) changes; returns the stop function.
+  void Function() watchBusiness(void Function() onChange);
 }
 
 class AppQuoteSource implements QuoteSource {
@@ -92,6 +102,16 @@ class AppQuoteSource implements QuoteSource {
   QuoteUsage? get usage => hub.usage;
 
   @override
+  int? get planLimit {
+    if (!Get.isRegistered<PlanController>()) return null;
+    final plans = Get.find<PlanController>();
+    return plans.loaded.value ? plans.myPlan.value.limits.quotationsPerMonth : null;
+  }
+
+  @override
+  bool get bankSaved => hub.hub.value?.profile?.bank.has ?? false;
+
+  @override
   bool get offline => hub.offline.value;
 
   @override
@@ -115,11 +135,7 @@ class AppQuoteSource implements QuoteSource {
   }
 
   @override
-  Future<void> ensureImages(int assetsVersion) async {
-    final uid = userId;
-    if (uid == null) return;
-    await hub.store.ensureImages(uid, hub.hub.value?.profile, assetsVersion: assetsVersion);
-  }
+  Future<void> ensureImages(int assetsVersion) => hub.fetchMissingImages(assetsVersion: assetsVersion);
 
   @override
   Future<QuoteReserveOutcome> reserve(String documentId, QuoteKind kind) async {
@@ -129,11 +145,27 @@ class AppQuoteSource implements QuoteSource {
         hub.applyReserve(value);
         return QuoteReserved(value);
       case OwnerRefused<QuoteReserveResult>():
+        final info = QuoteLimitInfo.of(r);
+        if (info != null) {
+          hub.applyUsage(QuoteUsage(used: info.used, limit: info.limit, resetsAt: info.resetsAt, canUpgrade: info.canUpgrade));
+          if (Get.isRegistered<PlanController>()) Get.find<PlanController>().invalidate().ignore();
+        }
         return QuoteReserveRefused(r);
       case OwnerOffline<QuoteReserveResult>():
         return const QuoteReserveOffline();
       default:
         return QuoteReserveFailed(r is OwnerFailed<QuoteReserveResult> ? r.message : null);
     }
+  }
+
+  @override
+  Future<void> refreshUsage() async {
+    await hub.load(force: true);
+  }
+
+  @override
+  void Function() watchBusiness(void Function() onChange) {
+    final w = ever<QuoteHub?>(hub.hub, (_) => onChange());
+    return w.dispose;
   }
 }

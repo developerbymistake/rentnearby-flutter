@@ -92,6 +92,13 @@ abstract final class QuoteMoney {
 
   static String inr(int rupees) => '${Money.symbol}${Money.group(rupees)}';
 
+  // Prefix of the rupee entry fields, and the spaced form the documents print for totals.
+  static const String fieldPrefix = '${Money.symbol} ';
+  static String inrSpaced(int rupees) => '$fieldPrefix${Money.group(rupees)}';
+  static String inrPaise(int paise) => '${Money.symbol}${QuoteMoney.paise(paise)}';
+  static String minusInr(int rupees) => '-${inr(rupees)}';
+  static String minusGroup(int rupees) => '-${Money.group(rupees)}';
+
   static String paise(int paise) {
     final neg = paise < 0;
     final a = paise.abs();

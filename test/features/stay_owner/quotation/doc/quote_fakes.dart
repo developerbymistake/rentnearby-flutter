@@ -10,7 +10,7 @@ import 'package:bakhli/features/stay_owner/quotation/model/quote_source.dart';
 import 'package:bakhli/features/stay_owner/quotation/pdf/quote_engine.dart';
 import 'package:flutter/widgets.dart';
 
-QuoteBusiness sampleBusiness({String gstin = '05ABCDE1234F1Z5', QuoteUsage? usage}) => QuoteBusiness(
+QuoteBusiness sampleBusiness({String gstin = '05ABCDE1234F1Z5', QuoteUsage? usage, bool previewWatermark = true}) => QuoteBusiness(
       name: 'The Banyan Retreat',
       slogan: 'Riverside stays on the edge of the forest',
       address: 'Village Dhikuli, Ramnagar\nNainital, Uttarakhand 244715',
@@ -25,6 +25,7 @@ QuoteBusiness sampleBusiness({String gstin = '05ABCDE1234F1Z5', QuoteUsage? usag
       bank: const QuoteBankLines(holder: 'The Banyan Retreat', accountNo: '30987654521', ifsc: 'SBIN0001234', bank: 'State Bank of India', branch: 'Ramnagar', upi: 'banyan@sbi'),
       nextQuotation: 42,
       nextProforma: 7,
+      previewWatermark: previewWatermark,
       usage: usage,
     );
 
@@ -96,7 +97,11 @@ class FakeEngine implements QuoteEngineApi {
   QuoteDoc? lastRendered;
   String? lastFileName;
   final deleted = <String>[];
+  final opened = <String>[];
+  List<QuotePreviewPage> previewPages = const [];
   int _n = 0;
+
+  static QuotePreviewPage tinyPage() => QuotePreviewPage(width: 2, height: 3, rgba: Uint8List(2 * 3 * 4));
 
   @override
   Future<String> storageDir() async => '/tmp/quote';
@@ -119,7 +124,7 @@ class FakeEngine implements QuoteEngineApi {
   @override
   Future<QuotePreview> preview(String template, QuoteDoc doc, {required int widthPx, required bool watermark}) async {
     calls.add('preview:$watermark');
-    return const QuotePreview(pages: [], fit: 0);
+    return QuotePreview(pages: previewPages, fit: 0);
   }
 
   @override
@@ -133,7 +138,10 @@ class FakeEngine implements QuoteEngineApi {
   }
 
   @override
-  Future<QuoteOpenResult> open(String uri) async => QuoteOpenResult.opened;
+  Future<QuoteOpenResult> open(String uri) async {
+    opened.add(uri);
+    return QuoteOpenResult.opened;
+  }
 
   @override
   Future<void> delete(String uri) async => deleted.add(uri);
@@ -143,10 +151,24 @@ class FakeEngine implements QuoteEngineApi {
 }
 
 class FakeSource implements QuoteSource {
-  FakeSource({this.business0, this.usage0});
+  FakeSource({this.business0, this.usage0, this.planLimit0, this.bank0, this.bankSaved0 = false, this.offline0 = false});
 
   QuoteBusiness? business0;
   QuoteUsage? usage0;
+  // null = /plans/me agrees with the hub limit.
+  int? planLimit0;
+  QuoteBank? bank0;
+  bool bankSaved0;
+  bool offline0;
+  int refreshes = 0;
+  final watchers = <void Function()>[];
+
+  void changeBusiness(QuoteBusiness b) {
+    business0 = b;
+    for (final w in List.of(watchers)) {
+      w();
+    }
+  }
   final reserves = <(String, QuoteKind)>[];
   final List<QuoteReserveOutcome> outcomes = [];
   final log = <String>[];
@@ -180,13 +202,19 @@ class FakeSource implements QuoteSource {
   QuoteUsage? get usage => usage0;
 
   @override
-  bool get offline => false;
+  int? get planLimit => planLimit0 ?? usage0?.limit;
+
+  @override
+  bool get bankSaved => bankSaved0;
+
+  @override
+  bool get offline => offline0;
 
   @override
   Future<bool> ensureReady(BuildContext context, {int? appTemplateVersion}) async => true;
 
   @override
-  Future<QuoteBank?> bank() async => null;
+  Future<QuoteBank?> bank() async => bank0;
 
   @override
   Future<bool> hasImage(QuoteImageKind kind, int version) async => kind == QuoteImageKind.logo;
@@ -199,5 +227,17 @@ class FakeSource implements QuoteSource {
     reserves.add((documentId, kind));
     log.add('reserve');
     return outcomes.isEmpty ? QuoteReserved(ok(kind: kind)) : outcomes.removeAt(0);
+  }
+
+  @override
+  Future<void> refreshUsage() async {
+    refreshes++;
+    log.add('refresh');
+  }
+
+  @override
+  void Function() watchBusiness(void Function() onChange) {
+    watchers.add(onChange);
+    return () => watchers.remove(onChange);
   }
 }

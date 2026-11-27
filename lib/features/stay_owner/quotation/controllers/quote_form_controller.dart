@@ -45,6 +45,8 @@ class QuoteFormController extends GetxController {
   final DateTime Function() _now;
   final errors = <String, String>{}.obs;
   final fromEnquiryGuest = RxnString();
+  void Function()? _unwatch;
+  bool _gstTextBad = false;
 
   String newId() => _newId();
 
@@ -70,6 +72,7 @@ class QuoteFormController extends GetxController {
     final c = QuoteFormController(initial: draft, store: store, business: business, ownerId: uid, now: clock);
     final prefill = QuotePrefill.fromArgs(args);
     if (fresh && prefill != null) c.applyPrefill(prefill);
+    c._unwatch = source.watchBusiness(() => c.refreshBusiness(source).ignore());
     if (existing != null) Get.delete<QuoteFormController>(tag: tag, force: true);
     return Get.put(c, tag: tag);
   }
@@ -89,31 +92,9 @@ class QuoteFormController extends GetxController {
     return d.reservationFor(other) != null && d.reservation == null;
   }
 
-  QuoteDoc doc({String? number, String? businessName, bool? logo, bool? signature}) {
-    var b = business.value;
-    if (logo != null || signature != null) {
-      b = QuoteBusiness(
-        name: b.name,
-        approved: b.approved,
-        slogan: b.slogan,
-        address: b.address,
-        phone: b.phone,
-        email: b.email,
-        gstin: b.gstin,
-        preparedBy: b.preparedBy,
-        termsText: b.termsText,
-        cancellationText: b.cancellationText,
-        hasLogo: logo ?? b.hasLogo,
-        hasSignature: signature ?? b.hasSignature,
-        assetsVersion: b.assetsVersion,
-        bank: b.bank,
-        nextQuotation: b.nextQuotation,
-        nextProforma: b.nextProforma,
-        previewWatermark: b.previewWatermark,
-        minTemplateVersion: b.minTemplateVersion,
-        usage: b.usage,
-      );
-    }
+  // assetsVersion: the version the download just got from /reserve, so the PDF reads the image files that are on the phone now.
+  QuoteDoc doc({String? number, String? businessName, bool? logo, bool? signature, int? assetsVersion}) {
+    final b = business.value.copyWith(hasLogo: logo, hasSignature: signature, assetsVersion: assetsVersion);
     return QuoteDocBuilder.build(draft.value, b, number: number, businessName: businessName, owner: ownerId);
   }
 
@@ -126,6 +107,15 @@ class QuoteFormController extends GetxController {
   void setBusiness(QuoteBusiness b) {
     business.value = b;
     if (!b.hasGstin && draft.value.gstBp != 0) _set(draft.value.copyWith(gstBp: 0));
+  }
+
+  // Business details changed (GSTIN, logo, terms, bank): the form, preview and PDF read the new values.
+  Future<void> refreshBusiness(QuoteSource source) async {
+    final bank = await source.bank();
+    final b = source.business(bank: bank);
+    if (b == null || isClosed) return;
+    final keepBank = bank == null && source.bankSaved && !business.value.bank.isEmpty;
+    setBusiness(keepBank ? b.copyWith(bank: business.value.bank) : b);
   }
 
   void setKind(QuoteKind k) {
@@ -175,7 +165,8 @@ class QuoteFormController extends GetxController {
   static String? lineError({required String description, required int rate, required int qty, required int nights}) {
     if (description.trim().isEmpty) return StayQuoteStrings.errDescription;
     if (rate < 0 || rate > QuoteMoney.maxRate) return StayQuoteStrings.errRate;
-    if (qty < 1 || qty > QuoteLimits.maxQty || nights < 1 || nights > QuoteLimits.maxNights) return StayQuoteStrings.errRate;
+    if (qty < 1 || qty > QuoteLimits.maxQty) return StayQuoteStrings.errQty(QuoteLimits.maxQty);
+    if (nights < 1 || nights > QuoteLimits.maxNights) return StayQuoteStrings.errNights(QuoteLimits.maxNights);
     return null;
   }
 
@@ -203,9 +194,11 @@ class QuoteFormController extends GetxController {
   bool setGstText(String text) {
     final bp = QuoteMoney.parseBp(text);
     if (bp == null) {
+      _gstTextBad = true;
       errors[QuoteFieldKeys.gst] = StayQuoteStrings.errGst;
       return false;
     }
+    _gstTextBad = false;
     errors.remove(QuoteFieldKeys.gst);
     _set(draft.value.copyWith(gstBp: gstAllowed ? bp : 0));
     return true;
@@ -276,7 +269,7 @@ class QuoteFormController extends GetxController {
     if (d.validTill.isBefore(d.date)) out[QuoteFieldKeys.validTill] = StayQuoteStrings.errValid;
     if (d.lines.isEmpty) out[QuoteFieldKeys.lines] = StayQuoteStrings.errLines;
     if (d.discount > t.subtotal) out[QuoteFieldKeys.discount] = StayQuoteStrings.errDiscount;
-    if (d.gstBp < 0 || d.gstBp > QuoteMoney.maxGstBp) out[QuoteFieldKeys.gst] = StayQuoteStrings.errGst;
+    if ((_gstTextBad && gstAllowed) || d.gstBp < 0 || d.gstBp > QuoteMoney.maxGstBp) out[QuoteFieldKeys.gst] = StayQuoteStrings.errGst;
     if (d.kind == QuoteKind.proforma && t.received > t.total) out[QuoteFieldKeys.payments] = StayQuoteStrings.errReceived;
     if (t.tooLarge) out[QuoteFieldKeys.total] = StayQuoteStrings.errTotal;
     return out;
@@ -296,6 +289,8 @@ class QuoteFormController extends GetxController {
 
   @override
   void onClose() {
+    _unwatch?.call();
+    _unwatch = null;
     store.flush().ignore();
     super.onClose();
   }

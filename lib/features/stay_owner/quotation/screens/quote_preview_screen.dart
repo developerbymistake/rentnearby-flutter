@@ -45,6 +45,8 @@ class _QuotePreviewScreenState extends State<QuotePreviewScreen> {
   QuoteDownloadController? _dl;
   bool _owns = false;
   List<ui.Image> _pages = const [];
+  List<TransformationController> _zoom = const [];
+  final _zoomed = ValueNotifier<bool>(false);
   String? _error;
   bool _disposed = false;
 
@@ -67,6 +69,12 @@ class _QuotePreviewScreenState extends State<QuotePreviewScreen> {
       _owns = !identical(had, c);
       _dl = QuoteDownloadController(form: c, source: _source, engine: _engine, offline: widget.offline);
     });
+    if (!_source.offline) {
+      try {
+        await _source.ensureImages(c.business.value.assetsVersion);
+      } catch (_) {}
+      if (!mounted) return;
+    }
     await _render(c);
   }
 
@@ -87,6 +95,7 @@ class _QuotePreviewScreenState extends State<QuotePreviewScreen> {
       setState(() {
         _pages = images;
         _error = null;
+        if (_zoom.length != images.length) _resetZoom(images.length);
       });
       QuotePageImage.disposeAll(old);
     } on QuoteEngineException catch (e) {
@@ -94,9 +103,26 @@ class _QuotePreviewScreenState extends State<QuotePreviewScreen> {
     }
   }
 
+  // One zoom per page; while a page is zoomed the list stops scrolling, so a drag pans the page instead of fighting the list.
+  void _resetZoom(int n) {
+    for (final z in _zoom) {
+      z.dispose();
+    }
+    _zoomed.value = false;
+    _zoom = [
+      for (var i = 0; i < n; i++) TransformationController()..addListener(_onZoom),
+    ];
+  }
+
+  void _onZoom() => _zoomed.value = _zoom.any((z) => z.value.getMaxScaleOnAxis() > 1.01);
+
   @override
   void dispose() {
     _disposed = true;
+    for (final z in _zoom) {
+      z.dispose();
+    }
+    _zoomed.dispose();
     QuotePageImage.disposeAll(_pages);
     if (_owns && identical(QuoteFormController.maybe, _c)) Get.delete<QuoteFormController>(tag: QuoteFormController.tag, force: true);
     super.dispose();
@@ -114,6 +140,9 @@ class _QuotePreviewScreenState extends State<QuotePreviewScreen> {
         await QuoteSavedSheet.show(context, result: saved, template: QuoteTemplates.of(_c!.draft.value.template).name, total: _c!.totals.total, engine: _engine);
       case QuoteDownloadLimit limit:
         await QuoteLimitSheets.show(context, used: limit.used, limit: limit.limit, canUpgrade: limit.canUpgrade, resetsAt: limit.resetsAt);
+        // The owner may have bought Plus from the sheet: the next tap must see the new limit.
+        await _source.refreshUsage();
+        if (mounted) setState(() {});
       case QuoteDownloadMessage(:final message):
         AppToast.info(message);
       case QuoteDownloadInvalid():
@@ -130,17 +159,26 @@ class _QuotePreviewScreenState extends State<QuotePreviewScreen> {
   Widget _page() {
     if (_error != null) return StayErrorCard(art: ListingArt.warning, title: _error!);
     if (_pages.isEmpty) return Padding(padding: DS.all(18), child: const SkeletonFormCard());
-    return InteractiveViewer(
-      maxScale: 2,
-      minScale: 1,
-      child: ListView(
+    return ValueListenableBuilder<bool>(
+      valueListenable: _zoomed,
+      builder: (context, zoomed, child) => ListView(
+        physics: zoomed ? const NeverScrollableScrollPhysics() : null,
         padding: DS.insets(l: 10, t: 12, r: 10, b: 12),
         children: [
-          for (final p in _pages)
+          for (var i = 0; i < _pages.length; i++)
             Container(
               margin: DS.insets(b: 10),
               decoration: BoxDecoration(boxShadow: DS.shadows(Ink3D.softShadow)),
-              child: AspectRatio(aspectRatio: p.width / p.height, child: RawImage(image: p, fit: BoxFit.fill)),
+              child: AspectRatio(
+                aspectRatio: _pages[i].width / _pages[i].height,
+                child: InteractiveViewer(
+                  transformationController: i < _zoom.length ? _zoom[i] : null,
+                  maxScale: 2,
+                  minScale: 1,
+                  panEnabled: zoomed,
+                  child: RawImage(image: _pages[i], fit: BoxFit.fill),
+                ),
+              ),
             ),
         ],
       ),
