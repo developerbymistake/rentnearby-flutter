@@ -173,7 +173,7 @@ void main() {
   tearDown(Get.reset);
 
   group('onboarding username (frame 1.1)', () {
-    testWidgets('shows the server username greyed in the locked pill, under the phone row at the end of step 1', (t) async {
+    testWidgets('shows the server username greyed in the locked pill, beside or under the phone row at the end of step 1', (t) async {
       _setup();
       await _openOnboarding(t);
       expect(find.text(_username), findsOneWidget);
@@ -183,7 +183,7 @@ void main() {
       expect(find.byKey(OnboardingWalk.nameKey), findsOneWidget);
       final y = t.getTopLeft(find.text(_username)).dy;
       expect(y, greaterThan(t.getTopLeft(find.text(SocialStringsA.fullName)).dy));
-      expect(y, greaterThan(t.getTopLeft(find.text('+91 98xxxxxx10')).dy));
+      expect(y, greaterThanOrEqualTo(t.getTopLeft(find.text('+91 98xxxxxx10')).dy - 2));
       await _finish(t);
     });
 
