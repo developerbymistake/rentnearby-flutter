@@ -103,7 +103,15 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
     if (p.maxScrollExtent > 0 && p.pixels >= p.maxScrollExtent - 300) _ctrl.loadMore();
   }
 
+  void _openArchived(TripSummaryModel t) {
+    TripNavigation.openArchived(t.id);
+  }
+
   void _open(TripSummaryModel t, {bool past = false}) {
+    if (t.archived) {
+      _openArchived(t);
+      return;
+    }
     if (!past) {
       TripNavigation.continueTrip(t.id);
       return;
@@ -114,6 +122,10 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
   }
 
   void _onAction(TripSummaryModel t, {bool past = false}) {
+    if (t.archived) {
+      _openArchived(t);
+      return;
+    }
     if (past || TripBarRules.isReady(t)) {
       TripNavigation.openOverview(tripId: t.id)?.then((_) {
         if (mounted) _ctrl.load();
@@ -146,7 +158,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
     final rows = t.progress.rows;
     final stays = rows.where((r) => (r.state == TripRowState.confirmed || r.state == TripRowState.booked) && r.key.kind == TripEasyRowKind.stay).length;
     final taxis = rows.where((r) => (r.state == TripRowState.confirmed || r.state == TripRowState.booked) && r.key.kind == TripEasyRowKind.taxi).length;
-    final named = await TripLifecycleActions.loadDeleteLines(t.id);
+    final named = t.archived ? const <String>[] : await TripLifecycleActions.loadDeleteLines(t.id);
     if (!mounted) return;
     final ok = await TripLifecycleActions.confirmDelete(
       context,
@@ -211,10 +223,10 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
         past: past,
         onOpen: () => _open(t, past: past),
         onAction: () => _onAction(t, past: past),
-        onShare: t.spotCount > 0 ? () => _share(t) : null,
+        onShare: t.spotCount > 0 && !t.archived ? () => _share(t) : null,
         onDelete: () => _delete(t),
-        onMarkComplete: past && !t.isCompleted ? () => TripLifecycleActions.markCompleteFromList(context, t) : null,
-        onCompletePlan: TripBarRules.canCompletePlan(t, past: past) ? () => _completePlan(t) : null,
+        onMarkComplete: past && !t.isCompleted && !t.archived ? () => TripLifecycleActions.markCompleteFromList(context, t) : null,
+        onCompletePlan: !t.archived && TripBarRules.canCompletePlan(t, past: past) ? () => _completePlan(t) : null,
       );
 
   Future<void> _completePlan(TripSummaryModel t) async {

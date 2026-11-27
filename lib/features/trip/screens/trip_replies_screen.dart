@@ -15,6 +15,7 @@ import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
 import '../utils/trip_format.dart';
+import '../widgets/trip_archived_view.dart';
 import '../widgets/trip_not_found_view.dart';
 import '../widgets/trip_status.dart';
 import 'trip_replies_leg_parts.dart';
@@ -170,10 +171,13 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> with TickerProvid
     return null;
   }
 
+  bool get _archivedHere => _c.isArchived && (_tripId == null || _c.trip.value?.id == _tripId);
+
   @override
   Widget build(BuildContext context) {
     return Obx(() {
       _c.plan.value;
+      if (_archivedHere) return TripArchivedView(trip: _c.trip.value!);
       return RepliesScaffold(
         tone: ListingTone.forest,
         title: TripStrings.stayReplies,

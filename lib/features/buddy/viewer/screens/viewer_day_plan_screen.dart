@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 
 import '../../../../design/design.dart';
 import '../../../trip/models/trip_spot_category.dart';
+import '../../../trip/trip_strings_archived.dart';
+import '../../../trip/widgets/trip_archived_view.dart';
 import '../../../trip/widgets/trip_ui.dart';
 import '../../buddy_navigation.dart';
 import '../../ledger/data/ledger_api.dart';
@@ -10,6 +12,7 @@ import '../../shared/buddy_format.dart';
 import '../../shared/buddy_look.dart';
 import '../../shared/strings_shared.dart';
 import '../../shared/widgets/buddy_page.dart';
+import '../../shared/widgets/note_banner.dart';
 import '../controllers/viewer_trip_controller.dart';
 import '../data/trip_viewer_api.dart';
 import '../models/viewer_models.dart';
@@ -90,6 +93,22 @@ class _ViewerDayPlanScreenState extends State<ViewerDayPlanScreen> {
                     layout: StateLayout.tall,
                   )
                 : Padding(padding: DS.all(40), child: const Center(child: CircularProgressIndicator())),
+          );
+        }
+        if (t.archived) {
+          return BuddyPage(
+            title: t.title,
+            body: Padding(
+              padding: DS.insets(l: 18, t: 20, r: 18, b: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  NoteBanner(key: const ValueKey('trip_archived_note'), text: TripStringsArchived.note, margin: EdgeInsets.zero),
+                  Gap.v(12),
+                  TripArchiveSections(summary: t.archiveOrFallback, fallbackTitle: t.title, showPeopleAndMoney: false),
+                ],
+              ),
+            ),
           );
         }
         _scrollToDay();

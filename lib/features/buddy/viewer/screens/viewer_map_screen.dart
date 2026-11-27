@@ -6,6 +6,7 @@ import '../../../../design/design.dart';
 import '../../../trip/map/discovery_api.dart';
 import '../../../trip/map/trip_discovery_layer.dart';
 import '../../../trip/models/trip_spot_model.dart';
+import '../../../trip/trip_strings_archived.dart';
 import '../../../trip/utils/trip_spots_cache.dart';
 import '../../../trip/widgets/trip_map_controls.dart';
 import '../../../trip/widgets/trip_map_spot_card.dart';
@@ -181,7 +182,12 @@ class _ViewerMapScreenState extends State<ViewerMapScreen> {
                   child: Center(
                     child: Padding(
                       padding: DS.all(24),
-                      child: Text(ViewerStrings.noRouteYet, textAlign: TextAlign.center, style: Ink3D.text(14, FontWeight.w600, ViewerLook.sub, letterSpacing: 0)),
+                      child: Text(
+                        t?.archived == true ? TripStringsArchived.note : ViewerStrings.noRouteYet,
+                        key: t?.archived == true ? const ValueKey('trip_archived_note') : null,
+                        textAlign: TextAlign.center,
+                        style: Ink3D.text(14, FontWeight.w600, ViewerLook.sub, letterSpacing: 0),
+                      ),
                     ),
                   ),
                 )

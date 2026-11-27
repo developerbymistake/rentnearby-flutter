@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
 
@@ -6,6 +7,7 @@ import '../../../buddy/shared/buddy_result.dart';
 import '../../../trip/data/trip_city_catalog.dart';
 import '../../../trip/data/trip_repository.dart';
 import '../../../trip/models/trip_city_model.dart';
+import '../../../trip/models/trip_model.dart';
 import '../../../trip/utils/trip_state_rule.dart';
 import '../../shared/social_formats.dart';
 import '../../shared/social_me_controller.dart';
@@ -91,13 +93,24 @@ class PostTripController extends GetxController {
 
   static Future<({List<TripCityModel> cities, DateTime? startDate, int days})> _defaultLoadTrip(String id) async {
     final trip = await const TripRepository().get(id);
-    final catalog = TripCityCatalog.to;
+    return (cities: citiesOf(trip, TripCityCatalog.to.search('')), startDate: trip.startDate, days: trip.dayCount);
+  }
+
+  // An archived trip has no plan legs: its cities come from the kept city names.
+  @visibleForTesting
+  static List<TripCityModel> citiesOf(TripModel trip, List<TripCityModel> catalog) {
+    if (trip.archived) {
+      return [
+        for (final name in trip.archiveOrFallback.cities.map((c) => c.name))
+          if (catalog.where((c) => c.name == name).firstOrNull case final known?) known,
+      ];
+    }
     final cities = <TripCityModel>[];
     for (final leg in trip.plan.legs) {
-      final known = catalog.search('').where((c) => c.cityKey == leg.cityKey);
+      final known = catalog.where((c) => c.cityKey == leg.cityKey);
       cities.add(known.isNotEmpty ? known.first : TripCityModel(cityKey: leg.cityKey, name: leg.cityName, latitude: leg.latitude, longitude: leg.longitude));
     }
-    return (cities: cities, startDate: trip.startDate, days: trip.dayCount);
+    return cities;
   }
 
   @override

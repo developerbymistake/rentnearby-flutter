@@ -25,6 +25,7 @@ import 'trip_navigation.dart';
 import 'trip_strings.dart';
 import 'utils/taxi_result.dart';
 import 'widgets/taxi_request/taxi_day_rows.dart';
+import 'widgets/trip_archived_view.dart';
 import 'widgets/trip_exit_confirm.dart';
 import 'widgets/trip_not_found_view.dart';
 
@@ -50,6 +51,12 @@ final List<GetPage> tripPages = [
   GetPage(
     name: AppRoutes.tripOverview,
     page: () => TripOverviewRoute(tripId: _text(_args()['tripId'])),
+    customTransition: TemplateTransition(),
+    transitionDuration: templateTransitionDuration,
+  ),
+  GetPage(
+    name: AppRoutes.tripArchived,
+    page: () => TripArchivedRoute(tripId: _text(_args()['tripId'])),
     customTransition: TemplateTransition(),
     transitionDuration: templateTransitionDuration,
   ),
@@ -137,12 +144,17 @@ mixin _HoldsTrip<T extends StatefulWidget> on State<T> {
     return t != null && (id == null || t.id == id) && _plan.plan.value != null;
   }
 
+  bool _heldArchived(String? id) {
+    final t = _plan.trip.value;
+    return t != null && t.archived && (id == null || t.id == id);
+  }
+
   void holdTrip() {
     _plan.openPages++;
     final id = heldTripId;
-    if (id != null && !_holds(id)) {
+    if (id != null && !_holds(id) && !_heldArchived(id)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && !_holds(id) && !_plan.isOpening.value) _plan.open(id);
+        if (mounted && !_holds(id) && !_heldArchived(id) && !_plan.isOpening.value) _plan.open(id);
       });
     }
   }
@@ -160,6 +172,8 @@ mixin _HoldsTrip<T extends StatefulWidget> on State<T> {
   }
 
   bool get heldGone => _plan.tripGone.value && _thisTrip;
+
+  VoidCallback? get onArchivedBack => null;
 
   Widget heldOrLoading(Widget Function() child) {
     final id = heldTripId;
@@ -184,6 +198,7 @@ mixin _HoldsTrip<T extends StatefulWidget> on State<T> {
         ),
       );
     }
+    if (_heldArchived(id)) return TripArchivedView(trip: _plan.trip.value!, onBack: onArchivedBack);
     if (_holds(id)) return child();
     if (id == null && !_plan.isOpening.value) {
       return Scaffold(
@@ -256,8 +271,11 @@ class _TripOverviewRouteState extends State<TripOverviewRoute> with _HoldsTrip {
     return p == null || d == null ? null : p.cityNameOf(d);
   }
 
+  @override
+  VoidCallback? get onArchivedBack => _exit;
+
   Future<void> _exit() async {
-    if (!_holds(heldTripId) || heldGone || _plan.plannerOff.value) {
+    if (!_holds(heldTripId) || heldGone || _plan.plannerOff.value || _heldArchived(heldTripId)) {
       TripNavigation.openTripsTab();
       return;
     }
@@ -319,6 +337,53 @@ class _TripOverviewRouteState extends State<TripOverviewRoute> with _HoldsTrip {
           });
         }),
       );
+}
+
+// Summary page of an archived trip; a trip that still has its plan goes to the overview instead.
+class TripArchivedRoute extends StatefulWidget {
+  const TripArchivedRoute({super.key, required this.tripId});
+
+  final String? tripId;
+
+  @override
+  State<TripArchivedRoute> createState() => _TripArchivedRouteState();
+}
+
+class _TripArchivedRouteState extends State<TripArchivedRoute> with _HoldsTrip {
+  bool _redirected = false;
+
+  @override
+  String? get heldTripId => widget.tripId;
+
+  @override
+  void initState() {
+    super.initState();
+    holdTrip();
+  }
+
+  @override
+  void dispose() {
+    releaseTrip();
+    super.dispose();
+  }
+
+  void _toOverview(String tripId) {
+    if (_redirected) return;
+    _redirected = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Get.offNamed(AppRoutes.tripOverview, arguments: {'tripId': tripId});
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => Obx(() {
+        _plan.openFailed.value;
+        _plan.plan.value;
+        return heldOrLoading(() {
+          _toOverview(_plan.trip.value!.id);
+          return _loadingPage();
+        });
+      });
 }
 
 class TripTaxiRequestRoute extends StatefulWidget {

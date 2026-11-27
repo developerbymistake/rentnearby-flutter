@@ -1,5 +1,6 @@
 import '../../shared/buddy_json.dart';
 import '../../sharing/models/sharing_models.dart';
+import '../../../trip/models/trip_archive_model.dart';
 
 class TripOwnerRef {
   const TripOwnerRef({required this.name, this.username, this.photoUrl});
@@ -302,6 +303,8 @@ class ViewerTrip {
     required this.expenses,
     this.updatedAt,
     this.detailsLocked = false,
+    this.archived = false,
+    this.archive,
   });
 
   final String tripId;
@@ -324,8 +327,21 @@ class ViewerTrip {
   final int progressPercent;
   final TripExpenseCard expenses;
   final DateTime? updatedAt;
+  final bool archived;
+  final TripArchiveSummary? archive;
 
   bool get isOwner => role == TripRoles.owner;
+
+  TripArchiveSummary get archiveOrFallback =>
+      archive ??
+      TripArchiveSummary.fallback(
+        title: title,
+        legCities: legCities,
+        startDate: startDate,
+        endDate: endDate,
+        dayCount: dayCount,
+        spotCount: spotCount,
+      );
 
   factory ViewerTrip.fromJson(Map<String, dynamic> j) => ViewerTrip(
         tripId: BuddyJson.str(j['tripId']),
@@ -348,6 +364,8 @@ class ViewerTrip {
         expenses: TripExpenseCard.fromJson(BuddyJson.map(j['expenses'])),
         updatedAt: BuddyJson.time(j['updatedAt']),
         detailsLocked: BuddyJson.boolean(j['detailsLocked']),
+        archived: j['archived'] == true,
+        archive: j['archived'] == true ? TripArchiveSummary.tryParse(j['summary']) : null,
       );
 
   Map<String, dynamic> toJson() => {
@@ -371,6 +389,8 @@ class ViewerTrip {
         'expenses': expenses.toJson(),
         'updatedAt': BuddyJson.timeText(updatedAt),
         'detailsLocked': detailsLocked,
+        if (archived) 'archived': true,
+        if (archived && archive != null) 'summary': archive!.toJson(),
       };
 }
 
@@ -422,6 +442,7 @@ class SharedTripCard {
     required this.planState,
     this.joinedAt,
     required this.expenses,
+    this.archived = false,
   });
 
   final String tripId;
@@ -440,6 +461,7 @@ class SharedTripCard {
   final String planState;
   final DateTime? joinedAt;
   final TripExpenseCard expenses;
+  final bool archived;
 
   factory SharedTripCard.fromJson(Map<String, dynamic> j) => SharedTripCard(
         tripId: BuddyJson.str(j['tripId']),
@@ -458,6 +480,7 @@ class SharedTripCard {
         planState: BuddyJson.str(j['planState'], 'Saved'),
         joinedAt: BuddyJson.time(j['joinedAt']),
         expenses: TripExpenseCard.fromJson(BuddyJson.map(j['expenses'])),
+        archived: j['archived'] == true,
       );
 }
 

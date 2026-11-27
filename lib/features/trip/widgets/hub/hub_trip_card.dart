@@ -7,6 +7,7 @@ import '../../utils/trip_bar_rules.dart';
 import '../../utils/trip_clock.dart';
 import '../../utils/trip_format.dart';
 import '../trip_card.dart';
+import 'hub_archived_body.dart';
 import 'hub_tokens.dart';
 import 'hub_trip_body.dart';
 import '../../trip_strings_hub_trips.dart';
@@ -147,7 +148,12 @@ class HubTripCard extends StatelessWidget {
                             style: Ink3D.text(12, FontWeight.w400, HubTokens.grey, height: 1.5, letterSpacing: 0),
                           ),
                         ),
-                        if (trip.inactiveByPlan) _inactiveLine() else HubTripBody(trip: trip, onNext: onAction, past: past),
+                        if (trip.inactiveByPlan)
+                          _inactiveLine()
+                        else if (trip.archived)
+                          HubArchivedBody(trip: trip)
+                        else
+                          HubTripBody(trip: trip, onNext: onAction, past: past),
                       ],
                     ),
                   ),

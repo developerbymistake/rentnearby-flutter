@@ -139,6 +139,12 @@ class TripNavigation {
     if (Get.isRegistered<MyTripsController>()) MyTripsController.to.load();
   }
 
+  static Future<void> openArchived(String tripId) async {
+    if (tripId.isEmpty) return;
+    await Get.toNamed(AppRoutes.tripArchived, arguments: {'tripId': tripId});
+    if (Get.isRegistered<MyTripsController>()) MyTripsController.to.load();
+  }
+
   static Future<void>? openTaxiStatus({required String tripId, required String requestId, bool replace = false}) {
     final args = {'tripId': tripId, 'requestId': requestId};
     return replace

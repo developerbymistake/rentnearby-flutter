@@ -5,6 +5,8 @@ import '../../../../design/design.dart';
 import '../../../social/c/chat/trip_chat_badge.dart';
 import '../../../social/b/social_strings_b.dart';
 import '../../../social/shared/social_nav.dart';
+import '../../../trip/trip_strings_archived.dart';
+import '../../../trip/widgets/trip_archived_view.dart';
 import '../../../trip/widgets/trip_hero_card.dart';
 import '../../buddy_navigation.dart';
 import '../../ledger/data/ledger_api.dart';
@@ -102,6 +104,10 @@ class _ViewerTripScreenState extends State<ViewerTripScreen> {
   Widget _overview(ViewerTrip t) {
     final e = t.expenses;
     final cards = <Widget>[
+      if (t.archived) ...[
+        NoteBanner(key: const ValueKey('trip_archived_note'), text: TripStringsArchived.note, margin: EdgeInsets.zero),
+        TripArchiveSections(summary: t.archiveOrFallback, fallbackTitle: t.title, showPeopleAndMoney: false),
+      ] else
       TripHeroCard(
         key: const ValueKey('viewer_itinerary_card'),
         tone: BuddyLook.indigo,
@@ -114,8 +120,8 @@ class _ViewerTripScreenState extends State<ViewerTripScreen> {
         onTap: () => BuddyNavigation.openDayPlan(t.tripId),
         compact: true,
       ),
-      if (!t.detailsLocked) _taxiCard(t.taxi),
-      if (!t.detailsLocked) _stayCard(t.stay),
+      if (!t.detailsLocked && !t.archived) _taxiCard(t.taxi),
+      if (!t.detailsLocked && !t.archived) _stayCard(t.stay),
       TripHeroCard(
         key: const ValueKey('viewer_travellers_card'),
         tone: BuddyLook.teal,
@@ -153,7 +159,7 @@ class _ViewerTripScreenState extends State<ViewerTripScreen> {
         subtitle: ViewerStrings.sharedBy(t.owner.name),
         onBack: _back,
         trailing: [
-          if (t.travellerCount > 1)
+          if (t.travellerCount > 1 && !t.archived)
             TripChatBadge(
               tripId: t.tripId,
               child: Tap3D(

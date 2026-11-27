@@ -23,6 +23,7 @@ import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../trip_strings_dayplan.dart';
 import '../trip_strings_v2_plan.dart';
 import '../widgets/trip_plan_header.dart';
+import '../widgets/trip_archived_view.dart';
 import '../widgets/trip_not_found_view.dart';
 import '../map/discovery_api.dart';
 import '../map/trip_discovery_layer.dart';
@@ -67,6 +68,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
   bool _carPinReady = false;
   bool _dayPicked = false;
   bool _awaitingDefaultDay = false;
+  String? _argTripId;
   String? _waitingTripId;
   TripDiscoveryLayer? _disc;
   bool _discBusy = false;
@@ -81,7 +83,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
   bool get _waitingForTrip {
     final id = _waitingTripId;
     if (id == null) return false;
-    if (_plan.openFailed.value || _plan.tripGone.value || _plan.plannerOff.value) return false;
+    if (_plan.openFailed.value || _plan.tripGone.value || _plan.plannerOff.value || _archivedHere) return false;
     return _plan.trip.value?.id != id || _plan.plan.value == null;
   }
 
@@ -112,7 +114,8 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     final args = Get.arguments;
     final day = args is Map ? args['day'] as int? : null;
     final tripId = args is Map ? args['tripId'] as String? : null;
-    final needsOpen = tripId != null && (_plan.trip.value?.id != tripId || _plan.plan.value == null);
+    _argTripId = tripId;
+    final needsOpen = tripId != null && (_plan.trip.value?.id != tripId || _plan.plan.value == null) && !_archivedHere;
     _dayPicked = day != null;
     _awaitingDefaultDay = day == null && (needsOpen || _plan.plan.value == null);
     _plan.selectedMapLeg.value = 0;
@@ -1062,8 +1065,15 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     await _fitCamera();
   }
 
+  bool get _archivedHere => _plan.isArchived && (_argTripId == null || _plan.trip.value?.id == _argTripId);
+
   @override
   Widget build(BuildContext context) {
+    final page = _mapPage(context);
+    return Obx(() => _archivedHere ? TripArchivedView(trip: _plan.trip.value!) : page);
+  }
+
+  Widget _mapPage(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: Stack(

@@ -38,6 +38,7 @@ import '../models/trip_spot_model.dart';
 import '../models/taxi_request_models.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
+import '../trip_strings_archived.dart';
 import '../trip_strings_dayplan.dart';
 import '../trip_strings_mca_a1.dart';
 import '../trip_strings_mca_a2.dart';
@@ -868,7 +869,9 @@ class TripPlanController extends GetxController {
 
   bool get isInactiveByPlan => trip.value?.inactiveByPlan ?? false;
 
-  bool get isReadOnly => isCompleted || isPastTrip || isInactiveByPlan;
+  bool get isArchived => trip.value?.archived == true;
+
+  bool get isReadOnly => isCompleted || isPastTrip || isInactiveByPlan || isArchived;
 
   bool isDayPast(int day) {
     final d = dateOf(day);
@@ -1757,6 +1760,11 @@ class TripPlanController extends GetxController {
   bool _showCached(String tripId) {
     final cached = TripTodayCache.trip(tripId);
     if (cached == null) return false;
+    if (cached.archived) {
+      _showArchived(cached);
+      offline.value = true;
+      return true;
+    }
     trip.value = cached;
     plan.value = cached.plan;
     final pending = StorageService.getTripPending(tripId);
@@ -2200,7 +2208,7 @@ class TripPlanController extends GetxController {
   }
 
   Future<void> open(String tripId, {bool fresh = false}) async {
-    if (!fresh && trip.value?.id == tripId && plan.value != null && !tripGone.value) return;
+    if (!fresh && trip.value?.id == tripId && (plan.value != null || isArchived) && !tripGone.value) return;
     if (_openingId == tripId && isOpening.value) return;
     _daysSeen = null;
     _dayCountWas = null;
@@ -2214,6 +2222,10 @@ class TripPlanController extends GetxController {
     try {
       final t = await _repo.get(tripId);
       if (_openingId != tripId) return;
+      if (t.archived) {
+        _adoptArchived(t);
+        return;
+      }
       if (shown) {
         offline.value = false;
         // A save from the copy already reached the server: this answer is older, so only the rows are refreshed.
@@ -2249,6 +2261,33 @@ class TripPlanController extends GetxController {
     } finally {
       if (_openingId == tripId) isOpening.value = false;
     }
+  }
+
+  // An archived trip has no plan: only the small summary is held, and no copy, edit or result is kept.
+  void _showArchived(TripModel t) {
+    _saveTimer?.cancel();
+    _recalcTimer?.cancel();
+    trip.value = t;
+    plan.value = null;
+    result.value = null;
+    _copyBase = null;
+    enquiryList.clear();
+    openFailed.value = false;
+  }
+
+  void _adoptArchived(TripModel t) {
+    offline.value = false;
+    StorageService.clearTripCache(t.id);
+    TripTodayCache.saveTrip(t);
+    _showArchived(t);
+  }
+
+  void _onArchivedRefused() {
+    _saveTimer?.cancel();
+    final id = trip.value?.id;
+    if (id != null) StorageService.clearTripPending(id);
+    AppToast.warning(TripStringsArchived.archivedRefused);
+    if (id != null) unawaited(Future<void>(() => open(id, fresh: true)));
   }
 
   bool _adoptPendingCopy(TripModel t) {
@@ -4220,6 +4259,10 @@ class TripPlanController extends GetxController {
     try {
       final t = await _repo.get(id);
       if (flow != _flow || seq != _enquirySeq) return;
+      if (t.archived) {
+        _adoptArchived(t);
+        return;
+      }
       final stale = gen != _saveGen || _saving != null;
       if (!stale) TripTodayCache.saveTrip(t);
       enquiryList.assignAll(t.enquiries);
@@ -4273,7 +4316,7 @@ class TripPlanController extends GetxController {
     stayTabOff.value = tabs != null && !tabs.isActiveForIndex(AppTabs.stays);
   }
 
-  bool get _saveBlocked => plannerOff.value || tripGone.value || needsUpdate.value || isCompleted;
+  bool get _saveBlocked => plannerOff.value || tripGone.value || needsUpdate.value || isCompleted || isArchived;
 
   void scheduleSave() {
     if (_saveBlocked || plan.value == null) return;
@@ -4441,6 +4484,10 @@ class TripPlanController extends GetxController {
       }
       if (type == TripErrorTypes.nameInvalid && name != null) {
         _onNameRejected(name);
+        return false;
+      }
+      if (type == TripErrorTypes.tripArchived) {
+        _onArchivedRefused();
         return false;
       }
       if (type == TripErrorTypes.tripCompleted) {

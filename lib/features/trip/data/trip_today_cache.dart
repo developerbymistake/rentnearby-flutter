@@ -10,6 +10,7 @@ class TripTodayCache {
   }
 
   static void savePlan(TripModel t, TripPlan plan) {
+    if (t.archived) return;
     final cached = StorageService.getTripCache(t.id);
     final base = cached ?? t.raw;
     if (base == null) return;
