@@ -224,11 +224,12 @@ void main() {
     await _app(t, home: const Scaffold(body: Text('home')));
     final c = TripPlanController.to;
     c.openPages++;
-    await c.open(_id);
+    await t.runAsync(() => c.open(_id));
     await _settle(t);
     expect(c.isArchived, isFalse);
     c.plan.value = c.plan.value!.copyWith(days: c.plan.value!.days.take(1).toList());
-    expect(await c.saveNow(), isFalse);
+    expect(await t.runAsync(c.saveNow), isFalse);
+    await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
     await _settle(t);
     expect(c.isArchived, isTrue);
     expect(c.plan.value, isNull);
