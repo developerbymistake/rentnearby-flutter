@@ -30,14 +30,17 @@ class EditProfileController extends GetxController {
   final loading = false.obs;
   final loadFailed = false.obs;
 
+  // A pick no longer in the catalog stays as a tile so an older profile can still remove it.
+  static List<String> _withPicked(List<String> options, List<String> picked) => [...options, ...picked.where((p) => !options.contains(p))];
+
   List<String> get interestOptions {
     final c = SocialMeController.maybe?.catalog.interests ?? const <String>[];
-    return c.isEmpty ? SocialCatalogDefaults.interests : c;
+    return _withPicked(c.isEmpty ? SocialCatalogDefaults.interests : c, interests);
   }
 
   List<String> get skillOptions {
     final c = SocialMeController.maybe?.catalog.skills ?? const <String>[];
-    return c.isEmpty ? SocialCatalogDefaults.skills : c;
+    return _withPicked(c.isEmpty ? SocialCatalogDefaults.skills : c, skills);
   }
 
   List<String> get aboutExamples {
@@ -126,7 +129,9 @@ class EditProfileController extends GetxController {
       interests.length >= ProfileRules.interestsMin &&
       interests.length <= ProfileRules.interestsMax &&
       skills.length >= ProfileRules.skillsMin &&
-      places.length >= ProfileRules.placesMin;
+      skills.length <= ProfileRules.skillsMax &&
+      places.length >= ProfileRules.placesMin &&
+      places.length <= ProfileRules.placesMax;
 
   bool get canSave => !saving.value && changeCount > 0 && valid;
 

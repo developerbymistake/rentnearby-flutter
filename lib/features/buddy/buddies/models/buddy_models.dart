@@ -31,11 +31,14 @@ class FoundPerson extends BuddyPerson {
     required this.relation,
     this.requestId,
     this.expiresAt,
+    this.followState = 'none',
   });
 
   final BuddyRelation relation;
   final String? requestId;
   final DateTime? expiresAt;
+  // Does the caller follow this person: following | requested | none.
+  final String followState;
 
   factory FoundPerson.fromJson(Map<String, dynamic> j) => FoundPerson(
         userId: BuddyJson.str(j['userId']),
@@ -46,6 +49,7 @@ class FoundPerson extends BuddyPerson {
         relation: _relation(j['relation']),
         requestId: BuddyJson.strOrNull(j['requestId']),
         expiresAt: BuddyJson.time(j['expiresAt']),
+        followState: BuddyJson.str(j['followState'], 'none'),
       );
 
   FoundPerson copyWith({BuddyRelation? relation, String? requestId, DateTime? expiresAt}) => FoundPerson(
@@ -57,6 +61,7 @@ class FoundPerson extends BuddyPerson {
         relation: relation ?? this.relation,
         requestId: requestId ?? this.requestId,
         expiresAt: expiresAt ?? this.expiresAt,
+        followState: followState,
       );
 }
 

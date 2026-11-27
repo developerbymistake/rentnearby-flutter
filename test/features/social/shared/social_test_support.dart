@@ -168,7 +168,7 @@ Map<String, dynamic> socialMeJson({Map<String, dynamic>? profile, bool isPlus = 
         'chatUnread': {'people': 1, 'trips': 0, 'requests': 2, 'total': 3},
       },
       'catalog': {
-        'interests': ['Mountains', 'Treks', 'Beaches', 'Adventure', 'Food', 'Culture', 'Photography', 'Spiritual', 'Road trips', 'Camping'],
+        'interests': ['Mountains', 'Treks', 'Adventure', 'Food', 'Culture', 'Spiritual', 'Road trips', 'Camping'],
         'skills': ['Photographer', 'Driver', 'Cook', 'Tour guide', 'Content creator', 'First aid'],
         'aboutExamples': ['Hills over beaches. Chai at every stop.', 'Weekend trekker. Happy to share a cab.', 'Slow travel, local food, early mornings.'],
         'postChips': ['Budget trip'],

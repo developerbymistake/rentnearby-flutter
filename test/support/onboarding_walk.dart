@@ -31,7 +31,7 @@ abstract final class OnboardingWalk {
     await _pump(t);
     await _next(t);
     c.interests.assignAll(const ['Mountains', 'Treks', 'Food']);
-    c.skills.assignAll(const ['Driver']);
+    c.skills.assignAll(const ['Driver', 'Cook']);
     c.places.assignAll(const ['Rishikesh']);
     await _pump(t);
     await _next(t);

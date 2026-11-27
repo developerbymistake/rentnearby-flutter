@@ -10,12 +10,9 @@ import '../../../utils/input_formatters.dart';
 import '../data/trip_city_catalog.dart';
 import '../data/trip_repository.dart';
 import '../models/trip_city_model.dart';
-import '../../../utils/app_toast.dart';
-import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
 import '../trip_strings_mca_a2.dart';
-import '../trip_strings_v2_create.dart';
 import '../utils/trip_state_rule.dart';
 
 class TripCitySupplyCache {
@@ -42,18 +39,10 @@ class TripCitySupplyCache {
   }
 }
 
-enum TripCitySheetMode { start, add }
-
 class TripCityPick {
   final TripCityModel city;
-  final TripCityModel? next;
-  final List<TripCityModel> cities;
-  final List<TripDraftLeg> draftLegs;
 
-  TripCityPick(this.city, {this.next, List<TripCityModel>? cities, this.draftLegs = const []})
-    : cities = cities ?? [city, ?next];
-
-  List<String> get draftIds => draftLegs.isEmpty ? const [] : draftLegs.first.ids;
+  const TripCityPick(this.city);
 }
 
 class TripDraftLeg {
@@ -140,11 +129,10 @@ class TripNewDraft {
 }
 
 class TripCitySheet extends StatefulWidget {
-  final TripCitySheetMode mode;
   final String? afterCity;
   final Set<int> inTrip;
 
-  const TripCitySheet({super.key, this.mode = TripCitySheetMode.start, this.afterCity, this.inTrip = const {}});
+  const TripCitySheet({super.key, this.afterCity, this.inTrip = const {}});
 
   static String artOf(TripCityModel c) {
     const arts = [ListingArt.mountain, ListingArt.camping, ListingArt.beach, ListingArt.sunrise];
@@ -153,7 +141,6 @@ class TripCitySheet extends StatefulWidget {
 
   static Future<TripCityPick?> pick(
     BuildContext context, {
-    TripCitySheetMode mode = TripCitySheetMode.start,
     String? afterCity,
     Set<int> inTrip = const {},
   }) {
@@ -165,7 +152,7 @@ class TripCitySheet extends StatefulWidget {
       clipBehavior: Clip.antiAlias,
       constraints: const BoxConstraints(maxWidth: 640),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(DS.radius(32)))),
-      builder: (_) => TripCitySheet(mode: mode, afterCity: afterCity, inTrip: inTrip),
+      builder: (_) => TripCitySheet(afterCity: afterCity, inTrip: inTrip),
     );
   }
 
@@ -175,16 +162,7 @@ class TripCitySheet extends StatefulWidget {
 
 enum _LoadError { none, failed, plannerOff }
 
-class _SheetText {
-  static const String addCity = 'Add city';
-  static const String remove = 'Remove';
-  static String continueCities(int n) => 'Continue ($n ${n == 1 ? 'city' : 'cities'})';
-  static String maxCities(int n) => 'Up to $n cities';
-}
-
 class _TripCitySheetState extends State<TripCitySheet> {
-  static const _compactButtonHeight = 44.0;
-  static const _compactButtonFont = 15.0;
   final _searchCtrl = TextEditingController();
   late final TripCityCatalog _catalog;
 
@@ -194,36 +172,8 @@ class _TripCitySheetState extends State<TripCitySheet> {
   bool _loading = false;
   _LoadError _error = _LoadError.none;
   int? _expanded;
-  final _picked = <TripCityModel>[];
   final _supply = <int, TripCitySupply>{};
   final _supplyFailed = <int>{};
-
-  bool get _add => widget.mode == TripCitySheetMode.add;
-
-  bool _isPicked(TripCityModel c) => _picked.any((p) => p.cityKey == c.cityKey);
-
-  void _togglePicked(TripCityModel c) {
-    if (_isPicked(c)) {
-      setState(() {
-        _picked.removeWhere((p) => p.cityKey == c.cityKey);
-        _expanded = null;
-      });
-      return;
-    }
-    if (_picked.length >= TripConstants.maxLegs) {
-      AppToast.warning(_SheetText.maxCities(TripConstants.maxLegs));
-      return;
-    }
-    setState(() {
-      _picked.add(c);
-      _expanded = null;
-    });
-  }
-
-  void _continue() {
-    if (_picked.isEmpty) return;
-    Navigator.pop(context, TripCityPick(_picked.first, cities: List.of(_picked)));
-  }
 
   @override
   void initState() {
@@ -281,11 +231,11 @@ class _TripCitySheetState extends State<TripCitySheet> {
     });
   }
 
-  void _syncStates() => _states = _add ? TripStateRule.statesOf(widget.inTrip, _catalog.search('')) : const [];
+  void _syncStates() => _states = TripStateRule.statesOf(widget.inTrip, _catalog.search(''));
 
   List<TripCityModel> _find(String q) => TripStateRule.filter([for (final c in _catalog.search(q)) if (c.isReady) c], _states);
 
-  // FX-08: one scroll view (header, search, picked row, cities); only Continue stays pinned. Sizes are read live.
+  // FX-08: one scroll view (header, search, cities). Sizes are read live.
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
@@ -294,9 +244,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
     final room = media.size.height - lift;
     final sheetHeight = math.max(0.0, math.min(media.size.height * 0.94, room));
     final topInset = math.max(0.0, media.padding.top - (room - sheetHeight));
-    final compact = _add || keyboard || sheetHeight < DS.s(560);
     final bare = sheetHeight < DS.s(420);
-    final picking = !_add && _picked.isNotEmpty;
     return SizedBox(
       height: sheetHeight,
       child: Column(
@@ -309,18 +257,16 @@ class _TripCitySheetState extends State<TripCitySheet> {
                 SliverToBoxAdapter(
                   child: TemplateEntranceOnce(
                     duration: const Duration(milliseconds: 300),
-                    child: compact ? _compactHeader(topInset: topInset, subtitle: !bare) : _buildHeader(topInset: topInset),
+                    child: _compactHeader(topInset: topInset, subtitle: !bare),
                   ),
                 ),
                 SliverToBoxAdapter(child: _buildSearchBox()),
-                if (picking) SliverToBoxAdapter(child: _pickedRow()),
                 ..._buildBody(),
               ],
             ),
           ),
-          if (picking) _continueBar(compact: keyboard || bare),
           ColoredBox(
-            color: picking ? DesignColors.surface : DesignColors.scaffold,
+            color: DesignColors.scaffold,
             child: SizedBox(height: (keyboard ? DS.s(8) : DS.s(14)) + AppInsets.bottomViewPadding(context)),
           ),
         ],
@@ -329,7 +275,6 @@ class _TripCitySheetState extends State<TripCitySheet> {
   }
 
   String get _subtitle {
-    if (!_add) return TripStringsV2Create.citiesHint;
     final after = widget.afterCity?.trim() ?? '';
     final line = [
       if (_states.isNotEmpty) TripStringsMcaA2.citiesIn(_states),
@@ -348,7 +293,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(_add ? TripStringsMcaA2.addACity : TripStrings.planATrip,
+          Text(TripStringsMcaA2.addACity,
               maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(18, FontWeight.w700, DesignColors.textInverse)),
           if (subtitle) ...[
             Gap.v(2),
@@ -360,100 +305,11 @@ class _TripCitySheetState extends State<TripCitySheet> {
     return Stack(children: [header, Positioned(top: DS.s(4) + topInset, right: DS.s(4), child: const SheetCloseButton())]);
   }
 
-  Widget _buildHeader({double topInset = 0}) {
-    final narrow = MediaQuery.sizeOf(context).width < 340;
-    final art = narrow ? 84.0 : 104.0;
-    final header = Container(
-      constraints: BoxConstraints(minHeight: DS.s(112)),
-      padding: EdgeInsets.fromLTRB(DS.s(22), DS.s(22) + topInset, DS.s(art + 66), DS.s(18)),
-      decoration: BoxDecoration(gradient: _tone.gradient),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                TripStrings.planATrip,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Ink3D.text(22, FontWeight.w700, DesignColors.textInverse),
-              ),
-              SizedBox(height: DS.s(2)),
-              Text(_subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w500, DesignColors.whiteHigh)),
-            ],
-          ),
-          Positioned(
-            right: DS.s(-art - 10),
-            top: DS.s(-12),
-            child: IgnorePointer(
-              child: Art3D(asset: ListingArt.luggage, size: art, halo: art + 10, haloColor: DesignColors.tint(DesignColors.surface, Alpha.v22)),
-            ),
-          ),
-        ],
-      ),
-    );
-    return Stack(children: [header, Positioned(top: DS.s(4) + topInset, right: DS.s(4), child: const SheetCloseButton())]);
-  }
-
-  Widget _pickedRow() {
-    return SizedBox(
-      height: DS.s(50),
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(4), DS.s(18), DS.s(8)),
-        itemCount: _picked.length,
-        separatorBuilder: (_, _) => Gap.h(8),
-        itemBuilder: (_, i) {
-          final c = _picked[i];
-          return Tap3D(
-            onTap: () => _togglePicked(c),
-            label: '${c.name}, ${_SheetText.remove}',
-            child: Container(
-              padding: EdgeInsets.fromLTRB(DS.s(6), 0, DS.s(10), 0),
-              decoration: BoxDecoration(
-                gradient: _tone.gradient,
-                borderRadius: DS.br(CardRadius.pill),
-                boxShadow: [BoxShadow(color: _tone.shadow, offset: DS.shadowOffset(const Offset(1, 3)), blurRadius: DS.shadowBlur(6))],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: DS.s(24),
-                    height: DS.s(24),
-                    alignment: Alignment.center,
-                    decoration: const BoxDecoration(color: DesignColors.surface, shape: BoxShape.circle),
-                    child: Text('${i + 1}', style: Ink3D.text(12, FontWeight.w700, _tone.text)),
-                  ),
-                  Gap.h(8),
-                  Text(c.name, style: Ink3D.text(13, FontWeight.w700, DesignColors.textInverse)),
-                  Gap.h(4),
-                  Icon(Icons.close_rounded, size: DS.s(16), color: DesignColors.surface),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _continueBar({bool compact = false}) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(compact ? 6 : 12), DS.s(18), 0),
-      decoration: BoxDecoration(color: DesignColors.surface, boxShadow: DS.shadows(Ink3D.topEdge)),
-      child: compact
-          ? GradientPillButton(tone: _tone, height: _compactButtonHeight, fontSize: _compactButtonFont, label: _SheetText.continueCities(_picked.length), onTap: _continue)
-          : GradientPillButton(tone: _tone, label: _SheetText.continueCities(_picked.length), onTap: _continue),
-    );
-  }
-
   Widget _buildSearchBox() {
     return SheetSearchField(
       tone: _tone,
       controller: _searchCtrl,
-      hint: _add ? TripStrings.searchCity : TripStringsV2Create.searchCity,
+      hint: TripStrings.searchCity,
       trailingArt: ListingArt.search,
       inputFormatters: noEmojiInputFormatters,
       onChanged: _onSearch,
@@ -511,7 +367,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
     final popular = items.where((c) => c.isPopularDestination).toList();
     final rest = items.where((c) => !c.isPopularDestination).toList();
     return [
-      _sectionHeader(_add ? TripStrings.popular : TripStringsV2Create.popularCities),
+      _sectionHeader(TripStrings.popular),
       _list(popular),
       if (rest.isNotEmpty) ...[_sectionHeader(TripStrings.allCities), _list(rest)],
     ];
@@ -525,12 +381,6 @@ class _TripCitySheetState extends State<TripCitySheet> {
           overflow: TextOverflow.ellipsis,
           style: Ink3D.text(11.5, FontWeight.w700, Ink3D.grey, letterSpacing: 0.8),
         ),
-      );
-
-  Widget _ring() => Container(
-        width: DS.s(28),
-        height: DS.s(28),
-        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Ink3D.hint, width: 1.5)),
       );
 
   void _toggle(TripCityModel city) {
@@ -561,18 +411,13 @@ class _TripCitySheetState extends State<TripCitySheet> {
   }
 
   Widget _cityRow(TripCityModel city, {bool divider = false}) {
-    final inTrip = _add && widget.inTrip.contains(city.cityKey);
+    final inTrip = widget.inTrip.contains(city.cityKey);
     final enabled = !inTrip;
-    final place = inTrip
-        ? TripStringsMcaA2.alreadyAdded
-        : (!_add && city.spotCount > 0 ? TripStringsV2Create.cityMeta(city.spotCount) : city.placeLine);
-    final picked = !_add && _isPicked(city);
-    final open = _add && enabled && _expanded == city.cityKey;
-    final Widget? trailing;
+    final place = inTrip ? TripStringsMcaA2.alreadyAdded : city.placeLine;
+    final open = enabled && _expanded == city.cityKey;
+    final Widget trailing;
     if (inTrip) {
       trailing = Text(TripStringsMcaA2.inThisTrip, style: Ink3D.text(11.5, FontWeight.w600, Ink3D.hint));
-    } else if (!_add) {
-      trailing = picked ? null : _ring();
     } else {
       trailing = Row(
         mainAxisSize: MainAxisSize.min,
@@ -594,10 +439,9 @@ class _TripCitySheetState extends State<TripCitySheet> {
           art: TripCitySheet.artOf(city),
           title: city.name,
           subtitle: place.isEmpty ? null : place,
-          selected: picked,
           enabled: enabled,
           divider: divider,
-          onTap: enabled ? () => _add ? _toggle(city) : _togglePicked(city) : null,
+          onTap: enabled ? () => _toggle(city) : null,
           trailing: trailing,
         ),
         if (open) _supplyPanel(city),
@@ -647,12 +491,8 @@ class _TripCitySheetState extends State<TripCitySheet> {
             tone: _tone,
             height: 46,
             fontSize: 15,
-            onTap: () => _add ? Navigator.pop(context, TripCityPick(city)) : _togglePicked(city),
-            label: _add
-                ? TripStringsMcaA2.addToTrip
-                : _isPicked(city)
-                    ? _SheetText.remove
-                    : _SheetText.addCity,
+            onTap: () => Navigator.pop(context, TripCityPick(city)),
+            label: TripStringsMcaA2.addToTrip,
           ),
         ],
       ),

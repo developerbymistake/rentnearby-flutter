@@ -82,47 +82,33 @@ void main() {
       expect(t.takeException(), isNull);
     });
 
-    testWidgets('o_sk_1_dotsShowThreeSlides_stayAndTaxiSlidesStillBuilt', (t) async {
+    testWidgets('I-17 o_sk_1_onlyTheTripSlide_noDots_noStayOrTaxiSlide', (t) async {
       _tall(t, h: 2600);
       registerHome(feed: fixtureNoTrip());
       await t.pumpWidget(_app(homeHost()));
       await _settle(t);
-      expect(find.bySemanticsLabel('Slide 1 of 3'), findsOneWidget);
-      expect(find.text('Find your stay', skipOffstage: false), findsWidgets);
-      expect(find.text('Find a taxi', skipOffstage: false), findsWidgets);
+      expect(find.bySemanticsLabel(RegExp(r'^Slide \d of \d$')), findsNothing);
+      expect(find.text('Find your stay', skipOffstage: false), findsNothing);
+      expect(find.text('Find a taxi', skipOffstage: false), findsNothing);
+      expect(find.byType(SeekerTripSlide), findsOneWidget);
     });
 
     for (final (name, feed) in [('no trip', fixtureNoTrip), ('in progress', fixtureInProgress), ('on trip', fixtureOnTrip)]) {
       for (final w in [360.0, 412.0]) {
-        testWidgets('Bug 5 + Bug 10: hero cards share one base and the action pill stays inside ($name, $w)', (t) async {
+        testWidgets('Bug 5 + Bug 10: the trip hero card keeps its action pill inside ($name, $w)', (t) async {
           t.view.devicePixelRatio = 1;
           t.view.physicalSize = Size(w, 1600);
           addTearDown(t.view.reset);
           registerHome(feed: feed());
           await t.pumpWidget(_app(homeHost()));
           await _settle(t);
-          final pager = find.byType(PageView);
-          Rect cardIn(Finder owner) => t.getRect(find.descendant(of: owner, matching: find.byType(DecoratedBox)).first);
-          final tripOwner = find.descendant(of: pager, matching: find.byType(SeekerTripCardView)).first;
-          final trip = cardIn(tripOwner);
-          final tripPill = t.getRect(find.descendant(of: tripOwner, matching: find.byType(WorkoutActionPill)));
-          await t.drag(pager, Offset(-w * 0.8, 0));
-          await _settle(t);
-          final stayOwner = find.ancestor(of: find.descendant(of: pager, matching: find.text('Find your stay')), matching: find.byType(WorkoutCard)).first;
-          final stay = cardIn(stayOwner);
-          final pill = t.getRect(find.descendant(of: stayOwner, matching: find.byType(WorkoutActionPill)));
-          expect(find.descendant(of: stayOwner, matching: find.text('Browse stays')), findsOneWidget);
-          expect(find.descendant(of: stayOwner, matching: find.byType(RoundGoButton)), findsNothing);
-          expect(stay.top, moreOrLessEquals(trip.top, epsilon: 1));
-          expect(stay.bottom, moreOrLessEquals(trip.bottom, epsilon: 1));
-          expect(stay.width, moreOrLessEquals(trip.width, epsilon: 1));
-          expect(stay.height, greaterThanOrEqualTo(DS.s(156) - 0.5));
-          for (final (card, p) in [(trip, tripPill), (stay, pill)]) {
-            expect(card.right - p.right, moreOrLessEquals(DS.s(20), epsilon: 0.5));
-            expect(card.bottom - p.bottom, moreOrLessEquals(DS.s(20), epsilon: 0.5));
-            expect(p.top, greaterThanOrEqualTo(card.top));
-          }
-          expect(pill.overlaps(t.getRect(find.descendant(of: stayOwner, matching: find.text('Find your stay')))), isFalse);
+          expect(find.byType(PageView), findsNothing);
+          final tripOwner = find.byType(SeekerTripCardView).first;
+          final trip = t.getRect(find.descendant(of: tripOwner, matching: find.byType(DecoratedBox)).first);
+          final p = t.getRect(find.descendant(of: tripOwner, matching: find.byType(WorkoutActionPill)));
+          expect(trip.right - p.right, moreOrLessEquals(DS.s(20), epsilon: 0.5));
+          expect(trip.bottom - p.bottom, moreOrLessEquals(DS.s(20), epsilon: 0.5));
+          expect(p.top, greaterThanOrEqualTo(trip.top));
           expect(t.takeException(), isNull);
         });
       }
@@ -164,7 +150,7 @@ void main() {
       expect(tileRect.bottom - t.getRect(go).bottom, lessThan(DS.s(40)));
     });
 
-    testWidgets('o_sk_1_tapMyTrips_pushesMyTrips, o_sk_1_tapFindBuddies_pushesTravelBuddies', (t) async {
+    testWidgets('o_sk_1_tapMyTrips_pushesMyTrips, o_sk_1_tapFindBuddies_pushesPeople', (t) async {
       _tall(t, h: 1600);
       registerHome(feed: fixtureNoTrip());
       await t.pumpWidget(_app(homeHost()));
@@ -175,7 +161,7 @@ void main() {
       await _settle(t);
       await t.tap(find.byKey(const ValueKey('seeker-qa-Buddies')));
       await _settle(t);
-      expect(visitedRoutes, [AppRoutes.myTrips, AppRoutes.travelBuddies]);
+      expect(visitedRoutes, [AppRoutes.myTrips, AppRoutes.people]);
     });
 
     testWidgets('o_sk_1_noOwnerTilesNoPlanNudge', (t) async {

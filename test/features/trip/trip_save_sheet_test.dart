@@ -229,6 +229,27 @@ void main() {
     await _drain(t);
   });
 
+  testWidgets('adults_and_kids_stop_at_12_together', (t) async {
+    installFakeApi([_planRoute()]);
+    await _openSheet(t);
+    final steppers = find.byType(StepperField);
+    StepperField adults() => t.widget<StepperField>(steppers.at(0));
+    StepperField kids() => t.widget<StepperField>(steppers.at(1));
+    expect(adults().max, TripDatesSheet.maxPeople);
+    expect(kids().max, TripDatesSheet.maxPeople - 2);
+    expect(find.byKey(TripDatesSheet.peopleCapKey), findsNothing);
+    for (var i = 0; i < 20; i++) {
+      kids().onChanged?.call(kids().value + 1 > kids().max ? kids().value : kids().value + 1);
+      await t.pump();
+    }
+    expect(kids().value, 10);
+    expect(adults().max, 2);
+    expect(kids().max, 10);
+    expect(find.byKey(TripDatesSheet.peopleCapKey), findsOneWidget);
+    expect(find.text(TripStringsV2Find.peopleCap), findsOneWidget);
+    await _drain(t);
+  });
+
   testWidgets('server_name_refusal_shows_line_and_keeps_sheet', (t) async {
     installFakeApi([_planRoute(), FakeRoute.value('POST', '/trips', null, code: 400, errorType: 'TripNameInvalid')]);
     final c = await _openSheet(t);

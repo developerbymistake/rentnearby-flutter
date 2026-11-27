@@ -97,14 +97,11 @@ class RoomController extends GetxController {
 
   bool get canMessage => room.value != null || (preflight.value?.canMessage ?? false);
 
-  /// Trip group rooms: a member without the group chat entitlement reads but cannot send.
-  bool get groupChatLocked {
-    if (!isTrip) return false;
-    return plusLocked.value || lock == RoomLock.plus || !(SocialMeController.maybe?.me.value?.limits.groupChat ?? true);
-  }
+  /// A Free sender after his one message in this room (direct or trip group): the Plus bar replaces the composer.
+  bool get plusLockShown => plusLocked.value || lock == RoomLock.plus;
 
   bool get canSend {
-    if (view.value != RoomView.ready || !canMessage || cannotMessageNow.value || groupChatLocked) return false;
+    if (view.value != RoomView.ready || !canMessage || cannotMessageNow.value || plusLockShown) return false;
     final r = room.value;
     if (r != null) return r.canSend && r.lock == RoomLock.none && r.status != RoomStatus.declined;
     return lock == RoomLock.none;
@@ -373,9 +370,8 @@ class RoomController extends GetxController {
     if (before.isIncomingRequest) {
       room.value = room.value?.copyWith(status: RoomStatus.active, lock: RoomLock.none, canSend: true);
       repliedFree.value = true;
-    } else if (before.isRequest && before.iStarted) {
-      unawaited(_refreshRoom());
     }
+    if (!(SocialMeController.maybe?.me.value?.limits.isPlus ?? false) || before.isRequest && before.iStarted) unawaited(_refreshRoom());
   }
 
   Future<void> _refreshRoom() async {
@@ -435,7 +431,7 @@ class RoomController extends GetxController {
         type == SocialErrorTypes.textTooLong ||
         type == SocialErrorTypes.roomNotFound ||
         type == SocialErrorTypes.personNotFound ||
-        (type == SocialErrorTypes.plusRequired && isTrip);
+        type == SocialErrorTypes.plusRequired;
     if (!bounce) {
       _markFailed(cid);
       refusal.value = r;

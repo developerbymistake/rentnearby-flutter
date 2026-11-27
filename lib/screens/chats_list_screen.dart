@@ -233,7 +233,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
           ChatStateCard3D(tone: _tone, art: ListingArt.speechBalloon, title: SocialStringsC.noChats, message: SocialStringsC.noChatsLine),
           Padding(
             padding: DS.gapInsets(l: 60, t: 18, r: 60),
-            child: GradientPillButton(tone: ListingTone.indigo, label: SocialStringsC.findBuddies, onTap: SocialNav.openTravelBuddies),
+            child: GradientPillButton(tone: ListingTone.indigo, label: SocialStringsC.findBuddies, onTap: SocialNav.openPeople),
           ),
         ],
       );

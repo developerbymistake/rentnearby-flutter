@@ -119,11 +119,11 @@ class TripWhen {
 }
 
 abstract final class TravelModes {
-  static const String public = 'public';
-  static const String bike = 'bike';
-  static const String car = 'car';
   static const String taxi = 'taxi';
-  static const List<String> codes = [public, bike, car, taxi];
+  static const String bike = 'bike';
+  static const String bus = 'bus';
+  static const String train = 'train';
+  static const List<String> codes = [taxi, bike, bus, train];
 
   static String? parse(Object? v) => v is String && codes.contains(v) ? v : null;
 }
@@ -154,7 +154,6 @@ class PublicTrip {
     this.notifyNearby = false,
     this.nearbyNotifiedAt,
     this.notified,
-    this.unlocksAt,
     this.travelMode,
   });
 
@@ -183,18 +182,8 @@ class PublicTrip {
   final DateTime? nearbyNotifiedAt;
   final String? travelMode;
 
-  /// Own post only: false = this publish sent no notification (weekly limit used); null = the server did not say.
+  /// Own post only: true = followers were told or the nearby push is queued; null = the server did not say.
   final bool? notified;
-
-  /// Own post only: the post cannot be removed before this moment (72-hour lock). Null = not locked or an older answer.
-  final DateTime? unlocksAt;
-
-  /// The lock moment while it still holds, else null (an older answer or a passed moment never blocks).
-  DateTime? lockedUntil({DateTime? now}) {
-    final u = unlocksAt;
-    if (!isMine || u == null) return null;
-    return u.isAfter((now ?? DateTime.now()).toUtc()) ? u : null;
-  }
 
   /// Pending join requests one post takes before it shows Full (server PendingRequestsMax).
   static const int requestsCap = 50;
@@ -206,7 +195,7 @@ class PublicTrip {
 
   bool get nearbyPending => isMine && notifyNearby && nearbyNotifiedAt == null;
 
-  PublicTrip copyWith({String? myJoin, bool? iFollowOwner, int? seatsLeft, int? waitingRequests, bool? requestsFull, DateTime? unlocksAt}) => PublicTrip(
+  PublicTrip copyWith({String? myJoin, bool? iFollowOwner, int? seatsLeft, int? waitingRequests, bool? requestsFull}) => PublicTrip(
         tripId: tripId,
         owner: owner,
         ownerInterests: ownerInterests,
@@ -231,7 +220,6 @@ class PublicTrip {
         notifyNearby: notifyNearby,
         nearbyNotifiedAt: nearbyNotifiedAt,
         notified: notified,
-        unlocksAt: unlocksAt ?? this.unlocksAt,
         travelMode: travelMode,
       );
 
@@ -260,27 +248,22 @@ class PublicTrip {
         notifyNearby: BuddyJson.boolean(j['notifyNearby']) || PostNotifyResult.of(j['notify'])?.nearby == PostNotifyResult.queued,
         nearbyNotifiedAt: BuddyJson.time(j['nearbyNotifiedAt']),
         notified: PostNotifyResult.of(j['notify'])?.notified,
-        unlocksAt: BuddyJson.time(j['unlocksAt']),
         travelMode: TravelModes.parse(j['travelMode']),
       );
 }
 
 /// The create / publish answer to the poster: what followers and nearby travellers are told (CONTRACT_SOCIAL post notify).
 class PostNotifyResult {
-  const PostNotifyResult({required this.followers, required this.nearby, this.used = 0, this.limit = 0, this.nextAllowedAt});
+  const PostNotifyResult({required this.followers, required this.nearby});
 
   static const String sent = 'sent';
   static const String queued = 'queued';
-  static const String weekLimit = 'weekLimit';
 
   final String followers;
   final String nearby;
-  final int used;
-  final int limit;
-  final DateTime? nextAllowedAt;
 
-  /// false = the weekly limit kept this post silent; null = nothing to say (no followers, toggle off, edit).
-  bool? get notified => followers == weekLimit || nearby == weekLimit ? false : (followers == sent || nearby == queued ? true : null);
+  /// true = followers were told or the nearby push is queued; null = nothing to say (no followers, toggle off, edit).
+  bool? get notified => followers == sent || nearby == queued ? true : null;
 
   static PostNotifyResult? of(Object? v) {
     final j = BuddyJson.mapOrNull(v);
@@ -288,9 +271,6 @@ class PostNotifyResult {
     return PostNotifyResult(
       followers: BuddyJson.str(j['followers'], 'none'),
       nearby: BuddyJson.str(j['nearby'], 'off'),
-      used: BuddyJson.integer(j['used']),
-      limit: BuddyJson.integer(j['limit']),
-      nextAllowedAt: BuddyJson.time(j['nextAllowedAt']),
     );
   }
 }
@@ -323,14 +303,11 @@ class SocialLimits {
     required this.nearMe,
     this.inactiveTrips = 0,
     this.pausedPosts = 0,
-    this.notifiedPosts = defaultNotifiedPosts,
-    this.notifyResetsAt,
     this.groupChat = true,
     this.publishes = defaultPublishes,
     this.publishNextAt,
   });
 
-  static const LimitUse defaultNotifiedPosts = LimitUse(limit: 2, used: 0);
   static const LimitUse defaultPublishes = LimitUse(limit: 4, used: 0);
 
   final bool isPlus;
@@ -344,10 +321,6 @@ class SocialLimits {
   final bool nearMe;
   final int inactiveTrips;
   final int pausedPosts;
-
-  /// Posts that notify anyone (followers or nearby), rolling 7 days, every plan.
-  final LimitUse notifiedPosts;
-  final DateTime? notifyResetsAt;
 
   /// Sending in a trip group chat. Missing = allowed: the server enforces.
   final bool groupChat;
@@ -386,8 +359,6 @@ class SocialLimits {
       nearMe: BuddyJson.boolean(j['nearMe']),
       inactiveTrips: BuddyJson.integer(j['inactiveTrips']),
       pausedPosts: BuddyJson.integer(j['pausedPosts']),
-      notifiedPosts: LimitUse.fromJson(BuddyJson.mapOrNull(j['notifyPosts']), fallbackLimit: defaultNotifiedPosts.limit),
-      notifyResetsAt: BuddyJson.time(j['notifyNextAt']),
       groupChat: BuddyJson.boolean(j['groupChat'], true),
       publishes: LimitUse.fromJson(BuddyJson.mapOrNull(j['publishes']), fallbackLimit: defaultPublishes.limit),
       publishNextAt: BuddyJson.time(j['publishNextAt']),

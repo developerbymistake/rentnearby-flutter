@@ -213,13 +213,12 @@ Future<void> _city(WidgetTester t, String name,
     Size size = phoneSize,
     List<TripCityModel>? list,
     bool fail = false,
-    TripCitySheetMode mode = TripCitySheetMode.start,
     Future<void> Function(WidgetTester t)? then}) async {
   shotsDir = _dir;
   debugDisableShadows = false;
   Get.put<TripCityCatalog>(_Catalog(list ?? _cities(), fail: fail), permanent: true);
   await pumpPhone(t, const Scaffold(body: SizedBox()), size: size, textScale: scale);
-  TripCitySheet.pick(t.element(find.byType(Scaffold).first), mode: mode, afterCity: mode == TripCitySheetMode.add ? 'Nainital' : null, inTrip: const {1});
+  TripCitySheet.pick(t.element(find.byType(Scaffold).first), afterCity: 'Nainital', inTrip: const {1});
   await _settle(t);
   if (then != null) await then(t);
   await shot(t, name);
@@ -335,13 +334,12 @@ void main() {
     });
   });
   for (final (s, z) in _sizes) {
-    testWidgets('city main ${_tag(s, z)}', (t) async => _city(t, 'city_main_${_tag(s, z)}', scale: s, size: z, then: (t) async {
-          await t.tap(find.text('Nainital').last);
+    testWidgets('city add ${_tag(s, z)}', (t) async => _city(t, 'city_add_${_tag(s, z)}', scale: s, size: z, then: (t) async {
           await t.tap(find.text('Almora').last);
           await _settle(t);
         }));
   }
-  testWidgets('city add', (t) async => _city(t, 'city_add', mode: TripCitySheetMode.add, then: (t) async {
+  testWidgets('city add', (t) async => _city(t, 'city_add', then: (t) async {
         await t.tap(find.text('Mussoorie').last);
         await _settle(t);
       }));
@@ -374,9 +372,7 @@ void main() {
       _fakeViews();
       Get.to(() => const TripMapScreen());
       await _settle(t);
-      await t.tap(find.byType(PopupMenuButton<int>));
-      await _settle(t);
-      await t.tap(find.text('Day 1').last);
+      await _tapMapDay(t, 1);
       await _settle(t);
       await _settle(t);
     });
@@ -453,9 +449,7 @@ void main() {
       _fakeViews();
       Get.to(() => const TripMapScreen());
       await _settle(t);
-      await t.tap(find.byType(PopupMenuButton<int>));
-      await _settle(t);
-      await t.tap(find.text('Day 4').last);
+      await _tapMapDay(t, 4);
       await _settle(t);
       await _settle(t);
     });
@@ -472,6 +466,16 @@ TripPlan _withSpots(TripPlan p, int Function(int day) count) => TripPlan(
 
 TripEnquiryModel _enq(String id, String kind, DateTime start, {int day = 1, int? leg, String display = 'asked'}) => TripEnquiryModel.fromJson(
     enquiryJson(id: id, kind: kind, status: display == 'asked' ? TripEnquiryStatuses.asked : TripEnquiryStatuses.confirmedByBoth, start: start, day: day, cityLeg: leg, displayStatus: display));
+
+// I-16: the map picks a day with the visible day chips (numbers when the trip has more than 3 days).
+Future<void> _tapMapDay(WidgetTester t, int day) async {
+  final chips = find.byKey(const ValueKey('trip_map_day_chips'));
+  final numbered = find.descendant(of: chips, matching: find.text('$day'));
+  final chip = numbered.evaluate().isNotEmpty ? numbered : find.descendant(of: chips, matching: find.text('Day $day'));
+  await t.ensureVisible(chip);
+  await t.pump();
+  await t.tap(chip);
+}
 
 Future<void> _settle(WidgetTester t) async {
   for (var i = 0; i < 3; i++) {

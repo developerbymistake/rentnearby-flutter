@@ -1,6 +1,6 @@
 abstract final class SocialStringsC {
-  static const String people = 'People';
-  static const String trips = 'Trips';
+  static const String people = 'Inbox';
+  static const String trips = 'Trip - Group';
   static const String requests = 'Requests';
   static const String traveller = 'TRAVELLER';
   static const String newToYou = 'New to you';
@@ -11,7 +11,7 @@ abstract final class SocialStringsC {
   static const String noTripChats = 'No trip chats yet';
   static const String noTripChatsLine = 'A trip chat starts when the first person joins your trip.';
   static const String noRequests = 'No message requests';
-  static const String repliesFree = 'Replying is always free.';
+  static const String repliesFree = 'On Free you can send 1 message in each chat.';
   static const String reply = 'Reply';
   static const String delete = 'Delete';
   static const String reportBlock = 'Report · Block';
@@ -28,17 +28,16 @@ abstract final class SocialStringsC {
   static const String maskToken = '•••• hidden';
   static const String notSent = 'Not sent. Tap to retry';
   static const String safety = 'Never send money to someone you have not met.';
-  static const String firstMessageTitle = 'Make your first message count';
   static const String chatMorePlus = 'Chat more with Plus';
-  static const String groupChatPlusTitle = 'Chat with your trip group with Plus';
-  static const String groupChatPlusLine = 'You can read the chat. Plus lets you send messages.';
-  static String freeCountLine(LimitLine l, String peer) =>
-      'Free: first message to ${l.limit} new people a month (${l.left} left). $peer can reply for free.';
+  static const String freeMessageUsedTitle = 'You sent your free message';
+  static const String freeMessageUsedLine = 'Get Plus to keep chatting.';
+  static const String awaitingTitle = 'Waiting for a reply';
+  static String awaitingLine(String peer) => '$peer can reply to your message.';
   static String firstFreeLine(LimitLine l) => 'Your first message to a new person is free · ${l.left} of ${l.limit} left this month';
   static const String limitTitle = 'You have used your new chats';
-  static String limitLine(LimitLine l) => 'Free: first message to ${l.limit} new people a month. Chats already going on are not limited.';
+  static String limitLine(LimitLine l) => 'Free: first message to ${l.limit} new people a month.';
   static String receiverInfo(String peer) => '$peer is new to you. Reply for free, or delete.';
-  static const String movedToPeople = 'Moved to People. Replies are free for you.';
+  static const String movedToPeople = 'Moved to Inbox.';
   static const String cannotMessage = 'You cannot message this person.';
   static const String leftTrip = 'You left this trip chat.';
   static const String notAvailable = 'This person is not available';
@@ -73,7 +72,7 @@ abstract final class SocialStringsC {
   static String perMonthAbout(String p) => 'about $p a month';
   static const String whatYouGet = 'What you get';
   static String chatPeople(int n) => 'Chat with $n new people a month';
-  static String chatPeopleSub(int free) => 'Free: first message to $free. Chats already going on are not limited';
+  static String chatPeopleSub(int free) => 'Free: $free new chats a month, 1 message in each';
   static String publicTrips(int n) => n == 1 ? '1 public trip' : '$n public trips';
   static String activeTrips(int n) => n == 1 ? '1 active trip' : '$n active trips';
   static String joinRequests(int n) => n == 1 ? '1 join request a month' : '$n join requests a month';
@@ -84,7 +83,7 @@ abstract final class SocialStringsC {
   static const String nearMeSub = 'See trips starting close to you';
   static const String groupChatPerk = 'Trip group chat';
   static const String groupChatPerkSub = 'Send messages to everyone on your trip';
-  static const String alwaysFree = 'Always free: replying to people who wrote to you, follow, privacy, report and block.';
+  static const String alwaysFree = 'Always free: follow, privacy, report and block.';
   static String footerTitle(String cycle) => 'Bakhli Plus · $cycle';
   static String footerToday(String price) => '$price today';
   static String renewYear(String price) => 'Then $price a year. Renews until you cancel in Google Play.';

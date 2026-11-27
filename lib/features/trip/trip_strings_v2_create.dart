@@ -8,9 +8,6 @@ class TripStringsV2Create {
   static String bestFitPill(int days) => 'Best fit: ${daysCount(days)}';
   static String suggested(int days) => 'Suggested ${daysCount(days)}';
   static const String noDatesNote = 'No dates yet. We ask only if you want help with stay, taxi or ways.';
-  static const String citiesHint = 'Pick one city or more. We plan them as one trip.';
-  static const String searchCity = 'Search a city';
-  static const String popularCities = 'Popular cities';
   static String cityMeta(int n) => '$n ${n == 1 ? 'place' : 'places'} · stays and taxis';
   static const String choosePlaces = 'Choose places';
   static String minDaysNote(int d) => 'At least ${daysCount(d)} for ${d == 1 ? 'this city' : 'these cities'}';

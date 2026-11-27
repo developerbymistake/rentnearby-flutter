@@ -19,12 +19,13 @@ class PostDraft {
     this.chips = const [],
     this.textEdited = false,
     this.notifyNearby = false,
-    this.travelMode = TravelModes.public,
+    this.travelMode = TravelModes.taxi,
   });
 
   static const String within = 'within';
   static const String exact = 'exact';
   static const int maxCities = 4;
+  static const int maxDays = 4;
   static const int maxMonths = 6;
   static const int maxText = 500;
   static const int startAheadDays = 365;
@@ -140,7 +141,7 @@ class PostDraft {
       whenKind: kind == exact ? exact : within,
       withinMonths: BuddyJson.integer(j['withinMonths'], 2).clamp(1, maxMonths),
       startDate: BuddyJson.date(j['startDate']),
-      days: BuddyJson.integer(j['days'], 4).clamp(1, SocialFormats.moreDays),
+      days: BuddyJson.integer(j['days'], 4).clamp(1, maxDays),
       joinGender: BuddyJson.str(j['joinGender'], 'A'),
       seats: BuddyJson.integer(j['seats'], 3),
       text: BuddyJson.str(j['text']),
@@ -150,7 +151,7 @@ class PostDraft {
     );
   }
 
-  static String _travel(Object? v) => TravelModes.parse(v) ?? TravelModes.public;
+  static String _travel(Object? v) => TravelModes.parse(v) ?? TravelModes.taxi;
 }
 
 abstract final class PostDraftStore {

@@ -87,26 +87,29 @@ void main() {
     await _tap(t, find.byKey(OnboardingBottom.buttonKey));
 
     expect(find.text(SocialStringsA.obStep2), findsOneWidget);
-    expect(find.text('Pick 3 more interests, 1 skill and 1 place'), findsOneWidget);
+    expect(find.text('Pick 2 more interests and 2 skills'), findsOneWidget);
     for (final i in ['Mountains', 'Treks', 'Food']) {
       await _tap(t, find.byKey(ValueKey('ob_int_$i')));
     }
     await _tap(t, find.byKey(const ValueKey('ob_skill_Driver')));
+    await _tap(t, find.byKey(const ValueKey('ob_skill_Cook')));
+    expect(find.byKey(const ValueKey('ob_add_place')), findsNothing, reason: 'I-10: places moved to step 3');
+    await _tap(t, find.byKey(OnboardingBottom.buttonKey));
+
+    expect(find.text(SocialStringsA.obStep3), findsOneWidget);
+    expect(find.text('Pick 1 place'), findsOneWidget);
     await _tap(t, find.byKey(const ValueKey('ob_add_place')));
     await t.tap(find.text('Rishikesh').last);
     await settle(t);
     expect(find.text('Rishikesh'), findsOneWidget);
-    // Picked places sit on the same equal-tile grid as Interests (same left edge and tile width), with a counter.
-    final placeTile = t.getRect(find.byKey(const ValueKey('ob_place_Rishikesh')));
-    final interestTile = t.getRect(find.byKey(const ValueKey('ob_int_Mountains')));
-    expect(placeTile.left, closeTo(interestTile.left, 0.5));
-    expect(placeTile.width, closeTo(interestTile.width, 0.5));
     expect(find.text(SocialStringsA.placesAdded(1)), findsOneWidget);
-    await _tap(t, find.byKey(OnboardingBottom.buttonKey));
-
-    expect(find.text(SocialStringsA.obStep3), findsOneWidget);
+    final placeAdd = t.getRect(find.byKey(const ValueKey('ob_add_place')));
+    expect(placeAdd.bottom, lessThan(t.getRect(find.byKey(const ValueKey('ob_about'))).top), reason: 'I-10: places above About');
+    expect(find.text('Hills over beaches. Chai at every stop.'), findsNothing, reason: 'I-10: no About examples');
     expect(find.byKey(const ValueKey('ob_preview')), findsNothing);
-    await _tap(t, find.text('Weekend trekker. Happy to share a cab.'));
+    await t.ensureVisible(find.byKey(const ValueKey('ob_about')));
+    await t.enterText(find.byKey(const ValueKey('ob_about')), 'Weekend trekker. Happy to share a cab.');
+    await settle(t);
     expect(find.byKey(const ValueKey('ob_preview')), findsOneWidget);
     expect(find.text(SocialStringsA.howOthersSee), findsOneWidget);
     await _tap(t, find.byKey(OnboardingBottom.buttonKey));
@@ -115,6 +118,7 @@ void main() {
     expect(body['gender'], 'Male');
     expect(body['birthMonth'], 1);
     expect(body['interests'], ['Mountains', 'Treks', 'Food']);
+    expect(body['skills'], ['Driver', 'Cook']);
     expect(body['places'], ['Rishikesh']);
     expect(find.text('MAIN'), findsOneWidget);
     await drain(t);
@@ -183,7 +187,7 @@ void main() {
     c.birthMonth.value = 1;
     c.birthYear.value = DateTime.now().year - 18;
     c.interests.assignAll(const ['Mountains', 'Treks', 'Food']);
-    c.skills.assignAll(const ['Driver']);
+    c.skills.assignAll(const ['Driver', 'Cook']);
     c.places.assignAll(const ['Rishikesh']);
     expect(c.next(), isTrue);
     expect(c.next(), isTrue);
@@ -256,7 +260,7 @@ void main() {
     testWidgets('step 2: interests and skills are equal tiles, two per row, with a tick when picked ($size, $scale)', (t) async {
       await toStep2(t, size: size, scale: scale);
       final tiles = find.byType(ChoiceArtTile);
-      expect(tiles, findsNWidgets(16));
+      expect(tiles, findsNWidgets(14));
       final first = t.getRect(tiles.first);
       for (final e in tiles.evaluate()) {
         final r = t.getRect(find.byWidget(e.widget));
@@ -265,7 +269,7 @@ void main() {
       }
       final a = t.getRect(find.byKey(const ValueKey('ob_int_Mountains')));
       final b = t.getRect(find.byKey(const ValueKey('ob_int_Treks')));
-      final c = t.getRect(find.byKey(const ValueKey('ob_int_Beaches')));
+      final c = t.getRect(find.byKey(const ValueKey('ob_int_Adventure')));
       expect(b.top, closeTo(a.top, 0.5));
       expect(c.top, greaterThan(a.bottom));
       expect(c.left, closeTo(a.left, 0.5));
@@ -275,9 +279,7 @@ void main() {
       await _tap(t, find.byKey(const ValueKey('ob_int_Mountains')));
       expect(find.descendant(of: find.byKey(const ValueKey('ob_int_Mountains')), matching: find.byIcon(Icons.check_rounded)), findsOneWidget);
       expect(find.text(SocialStringsA.picked(0)), findsOneWidget);
-      expect(find.text(SocialStringsA.placesAdded(0)), findsOneWidget);
-      final place = t.getRect(find.byKey(const ValueKey('ob_add_place')));
-      expect(place.left, closeTo(a.left, 0.5));
+      expect(find.byKey(const ValueKey('ob_add_place')), findsNothing);
       await drain(t);
       expect(t.takeException(), isNull);
     });

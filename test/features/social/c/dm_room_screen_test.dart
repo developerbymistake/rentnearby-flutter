@@ -29,12 +29,14 @@ void main() {
     for (final s in socialScales) {
       final at = '${w.toInt()} x$s';
 
-      testWidgets('sender after the first message sees the lock and Chat more with Plus ($at)', (t) async {
+      testWidgets('I-9 a Free sender after his one message sees the Plus lock and Chat more with Plus ($at)', (t) async {
         final api = FakeChatApi()
-          ..roomResult = BuddyOk(roomOf(status: 'Request', iStarted: true, lock: 'awaitingReply', canSend: false))
+          ..roomResult = BuddyOk(roomOf(status: 'Request', iStarted: true, lock: 'plus', canSend: false))
           ..messagesResult = BuddyOk(MessagesPage(items: [msgOf(1, sender: myId, text: 'Hi Kavya, are you going in mid Dec too?')], lastSeq: 1));
         await pumpSocial(t, DmRoomScreen(controller: controller(api)), width: w, scale: s);
-        expect(find.text(SocialStringsC.firstMessageTitle), findsOneWidget);
+        expect(find.text(SocialStringsC.freeMessageUsedTitle), findsOneWidget);
+        expect(find.text(SocialStringsC.freeMessageUsedLine), findsOneWidget);
+        expect(find.byKey(const ValueKey('dm_lock_plus')), findsOneWidget);
         expect(find.byKey(const ValueKey('dm_chat_more_plus')), findsOneWidget);
         expect(find.byKey(const ValueKey('dm_composer')), findsNothing);
         expect(find.text(SocialStringsC.safety), findsOneWidget);
@@ -57,7 +59,7 @@ void main() {
         expect(find.descendant(of: find.byType(ListView), matching: find.byKey(const ValueKey('dm_receiver_delete'))), findsNothing);
         expect(t.getTopLeft(find.byKey(const ValueKey('dm_receiver_delete'))).dy, greaterThan(t.getTopLeft(find.text(SocialStringsC.safety)).dy));
         expect(find.text(SocialStringsC.receiverInfo('Kavya')), findsOneWidget);
-        expect(find.text(SocialStringsC.firstMessageTitle), findsNothing);
+        expect(find.text(SocialStringsC.freeMessageUsedTitle), findsNothing);
         expect(t.takeException(), isNull);
         await disposeSocial(t);
       });

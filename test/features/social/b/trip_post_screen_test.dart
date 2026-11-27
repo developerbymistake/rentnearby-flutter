@@ -138,17 +138,52 @@ void main() {
     await drain(t);
   });
 
-  testWidgets('my own post: Join requests and Open trip, no Request button', (t) async {
+  testWidgets('my own post: Join requests and Plan this trip, no Request button, no menu', (t) async {
     final server = installServer();
     putSocialMe(server, socialMeWith());
     server.on('GET', _path, publicTripJson(isMine: true, ownerId: 'me', ownerName: 'Rahul Verma', waitingRequests: 2));
     await pumpSocial(t, const TripPostScreen(tripId: 'trip-1'), pages: _pages);
     expect(find.byKey(TripPostScreen.requestKey), findsNothing);
     expect(find.byKey(TripPostScreen.openTripKey), findsOneWidget);
+    expect(find.descendant(of: find.byKey(TripPostScreen.openTripKey), matching: find.text(SocialStringsB.planTrip)), findsOneWidget);
+    expect(find.text(SocialStringsB.openTrip), findsNothing);
+    expect(find.byKey(TripPostScreen.menuKey), findsNothing);
     expect(find.text('${SocialStringsB.joinRequestsTitle} · 2'), findsOneWidget);
     await t.tap(find.byKey(TripPostScreen.joinRequestsKey));
     await settle(t);
     expect(find.text('REQUESTS trip-1'), findsOneWidget);
+    await drain(t);
+  });
+
+  testWidgets('I-7: Plan this trip asks first; Cancel stays, confirm opens the trip overview', (t) async {
+    final server = installServer();
+    putSocialMe(server, socialMeWith());
+    server.on('GET', _path, publicTripJson(isMine: true, ownerId: 'me', ownerName: 'Rahul Verma', waitingRequests: 0));
+    final pages = [..._pages, GetPage(name: AppRoutes.tripOverview, page: () => Scaffold(body: Text('OVERVIEW ${(Get.arguments as Map)['tripId']}')))];
+    await pumpSocial(t, const TripPostScreen(tripId: 'trip-1'), pages: pages);
+    await t.tap(find.byKey(TripPostScreen.openTripKey));
+    await settle(t);
+    expect(find.text(SocialStringsB.planTripTitle), findsOneWidget);
+    expect(find.text(SocialStringsB.planTripBody), findsOneWidget);
+    await t.tap(find.text('Cancel'));
+    await settle(t);
+    expect(find.text(SocialStringsB.planTripTitle), findsNothing);
+    expect(find.text('OVERVIEW trip-1'), findsNothing);
+    await t.tap(find.byKey(TripPostScreen.openTripKey));
+    await settle(t);
+    await t.tap(find.text(SocialStringsB.planTrip).last);
+    await settle(t);
+    expect(find.text('OVERVIEW trip-1'), findsOneWidget);
+    await drain(t);
+  });
+
+  testWidgets('I-7: a joined member still sees Open trip', (t) async {
+    final server = installServer();
+    putSocialMe(server, socialMeWith());
+    server.on('GET', _path, publicTripJson(myJoin: 'member'));
+    await pumpSocial(t, const TripPostScreen(tripId: 'trip-1'), pages: _pages);
+    expect(find.text(SocialStringsB.openTrip), findsOneWidget);
+    expect(find.text(SocialStringsB.planTrip), findsNothing);
     await drain(t);
   });
 
@@ -163,10 +198,10 @@ void main() {
   testWidgets('T2: the details card shows Travel by with the chip; T1: no row when the post has no travel mode', (t) async {
     final server = installServer();
     putSocialMe(server, socialMeWith());
-    server.on('GET', _path, publicTripJson(travelMode: 'car'));
+    server.on('GET', _path, publicTripJson(travelMode: 'train'));
     await pumpSocial(t, const TripPostScreen(tripId: 'trip-1'), pages: _pages);
     expect(find.text(SocialStringsB.factTravelBy), findsOneWidget);
-    expect(find.descendant(of: find.byKey(TripPostScreen.travelKey), matching: find.text('Own car')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(TripPostScreen.travelKey), matching: find.text('Train')), findsOneWidget);
     await drain(t);
   });
 

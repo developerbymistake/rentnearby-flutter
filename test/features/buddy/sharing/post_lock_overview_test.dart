@@ -41,11 +41,9 @@ Future<void> _tapText(WidgetTester t, String text) async {
 }
 
 void main() {
-  final later = DateTime.now().toUtc().add(const Duration(hours: 30));
-  final passed = DateTime.now().toUtc().subtract(const Duration(hours: 1));
-
   setUp(() {
     DS.applyApproved();
+    TripDeleteFlow.debugReset();
     opened.clear();
   });
   tearDown(() {
@@ -55,64 +53,33 @@ void main() {
   });
 
   group('rule (pure)', () {
-    test('UC39/42 inside 72 h the delete is blocked with the unlock moment; after it, it is free', () {
-      final s = aloneBlock();
-      final locked = OwnerOverviewSeam.deleteBlock(trip(sharing: s).copyWith(isPublic: true, postUnlocksAt: later), s, ended: false);
-      expect(locked, isA<PostLockedBlock>());
-      expect(locked!.line, SocialStrings.postLockedLine(later));
-      expect(OwnerOverviewSeam.deleteBlock(trip(sharing: s).copyWith(isPublic: true, postUnlocksAt: passed), s, ended: false), isNull);
+    test('I-3: no 72-hour lock: a posted trip alone deletes at once', () {
+      expect(OwnerOverviewSeam.deleteBlock(aloneBlock()), isNull);
     });
 
     test('UC43 a posted trip with other travellers asks to remove them first (count from the sharing block)', () {
       final s = sharedBlock(pending: 0, expenses: _settled);
-      final b = OwnerOverviewSeam.deleteBlock(trip(sharing: s).copyWith(isPublic: true), s, ended: false);
+      final b = OwnerOverviewSeam.deleteBlock(s);
       expect(b, isA<MembersFirstBlock>());
       expect((b as MembersFirstBlock).count, 2);
       expect(b.line, 'Remove the other travellers first (2)');
     });
 
-    test('UC43 unpublish-then-delete: a private trip the server marks deleteNeedsAlone still asks to remove the others', () {
+    test('I-3: an ended trip with travellers also asks to remove them first (no ended exemption)', () {
       final s = sharedBlock(pending: 0, expenses: _settled);
-      final b = OwnerOverviewSeam.deleteBlock(trip(sharing: s).copyWith(deleteNeedsAlone: true), s, ended: false);
-      expect(b, isA<MembersFirstBlock>());
+      expect(OwnerOverviewSeam.deleteBlock(s), isA<MembersFirstBlock>());
     });
 
-    test('a never-posted private trip with travellers deletes as before (rule is for posted trips)', () {
+    testWidgets('an ended trip with travellers: Delete greyed with the count', (t) async {
+      registerFakes(members: FakeMembersApi(membersResult: BuddyOk(membersSample())));
       final s = sharedBlock(pending: 0, expenses: _settled);
-      expect(OwnerOverviewSeam.deleteBlock(trip(sharing: s), s, ended: false), isNull);
-    });
-
-    test('UC44 an ended trip skips the travellers rule once the 72 hours passed', () {
-      final s = sharedBlock(pending: 0, expenses: _settled);
-      expect(OwnerOverviewSeam.deleteBlock(trip(sharing: s).copyWith(isPublic: true, postUnlocksAt: passed), s, ended: true), isNull);
-      expect(OwnerOverviewSeam.deleteBlock(trip(sharing: s).copyWith(isPublic: true), s, ended: true), isNull);
-    });
-
-    test('safety review 2: an ended trip inside the 72 hours is still locked (trip dates can be edited)', () {
-      final s = sharedBlock(pending: 0, expenses: _settled);
-      final b = OwnerOverviewSeam.deleteBlock(trip(sharing: s).copyWith(isPublic: true, postUnlocksAt: later), s, ended: true);
-      expect(b, isA<PostLockedBlock>());
-      expect((b! as PostLockedBlock).unlocksAt, later);
+      await _pump(t, overview(trip(sharing: s, endDate: DateTime.now().subtract(const Duration(days: 3))), s));
+      await _openMenu(t);
+      expect(find.text('Remove the other travellers first (2)'), findsOneWidget);
     });
   });
 
   group('overview menu', () {
-    testWidgets('UC39 locked: Delete trip stays visible, greyed with the unlock line; a tap explains and never deletes', (t) async {
-      final api = FakeMembersApi(membersResult: BuddyOk(membersSample()));
-      registerFakes(members: api);
-      final s = aloneBlock();
-      await _pump(t, overview(trip(sharing: s).copyWith(isPublic: true, postUnlocksAt: later), s));
-      await _openMenu(t);
-      expect(find.text('Delete trip'), findsOneWidget);
-      expect(find.text(SocialStrings.postLockedLine(later)), findsOneWidget);
-      await _tapText(t, 'Delete trip');
-      expect(find.text(SocialStrings.postLockedTitle), findsOneWidget);
-      expect(find.text('${SocialStrings.postLockedLine(later)}.'), findsOneWidget);
-      expect(find.text('Delete this trip?'), findsNothing);
-      expect(api.deletes, 0);
-      expect(t.takeException(), isNull);
-    });
-
     testWidgets('UC43 other travellers: Delete greyed with the count; See travellers opens the members page', (t) async {
       final api = FakeMembersApi(membersResult: BuddyOk(membersSample()));
       registerFakes(members: api);
@@ -127,36 +94,22 @@ void main() {
       expect(api.deletes, 0);
     });
 
-    testWidgets('unlocked and alone: the normal red Delete trip (missing fields never block)', (t) async {
-      final s = sharedBlock(pending: 0, expenses: _settled);
+    testWidgets('alone: the normal red Delete trip, no lock line', (t) async {
+      final s = aloneBlock();
       registerFakes(members: FakeMembersApi(membersResult: BuddyOk(membersSample())));
-      await _pump(t, overview(trip(sharing: s), s));
+      await _pump(t, overview(trip(sharing: s).copyWith(isPublic: true), s));
       await _openMenu(t);
       expect(find.text('Delete trip'), findsOneWidget);
       expect(find.textContaining('You can remove this post'), findsNothing);
       expect(find.textContaining('Remove the other travellers'), findsNothing);
     });
 
-    testWidgets('a late PostLocked refusal (clock skew) closes the confirm and explains with the server moment', (t) async {
-      final api = FakeMembersApi(membersResult: BuddyOk(membersSample()))
-        ..deleteResult = BuddyRefused<void>(type: 'PostLocked', statusCode: 409, data: {'unlocksAt': later.toIso8601String()});
-      registerFakes(members: api);
-      final s = sharedBlock(pending: 0, expenses: _settled);
-      await _pump(t, overview(trip(sharing: s), s));
-      await _openMenu(t);
-      await _tapText(t, 'Delete trip');
-      await _tapText(t, 'Delete');
-      expect(api.deletes, 1);
-      expect(find.text('Delete this trip?'), findsNothing);
-      expect(find.text(SocialStrings.postLockedTitle), findsOneWidget);
-      expect(find.text('${SocialStrings.postLockedLine(later)}.'), findsOneWidget);
-    });
-
-    testWidgets('UC43 unpublish-then-delete: a RemoveMembersFirst refusal shows the members box', (t) async {
+    testWidgets('a late RemoveMembersFirst refusal (someone joined meanwhile) shows the members box', (t) async {
       final api = FakeMembersApi(membersResult: BuddyOk(membersSample()))
         ..deleteResult = const BuddyRefused<void>(type: 'RemoveMembersFirst', statusCode: 409, data: {'count': 2});
       registerFakes(members: api);
-      final s = sharedBlock(pending: 0, expenses: _settled);
+      // Alone now but the trip kept shared expenses, so Delete goes through the sharing confirm box that reads the refusal.
+      final s = formerBlock(expenses: _settled);
       await _pump(t, overview(trip(sharing: s), s));
       await _openMenu(t);
       await _tapText(t, 'Delete trip');

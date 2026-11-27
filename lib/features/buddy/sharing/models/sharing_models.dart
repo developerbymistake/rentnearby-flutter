@@ -1,3 +1,4 @@
+import '../../buddies/models/buddy_models.dart';
 import '../../shared/buddy_json.dart';
 import '../../shared/models/person_models.dart';
 
@@ -145,6 +146,32 @@ class InviteResult {
 
   factory InviteResult.fromJson(Map<String, dynamic> j) =>
       InviteResult(results: BuddyJson.list(j['results'], InviteOutcome.fromJson), seatsLeft: BuddyJson.integer(j['seatsLeft']));
+}
+
+// One person the owner follows, from GET /trips/{id}/invite-candidates (buddies first).
+class InviteCandidate {
+  const InviteCandidate({required this.person, this.isBuddy = false});
+
+  final BuddyItem person;
+  final bool isBuddy;
+
+  String get userId => person.userId;
+
+  factory InviteCandidate.fromJson(Map<String, dynamic> j) => InviteCandidate(person: BuddyItem.fromJson(j), isBuddy: BuddyJson.boolean(j['isBuddy']));
+}
+
+class InviteCandidateList {
+  const InviteCandidateList({required this.items, required this.count, this.nextCursor});
+
+  final List<InviteCandidate> items;
+  final int count;
+  final String? nextCursor;
+
+  factory InviteCandidateList.fromJson(Map<String, dynamic> j) => InviteCandidateList(
+        items: BuddyJson.list(j['items'], InviteCandidate.fromJson),
+        count: BuddyJson.integer(j['count']),
+        nextCursor: BuddyJson.strOrNull(j['nextCursor']),
+      );
 }
 
 class RemoveResult {

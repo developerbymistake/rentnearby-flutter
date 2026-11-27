@@ -1,4 +1,7 @@
 abstract final class TripStringsHubTrips {
+  static const List<String> tabs = ['My plans', 'Joined'];
+  static const String joinedEmptyTitle = 'No joined trips yet';
+  static const String joinedEmptyLine = 'Trips you join show here.';
   static const String active = 'Active';
   static const String past = 'Past trips';
   static const String stepsDone = 'steps done';

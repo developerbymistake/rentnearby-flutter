@@ -2,11 +2,11 @@ import 'package:bakhli/config/app_routes.dart';
 import 'package:bakhli/config/user_roles.dart';
 import 'package:bakhli/controllers/plan_controller.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/design/extra/ext_buddy.dart';
 import 'package:bakhli/features/buddy/buddy_strings.dart';
 import 'package:bakhli/features/social/a/profile/profile_sections.dart';
 import 'package:bakhli/features/social/a/profile/seeker_profile_screen.dart';
 import 'package:bakhli/features/social/a/social_strings_a.dart';
-import 'package:bakhli/features/social/a/widgets/social_chips_a.dart';
 import 'package:bakhli/features/social/a/widgets/social_section_card.dart';
 import 'package:bakhli/features/social/shared/social_me_controller.dart';
 import 'package:bakhli/models/my_plan_model.dart';
@@ -22,6 +22,8 @@ final _pages = [
   GetPage(name: AppRoutes.people, page: () => Scaffold(body: Text('PEOPLE ${(Get.arguments as Map)['tab']}'))),
   GetPage(name: AppRoutes.settings, page: () => const Scaffold(body: Text('SETTINGS'))),
   GetPage(name: AppRoutes.editProfile, page: () => const Scaffold(body: Text('EDIT'))),
+  GetPage(name: AppRoutes.myFiledReports, page: () => const Scaffold(body: Text('REPORTS'))),
+  GetPage(name: AppRoutes.myTrips, page: () => const Scaffold(body: Text('TRIPS'))),
 ];
 
 void main() {
@@ -32,22 +34,24 @@ void main() {
 
   for (final size in socialSizes) {
     for (final scale in socialScales) {
-      testWidgets('my profile shows identity, counters, About and the chips ($size, $scale)', (t) async {
+      testWidgets('my profile shows identity, counters, About, the username row and no chips ($size, $scale)', (t) async {
         final server = installServer();
         server.on('GET', '/social/me', socialMeJson(profile: myProfileJson()));
         putSeeker();
         Get.put(SocialMeController(), permanent: true);
         await pumpSocial(t, const SeekerProfileScreen(), size: size, textScale: scale, pages: _pages);
         expect(find.text('Rahul Verma'), findsOneWidget);
-        expect(find.text('Bakhli#${'me'.hashCode.abs()}'), findsOneWidget);
+        expect(find.text('Bakhli#${'me'.hashCode.abs()}'), findsWidgets);
         expect(find.text('Dehradun'), findsOneWidget);
         expect(find.text('128'), findsOneWidget);
         expect(find.text('41'), findsOneWidget);
-        expect(find.text(SocialStringsA.editProfileBtn), findsOneWidget);
+        expect(find.text(BuddyStrings.myUsername), findsOneWidget);
+        expect(find.text(SocialStringsA.editTitle), findsOneWidget);
+        expect(find.text(SocialStringsA.myQr), findsNothing);
         expect(find.text('Hills over beaches. Chai at every stop.'), findsOneWidget);
-        expect(find.text('Photography'), findsOneWidget);
-        expect(find.text('Manali'), findsOneWidget);
-        expect(find.text('Driver'), findsOneWidget);
+        expect(find.byType(ProfileChipsSection), findsNothing);
+        expect(find.text('Photography'), findsNothing);
+        expect(find.text('Manali'), findsNothing);
         expect(find.text('9897012345'), findsNothing);
         await drain(t);
         expect(t.takeException(), isNull);
@@ -109,7 +113,7 @@ void main() {
     await drain(t);
   });
 
-  testWidgets('About sits inside the header card above the counters; Interests, Places and Skills are separate section cards', (t) async {
+  testWidgets('I-11/18/19 About sits in the header card; the username + Edit profile rows, then Activity, then public trips', (t) async {
     final server = installServer();
     server.on('GET', '/social/me', socialMeJson(profile: myProfileJson()));
     putSeeker();
@@ -119,25 +123,48 @@ void main() {
     final about = find.descendant(of: hero, matching: find.byKey(ProfileHeroCard.aboutKey));
     expect(about, findsOneWidget);
     expect(t.getRect(about).bottom, lessThanOrEqualTo(t.getRect(find.byType(ProfileCounters)).top));
-    expect(t.getRect(about).top, greaterThanOrEqualTo(t.getRect(find.text('Dehradun')).bottom));
-    final cards = [ProfileChipsSection.interestsKey, ProfileChipsSection.placesKey, ProfileChipsSection.skillsKey];
-    for (final k in cards) {
-      expect(find.descendant(of: find.byKey(k), matching: find.byType(SocialSectionHeader)), findsOneWidget);
-      final chips = find.descendant(of: find.byKey(k), matching: find.byType(TagChip));
-      final n = chips.evaluate().length;
-      expect(n, greaterThan(0));
-      expect(find.descendant(of: find.byKey(k), matching: find.text('· $n')), findsOneWidget, reason: 'mock B4: count beside each section title');
-      expect(find.descendant(of: chips.first, matching: find.byType(Art3D)), findsOneWidget, reason: 'mock B4: 3D icon on every profile chip');
-    }
-    // Visible card box (the keyed Container's rect also covers its top margin).
-    final rects = [for (final k in cards) t.getRect(find.descendant(of: find.byKey(k), matching: find.byType(DecoratedBox)).first)];
-    for (final r in rects) {
-      expect(r.left, closeTo(rects.first.left, 0.5));
-      expect(r.width, closeTo(rects.first.width, 0.5));
-    }
-    expect(rects[1].top, greaterThan(rects[0].bottom));
-    expect(rects[2].top, greaterThan(rects[1].bottom));
-    expect(t.getRect(find.byKey(SeekerProfileScreen.editKey)).bottom, lessThan(rects.first.top));
+    expect(find.byType(ProfileChipsSection), findsNothing);
+    final user = t.getRect(find.byKey(SeekerProfileScreen.usernameKey));
+    final edit = t.getRect(find.byKey(SeekerProfileScreen.editKey));
+    final activity = t.getRect(find.byKey(SeekerProfileScreen.activityKey));
+    expect(user.top, greaterThan(t.getRect(hero).bottom));
+    expect(edit.top, greaterThanOrEqualTo(user.bottom - 0.5));
+    expect(activity.top, greaterThan(edit.bottom));
+    expect(find.descendant(of: find.byKey(SeekerProfileScreen.activityKey), matching: find.text(SocialStringsA.activityLabel)), findsOneWidget);
+    expect(find.descendant(of: find.byKey(SeekerProfileScreen.activityKey), matching: find.text(SocialStringsA.myReports)), findsOneWidget);
+    expect(find.byType(LabeledRowsSection), findsNWidgets(2));
+    expect(find.byType(IconRow3D), findsWidgets);
+    await drain(t);
+  });
+
+  testWidgets('I-18 My Trips and My Reports in the Activity section open their pages', (t) async {
+    final server = installServer();
+    server.on('GET', '/social/me', socialMeJson(profile: myProfileJson()));
+    putSeeker();
+    Get.put(SocialMeController(), permanent: true);
+    await pumpSocial(t, const SeekerProfileScreen(), size: const Size(392, 2400), pages: _pages);
+    await t.tap(find.text(SocialStringsA.myTrips));
+    await settle(t);
+    expect(find.text('TRIPS'), findsOneWidget);
+    Get.back();
+    await settle(t);
+    await t.tap(find.text(SocialStringsA.myReports));
+    await settle(t);
+    expect(find.text('REPORTS'), findsOneWidget);
+    await drain(t);
+  });
+
+  testWidgets('I-11 the username row has a QR and a Copy round button', (t) async {
+    final server = installServer();
+    server.on('GET', '/social/me', socialMeJson(profile: myProfileJson()));
+    putSeeker();
+    Get.put(SocialMeController(), permanent: true);
+    await pumpSocial(t, const SeekerProfileScreen(), pages: _pages);
+    final row = find.byKey(SeekerProfileScreen.usernameKey);
+    expect(find.descendant(of: row, matching: find.byKey(SeekerProfileScreen.myQrKey)), findsOneWidget);
+    expect(find.descendant(of: row, matching: find.byKey(SeekerProfileScreen.copyKey)), findsOneWidget);
+    expect(t.widget<BuddyRoundButton>(find.byKey(SeekerProfileScreen.copyKey)).onTap, isNotNull);
+    expect(find.descendant(of: row, matching: find.text('Bakhli#${'me'.hashCode.abs()}')), findsOneWidget);
     await drain(t);
   });
 
@@ -153,20 +180,19 @@ void main() {
     expect(gear.tint, ListingPalette.coral.g1);
     await drain(t);
   });
-  testWidgets('Q1: My QR opens the QR sheet with my name and username', (t) async {
+  testWidgets('Q1: the QR button opens the QR sheet with my name and username', (t) async {
     final server = installServer();
     server.on('GET', '/social/me', socialMeJson(profile: myProfileJson()));
     putSeeker();
     Get.put(SocialMeController(), permanent: true);
     await pumpSocial(t, const SeekerProfileScreen(), pages: _pages);
-    expect(find.text(SocialStringsA.myQr), findsOneWidget);
     expect(find.byKey(SeekerProfileScreen.editKey), findsOneWidget);
     await t.tap(find.byKey(SeekerProfileScreen.myQrKey));
     await settle(t);
-    expect(find.text(BuddyStrings.qrTitle), findsNWidgets(2));
+    expect(find.text(BuddyStrings.qrTitle), findsOneWidget, reason: 'I-11: the My QR pill is gone; only the sheet title says My QR');
     expect(find.text(BuddyStrings.qrSubtitle), findsOneWidget);
     expect(find.bySemanticsLabel(BuddyStrings.qrLabel), findsOneWidget);
-    expect(find.text('Bakhli#${'me'.hashCode.abs()}'), findsNWidgets(2));
+    expect(find.text('Bakhli#${'me'.hashCode.abs()}'), findsWidgets);
     expect(find.text('Rahul Verma'), findsNWidgets(2));
     await drain(t);
   });
@@ -180,6 +206,7 @@ void main() {
     await t.tap(find.byKey(SeekerProfileScreen.myQrKey), warnIfMissed: false);
     await settle(t);
     expect(find.text(BuddyStrings.qrSubtitle), findsNothing);
+    expect(t.widget<BuddyRoundButton>(find.byKey(SeekerProfileScreen.copyKey)).onTap, isNull);
     await drain(t);
   });
 }

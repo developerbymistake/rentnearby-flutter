@@ -3,9 +3,9 @@ import 'package:get/get.dart';
 
 import '../../../../design/design.dart';
 import '../../../../utils/input_formatters.dart';
-import '../../../buddy/shared/widgets/buddy_snack.dart';
 import '../../../trip/models/trip_city_model.dart';
 import '../../../trip/trip_strings_v2_create.dart';
+import '../../../trip/widgets/trip_city_art.dart';
 import '../../../trip/widgets/trip_city_sheet.dart';
 import '../../shared/social_strings.dart';
 import '../social_strings_b.dart';
@@ -33,10 +33,7 @@ class _PostWhereStepState extends State<PostWhereStep> {
     super.dispose();
   }
 
-  void _toggle(TripCityModel city) {
-    final error = c.toggleCity(city);
-    if (error != null) BuddySnack.show(context, error, danger: true);
-  }
+  void _toggle(TripCityModel city) => c.toggleCity(city);
 
   Widget _picked(List<TripCityModel> cities) {
     final tone = ListingTone.indigo;
@@ -76,6 +73,20 @@ class _PostWhereStepState extends State<PostWhereStep> {
     );
   }
 
+  Widget? _photo(TripCityModel city) {
+    final cover = city.cover;
+    if (cover == null) return null;
+    return KitPhoto(
+      key: ValueKey('post_city_photo_${city.cityKey}'),
+      url: cover,
+      width: DS.s(52),
+      height: DS.s(52),
+      tone: TripCityArt.toneOf(city.cityKey),
+      asset: TravelIcon.map,
+      iconSize: 20,
+    );
+  }
+
   Widget _list(List<TripCityModel> items) {
     final tone = ListingTone.indigo;
     return Container(
@@ -90,6 +101,7 @@ class _PostWhereStepState extends State<PostWhereStep> {
               key: ValueKey('post_city_${items[i].cityKey}'),
               tone: tone,
               art: TripCitySheet.artOf(items[i]),
+              photo: _photo(items[i]),
               title: items[i].name,
               subtitle: items[i].spotCount > 0 ? TripStringsV2Create.cityMeta(items[i].spotCount) : items[i].placeLine,
               selected: c.isPicked(items[i]),
@@ -128,7 +140,6 @@ class _PostWhereStepState extends State<PostWhereStep> {
       ));
       if (d.cities.isNotEmpty) children.add(_picked(d.cities));
       final items = c.visibleCities();
-      final state = c.stateName;
       if (items.isEmpty) {
         if (c.citiesLoading.value) {
           children.add(Padding(padding: DS.gapInsets(t: 24), child: const Center(child: CircularProgressIndicator())));
@@ -141,8 +152,7 @@ class _PostWhereStepState extends State<PostWhereStep> {
           children.add(WizardNote(text: SocialStringsB.noCities));
         }
       } else {
-        if (state != null) children.add(SmallLabel(text: SocialStringsB.inState(state), caps: true));
-        if (state == null) children.add(Gap.v(14));
+        children.add(Gap.v(14));
         children.add(_list(items));
       }
       children.add(WizardNote(text: SocialStringsB.whereNote));

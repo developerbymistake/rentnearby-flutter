@@ -8,8 +8,6 @@ import '../../../trip/data/trip_city_catalog.dart';
 import '../../../trip/data/trip_repository.dart';
 import '../../../trip/models/trip_city_model.dart';
 import '../../../trip/models/trip_model.dart';
-import '../../../trip/utils/trip_state_rule.dart';
-import '../../shared/social_formats.dart';
 import '../../shared/social_me_controller.dart';
 import '../../shared/social_models.dart';
 import '../data/public_trips_api.dart';
@@ -52,10 +50,6 @@ class PostTripController extends GetxController {
   // Spec 22: Anyone and Men only are free; Women only needs Plus.
   bool get canWomenOnly => limits?.genderOnlyTrips ?? false;
 
-  LimitUse get notifyUse => limits?.notifiedPosts ?? SocialLimits.defaultNotifiedPosts;
-
-  bool get notifyUsedUp => notifyUse.reached;
-
   bool get notifyPrivate => SocialMeController.maybe?.profile?.isPrivate ?? false;
 
   bool get notifyTooFar {
@@ -74,7 +68,7 @@ class PostTripController extends GetxController {
     return !((code == 'M' && gender == 'Male') || (code == 'F' && gender == 'Female'));
   }
 
-  bool get canNotifyNearby => !notifyUsedUp && !notifyPrivate && !notifyTooFar && !notifyGender;
+  bool get canNotifyNearby => !notifyPrivate && !notifyTooFar && !notifyGender;
 
   void setNotifyNearby(bool on) {
     if (on && !canNotifyNearby) return;
@@ -143,7 +137,7 @@ class PostTripController extends GetxController {
           cities: t.cities.take(PostDraft.maxCities).toList(),
           whenKind: restored == null && start != null && !start.isBefore(today) ? PostDraft.exact : null,
           startDate: restored == null && start != null && !start.isBefore(today) ? start : null,
-          days: restored == null && t.days > 0 ? t.days.clamp(1, SocialFormats.moreDays) : null,
+          days: restored == null && t.days > 0 ? t.days.clamp(1, PostDraft.maxDays) : null,
         );
       } catch (_) {
         preparing.value = false;
@@ -151,7 +145,8 @@ class PostTripController extends GetxController {
         return;
       }
     }
-    final d = restored ?? const PostDraft();
+    var d = restored ?? const PostDraft();
+    if (!fromTrip && d.cities.length > 1) d = d.copyWith(cities: d.cities.take(1).toList());
     final fixed = allowedJoin(d.joinGender) ? d : d.copyWith(joinGender: 'A');
     draft.value = fixed.textEdited ? fixed : fixed.copyWith(text: fixed.autoText());
     saved.value = restored != null;
@@ -181,36 +176,24 @@ class PostTripController extends GetxController {
     return DateTime(n.year, n.month, n.day);
   }
 
-  List<String> get _states {
-    final picked = draft.value.cities;
-    if (picked.isEmpty) return const [];
-    final s = picked.first.stateName.trim();
-    return s.isEmpty ? const [] : [s];
-  }
-
-  String? get stateName => _states.isEmpty ? null : _states.first;
-
   List<TripCityModel> visibleCities() {
     catalogVersion.value;
     final q = query.value;
-    final ready = [for (final c in TripCityCatalog.to.search(q)) if (c.isReady) c];
-    return TripStateRule.filter(ready, _states);
+    return [for (final c in TripCityCatalog.to.search(q)) if (c.isReady) c];
   }
 
   bool isPicked(TripCityModel c) => draft.value.cities.any((p) => p.cityKey == c.cityKey);
 
-  // Returns an error line when the pick is refused.
-  String? toggleCity(TripCityModel c) {
-    if (fromTrip) return null;
+  // A Travel buddies post is ONE city: a tap picks it (replacing the one before), a second tap clears it.
+  void toggleCity(TripCityModel c) {
+    if (fromTrip) return;
     final d = draft.value;
     if (isPicked(c)) {
-      _update(d.copyWith(cities: [for (final p in d.cities) if (p.cityKey != c.cityKey) p]));
-      return null;
+      _update(d.copyWith(cities: const []));
+      return;
     }
-    if (d.cities.length >= PostDraft.maxCities) return SocialStringsB.maxCities(PostDraft.maxCities);
-    if (!c.isReady || !TripStateRule.allows(_states, c)) return null;
-    _update(d.copyWith(cities: [...d.cities, c]));
-    return null;
+    if (!c.isReady) return;
+    _update(d.copyWith(cities: [c]));
   }
 
   void setWhenKind(String kind) => _update(draft.value.copyWith(whenKind: kind == PostDraft.exact ? PostDraft.exact : PostDraft.within));
@@ -219,7 +202,7 @@ class PostTripController extends GetxController {
 
   void setDate(DateTime d) => _update(draft.value.copyWith(startDate: DateTime(d.year, d.month, d.day), whenKind: PostDraft.exact));
 
-  void setDays(int n) => _update(draft.value.copyWith(days: n.clamp(1, SocialFormats.moreDays)));
+  void setDays(int n) => _update(draft.value.copyWith(days: n.clamp(1, PostDraft.maxDays)));
 
   void setSeats(int n) => _update(draft.value.copyWith(seats: n));
 

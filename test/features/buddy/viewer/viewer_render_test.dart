@@ -51,12 +51,18 @@ void main() {
     await _render(t, '3.6', TripInviteScreen(memberId: memberId, api: api));
   });
 
+  Future<void> joinedTab(WidgetTester t) async {
+    await t.tap(find.text('Joined'));
+    await t.pump(const Duration(milliseconds: 300));
+  }
+
   testWidgets('3.6a invite waiting', (t) async {
-    await _render(t, '3.6a', _myTrips(sharedTrips(invites: true)));
+    await _render(t, '3.6a', _myTrips(sharedTrips(invites: true)), arrange: joinedTab);
   });
 
   testWidgets('3.8 my trips after joining', (t) async {
     await _render(t, '3.8', _myTrips(sharedTrips(items: true)), arrange: (t) async {
+      await joinedTab(t);
       JoinedSnack.show(tripId);
       await t.pump(const Duration(milliseconds: 300));
     });

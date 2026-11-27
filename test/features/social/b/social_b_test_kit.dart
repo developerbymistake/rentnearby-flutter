@@ -26,13 +26,14 @@ Map<String, dynamic> publicTripJson({
   String? travelMode,
   int ownerTrips = 0,
   int ownerLevel = 0,
+  int cityKey = 0,
 }) =>
     {
       'tripId': id,
       'owner': personJson(ownerId, ownerName, city: 'Dehradun', completedTrips: ownerTrips, level: ownerLevel),
       'ownerInterests': ['Mountains', 'Treks'],
       'isMine': isMine,
-      'cityKey': 0,
+      'cityKey': cityKey,
       'cityNames': cities,
       'stateName': state,
       'when': when,

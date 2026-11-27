@@ -20,7 +20,7 @@ void main() {
     for (final ts in [1.0, 1.3]) {
       final tag = '${w.toInt()} @ $ts';
 
-      testWidgets('column: eye, zoom in, zoom out, locate top to bottom, 44 dp circles ($tag)', (tester) async {
+      testWidgets('column: eye, zoom in, zoom out, locate top to bottom, 52 dp circles ($tag)', (tester) async {
         var located = 0;
         await _pump(tester, TripMapControls.column(onLocate: () => located++, onEye: (_) {}), w, ts);
         expect(tester.takeException(), isNull);
@@ -30,6 +30,8 @@ void main() {
           expect(rects[i].left, closeTo(rects[0].left, 0.5));
         }
         expect(rects.first.width, closeTo(DS.s(TripMapControls.columnSize), 0.5));
+        expect(TripMapControls.columnSize, 52);
+        expect(TripMapControls.columnGlyph, 26);
         await tester.tap(find.byKey(const ValueKey('disc-locate')));
         expect(located, 1);
       });

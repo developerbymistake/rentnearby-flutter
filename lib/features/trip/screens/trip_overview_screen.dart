@@ -140,7 +140,10 @@ class TripOverviewScreen extends StatelessWidget {
     final tripText = title + sub + (showProgress ? DS.gv(8) + DS.s(10) + DS.gv(6) : 0);
     final tripCard = DS.s(12 + 12) + DS.s(1) * 2 + math.max(DS.s(narrow ? 48 : 58), tripText);
     final pausedLine = paused ? DS.gv(10) + KitText.heightOf(TripStringsOverview.paused, Ink3D.text(13, FontWeight.w600, Ink3D.sub), t, column, 6) : 0.0;
-    final free = box.maxHeight - DS.s(_pad * 2) - tripCard - DS.gv(gap) * n - pausedLine;
+    final planLine = trip.needsItinerary
+        ? DS.gv(10) + KitText.heightOf(TripStringsOverview.itineraryFirst, Ink3D.text(13, FontWeight.w600, Ink3D.sub), t, column, 6)
+        : 0.0;
+    final free = box.maxHeight - DS.s(_pad * 2) - tripCard - DS.gv(gap) * n - pausedLine - planLine;
     return math.max(free / n, DS.s(100));
   }
 
@@ -207,7 +210,9 @@ class TripOverviewScreen extends StatelessWidget {
     final taxi = TripOverviewTaxi.of(trip.taxiRequest, canRate: taxiCanRate);
     // Paused blocks only a new request; an existing request or booking can still be opened.
     final inactive = trip.inactiveByPlan;
-    final taxiBlocked = (paused || inactive) && !taxi.hasRequest;
+    final noPlan = trip.needsItinerary;
+    final taxiBlocked = noPlan || (paused || inactive) && !taxi.hasRequest;
+    final stayOff = noPlan || onStay == null || inactive && !stay.added;
     final indigo = ListingTone.indigo;
     const gap = 12.0;
     return Scaffold(
@@ -269,6 +274,15 @@ class TripOverviewScreen extends StatelessWidget {
                             onTap: onViewPlan,
                             wholeCard: true,
                           ),
+                          if (noPlan) ...[
+                            Gap.v(10),
+                            Text(
+                              TripStringsOverview.itineraryFirst,
+                              key: const ValueKey('overview_itinerary_first_line'),
+                              textAlign: TextAlign.center,
+                              style: Ink3D.text(13, FontWeight.w600, Ink3D.sub),
+                            ),
+                          ],
                           Gap.v(gap),
                           Opacity(
                             opacity: taxiBlocked ? 0.5 : 1,
@@ -296,17 +310,20 @@ class TripOverviewScreen extends StatelessWidget {
                           ],
                           if (showStay) ...[
                             Gap.v(gap),
-                            TripHeroCard(
-                              key: const ValueKey('overview_stay_card'),
-                              tone: ListingTone.forest,
-                              asset: TravelIcon.stay,
-                              title: stay.added ? TripStringsOverview.stay : TripStringsOverview.bookYourStay,
-                              chip: stay.added ? stay.chip : null,
-                              line: stay.line,
-                              button: stay.button,
-                              highlight: highlight == TripPart.stay,
-                              onTap: onStay == null || inactive && !stay.added ? null : () => onStay!(stay),
-                              wholeCard: true,
+                            Opacity(
+                              opacity: noPlan ? 0.5 : 1,
+                              child: TripHeroCard(
+                                key: const ValueKey('overview_stay_card'),
+                                tone: ListingTone.forest,
+                                asset: TravelIcon.stay,
+                                title: stay.added ? TripStringsOverview.stay : TripStringsOverview.bookYourStay,
+                                chip: stay.added ? stay.chip : null,
+                                line: stay.line,
+                                button: stay.button,
+                                highlight: highlight == TripPart.stay && !noPlan,
+                                onTap: stayOff ? null : () => onStay!(stay),
+                                wholeCard: true,
+                              ),
                             ),
                           ],
                           for (final card in extraCards) ...[Gap.v(gap), card],

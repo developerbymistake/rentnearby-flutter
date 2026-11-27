@@ -152,17 +152,18 @@ void main() {
     await drain(t);
   });
 
-  testWidgets('with the active trip slot full, Post your trip opens the trip limit sheet before the wizard', (t) async {
+  testWidgets('posts are not limited by active trips: active slot full but a free public slot opens the wizard', (t) async {
     final server = installServer();
     final me = socialMeWith();
     (me['limits'] as Map)['activeTrips'] = {'limit': 1, 'used': 1};
+    (me['limits'] as Map)['publicTrips'] = {'limit': 1, 'used': 0};
     putSocialMe(server, me);
     server.on('GET', _feed, _page());
     await pumpSocial(t, const TravelBuddiesScreen(), pages: _pages);
     await t.tap(find.byKey(TravelBuddiesScreen.postKey));
     await settle(t);
-    expect(find.text('WIZARD'), findsNothing);
-    expect(find.byKey(const ValueKey('plus_limit_sheet')), findsOneWidget);
+    expect(find.text('WIZARD'), findsOneWidget);
+    expect(find.byKey(const ValueKey('plus_limit_sheet')), findsNothing);
     await drain(t);
   });
 
@@ -199,26 +200,14 @@ void main() {
     await drain(t);
   });
 
-  testWidgets('mock D10g: my own post keeps the ⋮ next to Your post; Remove takes it off Travel buddies', (t) async {
+  testWidgets('I-3: my own post card has no menu (Remove from Travel buddies is gone); the post goes only by deleting the trip', (t) async {
     final server = installServer();
     putSocialMe(server, socialMeWith());
     server.on('GET', _feed, _page(mine: [publicTripJson(id: 'mine-1', ownerId: 'me', ownerName: 'Rahul Verma', cities: ['Manali'], isMine: true, waitingRequests: 0)]));
-    server.on('DELETE', '/social/trips/mine-1/post', {});
     await pumpSocial(t, const TravelBuddiesScreen(), pages: _pages);
     expect(find.text(SocialStringsB.yourPost), findsOneWidget);
-    final menu = find.byKey(PublicTripCard.menuKey);
-    expect(menu, findsOneWidget);
-    expect((t.getCenter(menu).dy - t.getCenter(find.text(SocialStringsB.yourPost)).dy).abs(), lessThan(DS.s(16)));
-    expect(t.getCenter(menu).dx, greaterThan(t.getCenter(find.text(SocialStringsB.yourPost)).dx));
-    await t.tap(menu);
-    await settle(t);
-    expect(find.text(SocialStringsB.removePost), findsOneWidget);
-    expect(find.text(SocialStringsB.reportTrip), findsNothing);
-    server.on('GET', _feed, _page());
-    await t.tap(find.text(SocialStringsB.removePost));
-    await settle(t);
-    expect(server.calls('DELETE', '/social/trips/mine-1/post'), hasLength(1));
-    expect(find.text(SocialStringsB.yourPost), findsNothing);
+    expect(find.byKey(PublicTripCard.menuKey), findsNothing);
+    expect(find.text('Remove from Travel buddies'), findsNothing);
     await drain(t);
   });
 

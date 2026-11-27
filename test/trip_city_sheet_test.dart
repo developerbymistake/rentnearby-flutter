@@ -40,39 +40,22 @@ void main() {
   });
   tearDown(Get.reset);
 
-  testWidgets('create mode shows Atlas Popular cities and no hardcoded routes', (t) async {
-    final cats = _Catalog();
-    cats.list.addAll([_city(4, 'Haridwar', popular: true), _city(5, 'Badrinath', popular: true)]);
-    Get.put<TripCityCatalog>(cats, permanent: true);
-    setGoldenView(t, const Size(412, 900));
-    await t.pumpWidget(const MaterialApp(home: Scaffold(body: TripCitySheet())));
-    await t.pumpAndSettle();
-    expect(find.text('POPULAR ROUTES'), findsNothing);
-    expect(find.text('Haridwar then Badrinath'), findsNothing);
-    expect(find.text('POPULAR CITIES'), findsOneWidget);
-    expect(find.text('ALL CITIES'), findsOneWidget);
-    expect(find.text('Haridwar'), findsOneWidget);
-    expect(find.text('Almora'), findsOneWidget);
-  });
-
   TripCityModel empty(int k, String n) => TripCityModel(
       cityKey: k, name: n, districtName: 'D$k', stateName: 'Uttarakhand', latitude: 1, longitude: 1, status: TripCityStatus.notReady);
 
-  for (final mode in TripCitySheetMode.values) {
-    testWidgets('${mode.name} mode never lists a city with no places', (t) async {
-      Get.put<TripCityCatalog>(_Catalog([empty(30, 'Haldwani'), empty(31, 'Kathgodam')]), permanent: true);
-      setGoldenView(t, const Size(412, 900));
-      await t.pumpWidget(MaterialApp(home: Scaffold(body: TripCitySheet(mode: mode, inTrip: const {1}))));
-      await t.pumpAndSettle();
-      expect(find.text('Haldwani'), findsNothing);
-      expect(find.text('Kathgodam'), findsNothing);
-      expect(find.textContaining('No places yet'), findsNothing);
-      expect(find.text('Almora'), findsOneWidget);
-      await t.enterText(find.byType(TextField).first, 'hald');
-      await t.pumpAndSettle();
-      expect(find.text('Haldwani'), findsNothing);
-    });
-  }
+  testWidgets('never lists a city with no places', (t) async {
+    Get.put<TripCityCatalog>(_Catalog([empty(30, 'Haldwani'), empty(31, 'Kathgodam')]), permanent: true);
+    setGoldenView(t, const Size(412, 900));
+    await t.pumpWidget(const MaterialApp(home: Scaffold(body: TripCitySheet(inTrip: {1}))));
+    await t.pumpAndSettle();
+    expect(find.text('Haldwani'), findsNothing);
+    expect(find.text('Kathgodam'), findsNothing);
+    expect(find.textContaining('No places yet'), findsNothing);
+    expect(find.text('Almora'), findsOneWidget);
+    await t.enterText(find.byType(TextField).first, 'hald');
+    await t.pumpAndSettle();
+    expect(find.text('Haldwani'), findsNothing);
+  });
 
   testWidgets('add mode shows no Popular next stops', (t) async {
     final cats = _Catalog();
@@ -80,7 +63,7 @@ void main() {
     Get.put<TripCityCatalog>(cats, permanent: true);
     setGoldenView(t, const Size(412, 900));
     await t.pumpWidget(const MaterialApp(
-      home: Scaffold(body: TripCitySheet(mode: TripCitySheetMode.add, afterCity: 'Haridwar', inTrip: {4})),
+      home: Scaffold(body: TripCitySheet(afterCity: 'Haridwar', inTrip: {4})),
     ));
     await t.pumpAndSettle();
     expect(find.text('POPULAR NEXT STOPS'), findsNothing);
@@ -142,7 +125,7 @@ void main() {
       Get.put<TripCityCatalog>(_Catalog(extra ?? himachal), permanent: true);
       setGoldenView(t, const Size(412, 900));
       await t.pumpWidget(MaterialApp(
-        home: Scaffold(body: TripCitySheet(mode: TripCitySheetMode.add, afterCity: 'Nainital', inTrip: inTrip)),
+        home: Scaffold(body: TripCitySheet(afterCity: 'Nainital', inTrip: inTrip)),
       ));
       await t.pumpAndSettle();
     }
@@ -192,15 +175,6 @@ void main() {
       expect(find.text('Almora'), findsOneWidget);
     });
 
-    testWidgets('start mode is not filtered', (t) async {
-      Get.put<TripCityCatalog>(_Catalog(himachal), permanent: true);
-      setGoldenView(t, const Size(412, 900));
-      await t.pumpWidget(const MaterialApp(home: Scaffold(body: TripCitySheet(inTrip: {1}))));
-      await t.pumpAndSettle();
-      expect(find.text('Shimla'), findsOneWidget);
-      expect(luggageArt(t), isTrue);
-    });
-
     for (final size in fiveSizes) {
       testWidgets('add sheet at ${sizeLabel(size)}', (t) async {
         Get.put<TripCityCatalog>(_Catalog([...himachal, _city(20, 'Longtown', state: _longState)]), permanent: true);
@@ -208,7 +182,7 @@ void main() {
           {1},
           {20},
         ]) {
-          await pumpAtSize(t, Scaffold(body: TripCitySheet(mode: TripCitySheetMode.add, afterCity: 'Nainital', inTrip: inTrip)), size);
+          await pumpAtSize(t, Scaffold(body: TripCitySheet(afterCity: 'Nainital', inTrip: inTrip)), size);
           await t.pump(const Duration(milliseconds: 500));
           expect(t.takeException(), isNull, reason: '${sizeLabel(size)} $inTrip');
           final sub = find.textContaining('Cities in');

@@ -195,7 +195,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         SocialSectionCard(
           art: ListingArt.camera,
           title: SocialStringsA.skills,
-          hint: _hintText(SocialStringsA.atLeastOne),
+          hint: Obx(() => _hintText(SocialStringsA.skillsHint(c.skills.length))),
           child: Obx(() => ChoiceTileGrid(
                 children: [
                   for (final s in c.skillOptions)

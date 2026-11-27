@@ -19,6 +19,7 @@ import '../social_strings_a.dart';
 import '../widgets/social_chips_a.dart';
 import 'follow_requests_view.dart';
 import 'people_controller.dart';
+import 'people_find.dart';
 import 'people_widgets.dart';
 import 'scan_to_follow.dart';
 
@@ -29,7 +30,7 @@ class PeopleScreen extends StatefulWidget {
   final ScanToFollow scanToFollow;
 
   static const Key requestsRowKey = ValueKey('people_requests_row');
-  static const Key scanQrKey = ValueKey('people_scan_qr');
+  static const Key scanQrKey = PeopleFindSection.scanKey;
   static const Key addFromFollowersKey = ValueKey('people_add_from_followers');
 
   @override
@@ -94,15 +95,8 @@ class _PeopleScreenState extends State<PeopleScreen> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  PeopleFindSection(api: widget.scanToFollow.api, onScan: () => widget.scanToFollow.start(context)),
                   _requestsRow(),
-                  _actionRow(
-                    key: PeopleScreen.scanQrKey,
-                    icon: Icons.qr_code_scanner_rounded,
-                    title: SocialStringsA.scanQr,
-                    line: SocialStringsA.scanQrLine,
-                    top: 16,
-                    onTap: () => widget.scanToFollow.start(context),
-                  ),
                   SegmentTabs(
                     labels: SocialStringsA.peopleTabs,
                     selected: i,

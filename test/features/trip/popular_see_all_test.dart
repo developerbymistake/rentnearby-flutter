@@ -1,6 +1,10 @@
+import 'package:bakhli/config/app_routes.dart';
+import 'package:bakhli/features/buddy/shared/buddy_result.dart';
+import 'package:bakhli/features/buddy/triplimit/trip_limit_api.dart';
+import 'package:bakhli/features/buddy/triplimit/trip_limit_gate.dart';
+import 'package:bakhli/features/buddy/triplimit/trip_limit_models.dart';
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
-import 'package:bakhli/features/trip/widgets/trip_city_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_popular_rail.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -28,17 +32,29 @@ class _Catalog extends TripCityCatalog {
       ];
 }
 
-void main() {
-  tearDown(Get.reset);
+class _FreeSlots extends TripLimitApi {
+  const _FreeSlots();
 
-  testWidgets('See all on the Home popular rail opens the Trip Planner city pick, not the trips tab', (t) async {
+  @override
+  Future<BuddyResult<TripSlots>> slots() async => const BuddyOk(TripSlots(limit: 1, count: 0, trips: []));
+}
+
+void main() {
+  tearDown(() {
+    TripLimitGate.debugReset();
+    Get.reset();
+  });
+
+  testWidgets('See all on the Home popular rail opens Where to next', (t) async {
+    TripLimitGate.api = const _FreeSlots();
     Get.put<TripCityCatalog>(_Catalog(), permanent: true);
-    await t.pumpWidget(const GetMaterialApp(home: Scaffold(body: SingleChildScrollView(child: TripPopularRail()))));
+    await t.pumpWidget(GetMaterialApp(
+      home: const Scaffold(body: SingleChildScrollView(child: TripPopularRail())),
+      getPages: [GetPage(name: AppRoutes.tripWhere, page: () => const Scaffold(body: Text('where-page')))],
+    ));
     await t.pumpAndSettle();
-    expect(find.byType(TripCitySheet), findsNothing);
     await t.tap(find.text('See all'));
-    await t.pump();
-    await t.pump(const Duration(milliseconds: 600));
-    expect(find.byType(TripCitySheet), findsOneWidget);
+    await t.pumpAndSettle();
+    expect(find.text('where-page'), findsOneWidget);
   });
 }

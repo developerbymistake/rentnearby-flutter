@@ -100,7 +100,6 @@ class TripNavigation {
     }
     final pick = await TripCitySheet.pick(
       context,
-      mode: TripCitySheetMode.add,
       afterCity: c.lastCityName,
       inTrip: {for (final l in c.legs) l.cityKey},
     );

@@ -1,6 +1,6 @@
 abstract final class SharingStrings {
   static const String travellersTitle = 'Travellers';
-  static const String buddyInviteTitle = 'Buddy invite';
+  static const String buddyInviteTitle = 'Invite travellers';
   static const String expensesTitle = 'Trip expenses';
   static const String deleteTrip = 'Delete trip';
   static const String inviteBuddies = 'Invite buddies';
@@ -41,6 +41,17 @@ abstract final class SharingStrings {
   static const String noBuddiesYet = 'No buddies yet';
   static const String noBuddiesLine = 'Add a buddy first, then invite them to your trip.';
   static const String findABuddy = 'Find a buddy';
+  static const String followFootnote = 'People you follow are listed here. Buddies have a star.';
+  static const String myBuddies = 'My buddies';
+  static const String myBuddiesLine = 'Select all your buddies';
+  static const String peopleYouFollow = 'People you follow';
+  static const String sendInvites = 'Send invites';
+  static String sendInvitesN(int n) => n > 0 ? 'Send invites ($n)' : sendInvites;
+  static const String backToPlan = 'Back to plan';
+  static const String noFollowsYet = 'No one to invite yet';
+  static const String noFollowsLine = 'Follow people first, then invite them to your trip.';
+  static const String findPeople = 'Find people';
+  static String invitesSent(int n) => 'Invites sent to $n people';
 
   static String countTitle(int n, int max) => '$n of $max travellers';
   static const String joinedSection = 'JOINED';

@@ -21,7 +21,7 @@ import '../controllers/trip_members_controller.dart';
 import '../models/sharing_models.dart';
 import '../sharing_deps.dart';
 import '../sharing_strings.dart';
-import '../widgets/invite_sheet.dart';
+import 'invite_people_screen.dart';
 import '../widgets/remove_traveller_dialog.dart';
 import '../widgets/traveller_menu.dart';
 
@@ -62,7 +62,10 @@ class _TravellersOwnerScreenState extends State<TravellersOwnerScreen> {
 
   void _snack(String text) => BuddySnack.show(context, text, bottom: 104);
 
-  Future<void> _invite() => InviteSheet.show(context, widget.tripId, onChanged: _c.reload);
+  Future<void> _invite() async {
+    await InvitePeopleScreen.open(widget.tripId);
+    if (mounted) await _c.reload();
+  }
 
   Future<void> _cancel(InvitedMember i) async {
     final r = await _c.cancelInvite(i.userId);

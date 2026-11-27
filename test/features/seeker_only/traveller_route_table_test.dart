@@ -55,7 +55,7 @@ void main() {
     };
     expect(AppRoutes.travellerOnly, want);
     expect(tripPages.map((p) => p.name), contains(AppRoutes.tripArchived), reason: 'the archived trip page is a seeker trip page');
-    expect(AppRoutes.travellerOnly, hasLength(40));
+    expect(AppRoutes.travellerOnly, hasLength(41));
   });
 
   test('every traveller route opens for a seeker only', () {

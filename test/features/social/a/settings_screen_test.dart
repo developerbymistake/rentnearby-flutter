@@ -19,7 +19,6 @@ import '../shared/social_test_support.dart';
 final _pages = [
   GetPage(name: AppRoutes.seekerPlus, page: () => Scaffold(body: Text('PLUS ${(Get.arguments as Map)['from']}'))),
   GetPage(name: AppRoutes.buddiesBlocked, page: () => const Scaffold(body: Text('BLOCKED'))),
-  GetPage(name: AppRoutes.myTrips, page: () => const Scaffold(body: Text('TRIPS'))),
 ];
 
 const _rows = [
@@ -31,8 +30,6 @@ const _rows = [
   SocialStringsA.notifyFollows,
   SocialStringsA.notifyTrips,
   SocialStringsA.notifyNearbyTrips,
-  SocialStringsA.myTrips,
-  SocialStringsA.myReports,
   SocialStringsA.contactSupport,
   SocialStringsA.rateApp,
   SocialStringsA.shareApp,
@@ -123,7 +120,15 @@ void main() {
     await drain(t);
   });
 
-  testWidgets('Plus, Blocked people and My Trips rows are wired', (t) async {
+  testWidgets('I-18 the Activity section moved to the profile: no My Trips, Jobs, My Journeys or My Reports here', (t) async {
+    await open(t);
+    for (final r in [SocialStringsA.activityLabel, SocialStringsA.myTrips, SocialStringsA.jobs, SocialStringsA.myJourneys, SocialStringsA.myReports]) {
+      expect(find.text(r), findsNothing, reason: r);
+    }
+    await drain(t);
+  });
+
+  testWidgets('Plus and Blocked people rows are wired', (t) async {
     await open(t);
     await t.tap(find.byKey(SettingsScreen.plusKey));
     await settle(t);
@@ -133,11 +138,6 @@ void main() {
     await t.tap(find.byKey(SettingsScreen.blockedKey));
     await settle(t);
     expect(find.text('BLOCKED'), findsOneWidget);
-    Get.back();
-    await settle(t);
-    await t.tap(find.text(SocialStringsA.myTrips));
-    await settle(t);
-    expect(find.text('TRIPS'), findsOneWidget);
     await drain(t);
   });
 

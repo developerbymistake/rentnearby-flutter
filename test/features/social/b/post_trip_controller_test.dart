@@ -1,6 +1,5 @@
 import 'package:bakhli/features/buddy/shared/buddy_result.dart';
 import 'package:bakhli/features/social/b/models/post_draft.dart';
-import 'package:bakhli/features/social/b/social_strings_b.dart';
 import 'package:bakhli/features/social/b/wizard/post_trip_controller.dart';
 import 'package:bakhli/features/social/shared/social_models.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,24 +25,43 @@ void main() {
   });
   tearDown(Get.reset);
 
-  test('Where: Ready cities only, the first city fixes the state, max 4 in order', () async {
+  test('I-6 Where: Ready cities only, ONE city: a tap picks, another tap replaces, the same tap clears; no state filter', () async {
     installServer();
     final c = await ready(PostTripController(persist: false));
     expect(c.visibleCities().map((e) => e.name), isNot(contains('Chopta')));
     expect(c.visibleCities().map((e) => e.name), containsAll(['Manali', 'Rishikesh']));
     expect(c.canNext(PostTripController.stepWhere), isFalse);
     c.toggleCity(manali);
-    expect(c.visibleCities().every((e) => e.stateName == 'Himachal Pradesh'), isTrue);
-    expect(c.toggleCity(rishikesh), isNull);
     expect(c.draft.value.cities.map((e) => e.name), ['Manali']);
+    expect(c.visibleCities().map((e) => e.name), containsAll(['Manali', 'Rishikesh']), reason: 'no state filter after the pick');
+    c.toggleCity(rishikesh);
+    expect(c.draft.value.cities.map((e) => e.name), ['Rishikesh']);
     c.toggleCity(kasol);
-    c.toggleCity(shimla);
-    c.toggleCity(dharamshala);
-    expect(c.toggleCity(tosh), SocialStringsB.maxCities(4));
-    expect(c.draft.value.cities.map((e) => e.name), ['Manali', 'Kasol', 'Shimla', 'Dharamshala']);
-    c.toggleCity(manali);
-    expect(c.draft.value.cities.first.name, 'Kasol');
+    expect(c.draft.value.cities.map((e) => e.name), ['Kasol']);
     expect(c.canNext(PostTripController.stepWhere), isTrue);
+    c.toggleCity(kasol);
+    expect(c.draft.value.cities, isEmpty);
+    expect(c.canNext(PostTripController.stepWhere), isFalse);
+  });
+
+  test('I-6 How long: a post is 1 to 4 days', () async {
+    installServer();
+    final c = await ready(PostTripController(persist: false));
+    c.setDays(11);
+    expect(c.draft.value.days, PostDraft.maxDays);
+    expect(PostDraft.maxDays, 4);
+    c.setDays(0);
+    expect(c.draft.value.days, 1);
+    expect(PostDraft.fromStore({...const PostDraft().toStore(), 'days': 11}).days, 4);
+  });
+
+  test('I-6: an older saved draft with several cities keeps only the first one', () async {
+    installServer();
+    await PostDraftStore.init();
+    await PostDraftStore.save(const PostDraft(cities: [manali, kasol]), userId: 'me');
+    final c = await ready(PostTripController());
+    expect(c.draft.value.cities.map((e) => e.name), ['Manali']);
+    await PostDraftStore.clear();
   });
 
   test('auto text follows the answers until the user edits it; chips add a line', () async {
@@ -130,23 +148,22 @@ void main() {
     server.on('POST', '/social/trips', publicTripJson(id: 'new-1', isMine: true));
     final c = await ready(PostTripController(persist: false));
     c.toggleCity(manali);
-    c.toggleCity(kasol);
     c.setDate(DateTime(2026, 12, 12));
-    c.setDays(11);
+    c.setDays(4);
     c.setSeats(11);
     final r = await c.submit();
     expect(r, isA<BuddyOk<PublicTrip>>());
     final body = server.calls('POST', '/social/trips').single.data as Map;
-    expect(body['cityKeys'], [101, 102]);
+    expect(body['cityKeys'], [101]);
     expect(body['whenKind'], 'exact');
     expect(body['startDate'], '2026-12-12');
     expect(body.containsKey('withinMonths'), isFalse);
-    expect(body['days'], 11);
+    expect(body['days'], 4);
     expect(body['joinGender'], 'A');
     expect(body['seats'], 11);
     expect(body['text'], isNotEmpty);
     expect(body['clientTripId'], c.clientTripId);
-    expect(body['travelMode'], TravelModes.public, reason: 'owner 2026-11-27: Public transport is picked by default');
+    expect(body['travelMode'], TravelModes.taxi, reason: 'I-1: Taxi, the first option, is picked by default');
   });
 
   test('T2: the picked travel mode goes in the create body; unknown codes are ignored', () async {
@@ -172,8 +189,8 @@ void main() {
     ));
     expect(c.step.value, PostTripController.stepWhen);
     expect(c.draft.value.cities.map((e) => e.name), ['Manali', 'Kasol']);
-    expect(c.draft.value.days, 5);
-    expect(c.toggleCity(manali), isNull);
+    expect(c.draft.value.days, 4, reason: 'I-6: a post is at most 4 days');
+    c.toggleCity(manali);
     expect(c.draft.value.cities, hasLength(2));
     expect(c.back(), isFalse);
     await c.submit();
@@ -181,15 +198,17 @@ void main() {
     expect(body.containsKey('cityKeys'), isFalse);
     expect(body['whenKind'], 'within');
     expect(body['withinMonths'], 2);
-    expect(body['travelMode'], TravelModes.public, reason: 'PUT replaces the stored value, so the current choice is always sent');
+    expect(body['travelMode'], TravelModes.taxi, reason: 'PUT replaces the stored value, so the current choice is always sent');
   });
 
-  test('the stored draft keeps the travel mode; an old draft without it or with a bad value starts on Public transport', () {
-    final d = PostDraft.fromStore(const PostDraft(travelMode: 'taxi').toStore());
-    expect(d.travelMode, 'taxi');
+  test('the stored draft keeps the travel mode; an old draft without it or with an old or bad value starts on Taxi', () {
+    final d = PostDraft.fromStore(const PostDraft(travelMode: 'train').toStore());
+    expect(d.travelMode, 'train');
     final old = const PostDraft().toStore()..remove('travelMode');
-    expect(PostDraft.fromStore(old).travelMode, TravelModes.public);
-    expect(PostDraft.fromStore({...const PostDraft().toStore(), 'travelMode': 'plane'}).travelMode, TravelModes.public);
+    expect(PostDraft.fromStore(old).travelMode, TravelModes.taxi);
+    for (final bad in ['plane', 'public', 'car']) {
+      expect(PostDraft.fromStore({...const PostDraft().toStore(), 'travelMode': bad}).travelMode, TravelModes.taxi);
+    }
   });
 
   test('PostDraft.autoText follows the chosen join value, whatever the poster gender; unknown values read as anyone', () {

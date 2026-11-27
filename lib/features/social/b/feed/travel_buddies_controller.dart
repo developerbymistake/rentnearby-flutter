@@ -1,7 +1,6 @@
 import 'package:get/get.dart';
 
 import '../../../buddy/shared/buddy_result.dart';
-import '../../shared/post_removal.dart';
 import '../../shared/social_error_types.dart';
 import '../../shared/social_live.dart';
 import '../../shared/social_models.dart';
@@ -127,22 +126,7 @@ class TravelBuddiesController extends GetxController {
     if (type == SocialErrorTypes.cannotRejoin) items[i] = items[i].copyWith(myJoin: 'removed');
   }
 
-  void applyRemovalBlock(String tripId, PostRemovalBlock block) {
-    if (block is! PostLockedBlock || block.unlocksAt == null) return;
-    final i = mine.indexWhere((t) => t.tripId == tripId);
-    if (i != -1) mine[i] = mine[i].copyWith(unlocksAt: block.unlocksAt);
-  }
-
-  Future<BuddyResult<void>> removeMyPost(String tripId) async {
-    final r = await _api.unpublish(tripId);
-    if (r.isOk) {
-      mine.removeWhere((t) => t.tripId == tripId);
-      SocialLive.posts.value++;
-    }
-    return r;
-  }
-
-    void removeOwner(String userId) {
+  void removeOwner(String userId) {
     items.removeWhere((t) => t.owner.userId == userId);
   }
 

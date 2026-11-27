@@ -298,6 +298,40 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  group('empty itinerary', () {
+    double dimOf(WidgetTester tester, String key) =>
+        tester.widget<Opacity>(find.ancestor(of: find.byKey(ValueKey(key)), matching: find.byType(Opacity)).first).opacity;
+
+    for (final empty in [_trip().copyWith(dayCount: 0), _trip().copyWith(spotCount: 0)]) {
+      testWidgets('taxi and stay are off, itinerary stays on (days ${empty.dayCount}, places ${empty.spotCount})', (tester) async {
+        final calls = _Calls();
+        await _pump(tester, empty, calls: calls);
+        expect(find.byKey(const ValueKey('overview_itinerary_first_line')), findsOneWidget);
+        expect(find.text('Make your itinerary first'), findsOneWidget);
+        expect(dimOf(tester, 'overview_taxi_card'), 0.5);
+        expect(dimOf(tester, 'overview_stay_card'), 0.5);
+        await tester.tap(find.byKey(const ValueKey('overview_taxi_card')), warnIfMissed: false);
+        await tester.tap(find.byKey(const ValueKey('overview_stay_card')), warnIfMissed: false);
+        expect(calls.taxi, isEmpty);
+        expect(calls.stay, isEmpty);
+        await tester.tap(find.byKey(const ValueKey('overview_itinerary_card')));
+        expect(calls.plan, 1);
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('days and places: every card on, no line', (tester) async {
+      final calls = _Calls();
+      await _pump(tester, _trip(), calls: calls);
+      expect(find.byKey(const ValueKey('overview_itinerary_first_line')), findsNothing);
+      expect(dimOf(tester, 'overview_taxi_card'), 1);
+      expect(dimOf(tester, 'overview_stay_card'), 1);
+      await tester.tap(find.byKey(const ValueKey('overview_stay_card')));
+      expect(calls.stay, [TripOverviewStayState.notAdded]);
+    });
+  });
+
+  testFiveSizes('five sizes empty itinerary', () => _screen(_trip().copyWith(dayCount: 0, spotCount: 0)));
   testFiveSizes('five sizes optional', () => _screen(_trip()));
   testFiveSizes('five sizes three cards booked', () => _screen(_trip(view: 'Booked'), stay: TripOverviewStay.booked));
   testFiveSizes('five sizes booked paused long name', () => _screen(_trip(view: 'Booked', title: 'A very long trip name that goes on and on forever'), paused: true));

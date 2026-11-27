@@ -42,27 +42,34 @@ void main() {
   RoomController controller(FakeChatApi api, [FakeTransport? hub]) => RoomController(roomId: 'r1', api: api, transport: hub ?? FakeTransport(), myId: () => myId);
 
   group('controller', () {
-    test('UC33 Free member (no group chat entitlement): the trip room cannot send', () async {
+    test('I-9 Free member (no group chat entitlement) can send his first message in the trip room', () async {
       Get.put<SocialMeController>(FakeSocialMeController(_limits(groupChat: false)), permanent: true);
       final c = Get.put(controller(_tripApi()));
       await settle();
       expect(c.isTrip, isTrue);
-      expect(c.groupChatLocked, isTrue);
-      expect(c.canSend, isFalse);
-    });
-
-    test('UC35/37 Plus member, or payment OFF (entitlement on for everyone), sends freely', () async {
-      Get.put<SocialMeController>(FakeSocialMeController(_limits(groupChat: true)), permanent: true);
-      final c = Get.put(controller(_tripApi()));
-      await settle();
-      expect(c.groupChatLocked, isFalse);
+      expect(c.plusLockShown, isFalse);
       expect(c.canSend, isTrue);
     });
 
-    test('an older answer without groupChat never locks: the server decides', () async {
+    test('I-9 after his one message the server lock plus locks the trip room', () async {
+      Get.put<SocialMeController>(FakeSocialMeController(_limits(groupChat: false)), permanent: true);
+      final api = _tripApi();
+      final hub = FakeTransport()..hubReplies.add({'ok': true, 'message': messageJson(3, sender: myId, cid: 'c1')});
+      final c = Get.put(RoomController(roomId: 'r1', api: api, transport: hub, myId: () => myId, newId: () => 'c1'));
+      await settle();
+      api.roomResult = BuddyOk(roomOf(kind: 'T', lock: RoomLock.plus, canSend: false, trip: _trip));
+      await c.send('Hello group');
+      await settle();
+      expect(c.plusLockShown, isTrue);
+      expect(c.canSend, isFalse);
+    });
+
+    test('UC35/37 Plus member sends freely', () async {
+      Get.put<SocialMeController>(FakeSocialMeController(_limits(groupChat: true)), permanent: true);
       final c = Get.put(controller(_tripApi()));
       await settle();
-      expect(c.groupChatLocked, isFalse);
+      expect(c.plusLockShown, isFalse);
+      expect(c.canSend, isTrue);
     });
 
     test('UC34/36 a PlusRequired refusal (hub) stores nothing, gives the text back and locks the room', () async {
@@ -103,32 +110,33 @@ void main() {
       expect(c.canSend, isTrue);
     });
 
-    test('a server lock plus on the room locks it too', () async {
+    test('a server lock plus on the room locks it', () async {
       final c = Get.put(controller(_tripApi(lock: RoomLock.plus, canSend: false)));
       await settle();
-      expect(c.groupChatLocked, isTrue);
-    });
-
-    test('1-to-1 chats never use the group chat lock', () async {
-      Get.put<SocialMeController>(FakeSocialMeController(_limits(groupChat: false)), permanent: true);
-      final c = Get.put(controller(FakeChatApi()));
-      await settle();
-      expect(c.isTrip, isFalse);
-      expect(c.groupChatLocked, isFalse);
+      expect(c.plusLockShown, isTrue);
     });
   });
 
   group('screen', () {
-    testWidgets('UC33/38 Free member opens the trip room: history and the joined line show, a calm Plus panel in place of the composer', (t) async {
+    testWidgets('I-9 Free member opens the trip room before his message: history and the composer show', (t) async {
       Get.put<SocialMeController>(FakeSocialMeController(_limits(groupChat: false)), permanent: true);
       await pumpSocial(t, DmRoomScreen(controller: controller(_tripApi())));
       expect(find.text('Meera joined the trip'), findsOneWidget);
       expect(find.text('Booked the cab for 6 AM.'), findsOneWidget);
+      expect(find.byKey(const ValueKey('dm_composer')), findsOneWidget);
+      expect(find.byKey(const ValueKey('dm_lock_plus')), findsNothing);
+      expect(t.takeException(), isNull);
+      await disposeSocial(t);
+    });
+
+    testWidgets('I-9 trip room locked by the server: the Plus panel replaces the composer', (t) async {
+      Get.put<SocialMeController>(FakeSocialMeController(_limits(groupChat: false)), permanent: true);
+      await pumpSocial(t, DmRoomScreen(controller: controller(_tripApi(lock: RoomLock.plus, canSend: false))));
       expect(find.byKey(const ValueKey('dm_composer')), findsNothing);
-      expect(find.byKey(const ValueKey('dm_lock_group_plus')), findsOneWidget);
-      expect(find.text(SocialStringsC.groupChatPlusTitle), findsOneWidget);
-      expect(find.text(SocialStringsC.groupChatPlusLine), findsOneWidget);
-      expect(find.text(SocialStringsC.seePlus), findsOneWidget);
+      expect(find.byKey(const ValueKey('dm_lock_plus')), findsOneWidget);
+      expect(find.text(SocialStringsC.freeMessageUsedTitle), findsOneWidget);
+      expect(find.text(SocialStringsC.freeMessageUsedLine), findsOneWidget);
+      expect(find.text(SocialStringsC.chatMorePlus), findsOneWidget);
       expect(t.takeException(), isNull);
       await disposeSocial(t);
     });
@@ -137,11 +145,11 @@ void main() {
       Get.put<SocialMeController>(FakeSocialMeController(_limits(groupChat: true)), permanent: true);
       await pumpSocial(t, DmRoomScreen(controller: controller(_tripApi())));
       expect(find.byKey(const ValueKey('dm_composer')), findsOneWidget);
-      expect(find.byKey(const ValueKey('dm_lock_group_plus')), findsNothing);
+      expect(find.byKey(const ValueKey('dm_lock_plus')), findsNothing);
       await disposeSocial(t);
     });
 
-    testWidgets('UC36 Plus lapses mid-chat: the PlusRequired send shows the Plus sheet and the calm panel replaces the composer', (t) async {
+    testWidgets('UC36 Plus lapses mid-chat: the PlusRequired send shows the Plus sheet and the panel replaces the composer', (t) async {
       Get.put<SocialMeController>(FakeSocialMeController(_limits(groupChat: true)), permanent: true);
       final api = _tripApi()..sendResults.add(const BuddyRefused(type: 'PlusRequired', statusCode: 403));
       await pumpSocial(t, DmRoomScreen(controller: controller(api)));
@@ -151,9 +159,9 @@ void main() {
       await t.pump();
       await t.pump(const Duration(milliseconds: 400));
       expect(find.byKey(const ValueKey('plus_limit_sheet')), findsOneWidget);
-      expect(find.text(SocialStringsC.groupChatPlusTitle), findsWidgets);
+      expect(find.text(SocialStringsC.freeMessageUsedTitle), findsWidgets);
       expect(find.text('Hello group'), findsNothing, reason: 'nothing stored in the chat');
-      expect(find.byKey(const ValueKey('dm_lock_group_plus')), findsOneWidget);
+      expect(find.byKey(const ValueKey('dm_lock_plus')), findsOneWidget);
       expect(find.byKey(const ValueKey('dm_composer')), findsNothing);
       expect(t.takeException(), isNull);
       await disposeSocial(t);
@@ -163,7 +171,7 @@ void main() {
       Get.put<SocialMeController>(FakeSocialMeController(_limits(groupChat: false)), permanent: true);
       await pumpSocial(t, DmRoomScreen(controller: controller(_tripApi(lock: 'left', canSend: false))));
       expect(find.byKey(const ValueKey('dm_notice')), findsOneWidget);
-      expect(find.byKey(const ValueKey('dm_lock_group_plus')), findsNothing);
+      expect(find.byKey(const ValueKey('dm_lock_plus')), findsNothing);
       await disposeSocial(t);
     });
   });

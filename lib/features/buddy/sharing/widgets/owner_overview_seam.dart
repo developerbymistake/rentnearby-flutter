@@ -15,8 +15,8 @@ import '../../../trip/models/trip_model.dart';
 import '../../buddy_navigation.dart';
 import '../controllers/owner_sharing_controller.dart';
 import '../models/sharing_models.dart';
+import '../screens/invite_people_screen.dart';
 import '../sharing_strings.dart';
-import 'invite_sheet.dart';
 import 'overview_expenses_card.dart';
 import 'overview_travellers_card.dart';
 import 'trip_delete_flow.dart';
@@ -104,7 +104,7 @@ abstract final class OwnerOverviewSeam {
               AppToast.error(SharingStrings.addPlacesFirst);
               return;
             }
-            InviteSheet.show(context, trip.id, onChanged: reload);
+            InvitePeopleScreen.open(trip.id, onChanged: reload);
           },
           onManage: () async {
             await BuddyNavigation.openTravellers(trip.id);
@@ -114,6 +114,7 @@ abstract final class OwnerOverviewSeam {
         OverviewExpensesCard(
           expenses: s.expenses,
           tripEnded: ended,
+          enabled: !trip.needsItinerary,
           onAdd: () async {
             await BuddyNavigation.openExpenses(trip.id);
             reload();
@@ -126,22 +127,16 @@ abstract final class OwnerOverviewSeam {
       ],
       extraMenuItems: [
         ?_socialItem(context, trip),
-        _deleteItem(context, trip, s, ended: ended, reload: reload),
+        _deleteItem(context, trip, s, reload: reload),
       ],
     );
   }
 
-  /// Delete trip: greyed during the 72-hour post lock, or while other travellers are on a posted trip (CONTRACT_SOCIAL 11.9).
-  static PostRemovalBlock? deleteBlock(TripModel trip, TripSharingBlock s, {required bool ended, DateTime? now}) => PostRemovalRule.forDelete(
-        unlocksAt: trip.postUnlocksAt,
-        posted: trip.isPublic || trip.deleteNeedsAlone,
-        otherMembers: s.viewerCount,
-        ended: ended,
-        now: now,
-      );
+  /// Delete trip: greyed while other travellers are on the trip (any trip, posted or not).
+  static PostRemovalBlock? deleteBlock(TripSharingBlock s) => PostRemovalRule.forDelete(otherMembers: s.viewerCount);
 
-  static OverviewMenuItem _deleteItem(BuildContext context, TripModel trip, TripSharingBlock s, {required bool ended, VoidCallback? reload}) {
-    final block = deleteBlock(trip, s, ended: ended);
+  static OverviewMenuItem _deleteItem(BuildContext context, TripModel trip, TripSharingBlock s, {VoidCallback? reload}) {
+    final block = deleteBlock(s);
     if (block == null) return OverviewMenuItem(label: SharingStrings.deleteTrip, danger: true, onTap: () => TripDeleteFlow.start(context, trip, s));
     return OverviewMenuItem(label: SharingStrings.deleteTrip, subtitle: block.line, blocked: true, onTap: () async {
           await PostRemovalNotice.show(context, trip.id, block);

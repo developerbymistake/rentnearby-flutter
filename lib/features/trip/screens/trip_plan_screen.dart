@@ -25,7 +25,6 @@ import '../trip_strings_v2_plan.dart';
 import '../widgets/trip_add_city_card.dart';
 import '../widgets/trip_archived_view.dart';
 import '../widgets/trip_day_spot_list.dart';
-import '../widgets/trip_day_chips.dart';
 import '../widgets/trip_days_sheet.dart';
 import '../widgets/trip_exit_confirm.dart';
 import '../widgets/trip_leg_header.dart';
@@ -197,7 +196,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       case TripPlanMenu.rename:
         await _rename();
       case TripPlanMenu.map:
-        TripNavigation.openMap(day: _c.todayDay == null ? TripDayChips.all : _c.defaultMapDay, tripId: _c.trip.value?.id);
+        TripNavigation.openMap(day: 1, tripId: _c.trip.value?.id);
       case TripPlanMenu.mute:
         await TripLifecycleActions.toggleMute(context);
       case TripPlanMenu.complete:

@@ -72,11 +72,14 @@ void main() {
 
   for (final w in socialWidths) {
     for (final s in socialScales) {
-      testWidgets('seeker chats list has People, Trips, Requests (${w.toInt()} x$s)', (t) async {
+      testWidgets('I-8 seeker chats list has Inbox, Trip - Group, Requests (${w.toInt()} x$s)', (t) async {
         seeker(ShellKind.seeker, UserRoleKeys.seeker);
         rooms();
         await pumpSocial(t, const ChatsListScreen(), width: w, scale: s);
         expect(find.byKey(const ValueKey('social_rooms_tabs')), findsOneWidget);
+        expect(find.text('Inbox'), findsOneWidget);
+        expect(find.text('Trip - Group'), findsOneWidget);
+        expect(find.text('People'), findsNothing);
         expect(find.text('See you at 7 near ISBT'), findsOneWidget);
         expect(find.text('Yes, dates are free'), findsOneWidget);
         await t.tap(find.text(SocialStringsC.trips));
@@ -195,7 +198,7 @@ void main() {
     await disposeSocial(t);
   });
 
-  testWidgets('an empty Requests tab says replying is free only once', (t) async {
+  testWidgets('an empty Requests tab shows the one-message rule once', (t) async {
     seeker(ShellKind.seeker, UserRoleKeys.seeker);
     final api = FakeChatApi();
     Get.put(RoomsController(api: api, transport: FakeTransport(), myId: () => myId), permanent: true);

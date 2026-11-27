@@ -10,7 +10,7 @@ import '../../shared/social_strings.dart';
 import '../social_strings_a.dart';
 
 abstract final class SocialCatalogDefaults {
-  static const List<String> interests = ['Mountains', 'Treks', 'Beaches', 'Adventure', 'Food', 'Culture', 'Photography', 'Spiritual', 'Road trips', 'Camping'];
+  static const List<String> interests = ['Mountains', 'Treks', 'Adventure', 'Food', 'Culture', 'Spiritual', 'Road trips', 'Camping'];
   static const List<String> skills = ['Photographer', 'Driver', 'Cook', 'Tour guide', 'Content creator', 'First aid'];
   static const List<String> aboutExamples = [
     'Hills over beaches. Chai at every stop.',
@@ -22,12 +22,12 @@ abstract final class SocialCatalogDefaults {
 abstract final class ProfileRules {
   static const int nameMax = 100;
   static const int aboutMax = 150;
-  static const int interestsMin = 3;
-  static const int interestsMax = 5;
-  static const int skillsMin = 1;
-  static const int skillsMax = 6;
+  static const int interestsMin = 2;
+  static const int interestsMax = 3;
+  static const int skillsMin = 2;
+  static const int skillsMax = 3;
   static const int placesMin = 1;
-  static const int placesMax = 20;
+  static const int placesMax = 3;
   static const int oldestYear = 1940;
   static const int adultYears = 18;
   static const int nameChangeDays = 14;
@@ -71,11 +71,6 @@ class OnboardingController extends GetxController {
     return c.isEmpty ? SocialCatalogDefaults.skills : c;
   }
 
-  List<String> get aboutExamples {
-    final c = SocialMeController.maybe?.catalog.aboutExamples ?? const <String>[];
-    return c.isEmpty ? SocialCatalogDefaults.aboutExamples : c;
-  }
-
   List<int> get years => ProfileRules.birthYears(_clock());
 
   @override
@@ -104,9 +99,13 @@ class OnboardingController extends GetxController {
       interests.length >= ProfileRules.interestsMin &&
       interests.length <= ProfileRules.interestsMax &&
       skills.length >= ProfileRules.skillsMin &&
-      places.length >= ProfileRules.placesMin;
+      skills.length <= ProfileRules.skillsMax;
 
-  bool get step3Ok => about.value.trim().isNotEmpty && about.value.trim().length <= ProfileRules.aboutMax;
+  bool get _placesOk => places.length >= ProfileRules.placesMin && places.length <= ProfileRules.placesMax;
+
+  bool get _aboutOk => about.value.trim().isNotEmpty && about.value.trim().length <= ProfileRules.aboutMax;
+
+  bool get step3Ok => _placesOk && _aboutOk;
 
   bool get canNext => switch (step.value) {
         0 => step1Ok,
@@ -125,9 +124,12 @@ class OnboardingController extends GetxController {
         return SocialStringsA.step2Missing(
           interests: i > 0 ? i : 0,
           skills: skills.length >= ProfileRules.skillsMin ? 0 : ProfileRules.skillsMin - skills.length,
-          places: places.length >= ProfileRules.placesMin ? 0 : ProfileRules.placesMin - places.length,
+          places: 0,
         );
       default:
+        if (!_placesOk) {
+          return SocialStringsA.step2Missing(interests: 0, skills: 0, places: ProfileRules.placesMin - places.length);
+        }
         return SocialStringsA.writeAbout;
     }
   }
@@ -150,8 +152,6 @@ class OnboardingController extends GetxController {
   }
 
   void removePlace(String v) => places.remove(v);
-
-  void useExample(String text) => about.value = text.length > ProfileRules.aboutMax ? text.substring(0, ProfileRules.aboutMax) : text;
 
   bool next() {
     if (!canNext || step.value >= stepCount - 1) return false;

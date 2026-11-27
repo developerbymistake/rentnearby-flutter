@@ -417,6 +417,7 @@ class SheetListRow extends StatelessWidget {
     this.divider = true,
     this.compact = false,
     this.roundArt = false,
+    this.photo,
   });
 
   final bool compact;
@@ -424,6 +425,7 @@ class SheetListRow extends StatelessWidget {
   final ListingTone tone;
   final String title;
   final String? art;
+  final Widget? photo;
   final String? subtitle;
   final bool selected;
   final bool enabled;
@@ -439,7 +441,13 @@ class SheetListRow extends StatelessWidget {
       decoration: BoxDecoration(border: divider && !roundArt ? const Border(top: BorderSide(color: Ink3D.line)) : null),
       child: Row(
         children: [
-          if (art != null) ...[
+          if (photo != null) ...[
+            ClipRRect(
+              borderRadius: roundArt ? BorderRadius.circular(DS.s(26)) : DS.circular(16),
+              child: SizedBox(width: DS.s(52), height: DS.s(52), child: photo),
+            ),
+            SizedBox(width: DS.s(14)),
+          ] else if (art != null) ...[
             SizedBox(
               width: DS.s(52),
               height: DS.s(52),

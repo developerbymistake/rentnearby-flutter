@@ -74,9 +74,7 @@ class _PostTripScreenState extends State<PostTripScreen> {
         SocialLive.posts.value++;
         if (Get.isRegistered<MyTripsController>()) MyTripsController.to.load();
         SocialMeController.maybe?.refreshQuiet();
-        SocialNavB.postedNote = value.notified == false
-            ? SocialStringsB.notifyUsedUpPosted
-            : (value.notifyNearby ? SocialStringsB.nearbyTomorrow : null);
+        SocialNavB.postedNote = value.notifyNearby ? SocialStringsB.nearbyTomorrow : null;
         SocialNavB.backToTravelBuddies(posted: true);
       case BuddyRefused(:final type, :final message, :final data):
         if (type == SocialErrorTypes.publishLimit) {
