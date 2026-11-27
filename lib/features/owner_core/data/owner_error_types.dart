@@ -41,6 +41,7 @@ abstract final class OwnerErrorTypes {
   static const dayOffPast = 'DayOffPast';
   static const dayOffReasonTooLong = 'DayOffReasonTooLong';
   static const dayIsOff = 'DayIsOff';
+  static const quotationMonthLimit = 'QuotationMonthLimit';
 
   static const Set<String> limitTypes = {
     planPhotoLimit,
@@ -50,6 +51,7 @@ abstract final class OwnerErrorTypes {
     calendarEntryLimit,
     blockedRangeLimit,
     specialPriceLimit,
+    quotationMonthLimit,
   };
 
   static const Set<String> all = {
@@ -59,7 +61,7 @@ abstract final class OwnerErrorTypes {
     planVisibleLimit, planVisibleInvalid, planVisibleNotNeeded, planFeatureLocked, moneyNoteInvalid,
     phoneNotAllowed, staleEdit, idTaken, stayFullOnDates, changeTouchesBlock, roomTypeDuplicate, stayNeedsPhoto,
     stayEditGone, stayEditChanged, planValueBelowFree, announceTooSoon, dayOffBooked, dayOffPast, dayOffReasonTooLong,
-    dayIsOff,
+    dayIsOff, quotationMonthLimit,
   };
 }
 

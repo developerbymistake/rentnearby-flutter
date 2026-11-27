@@ -4,10 +4,12 @@ import 'package:get/get.dart';
 import '../config/app_routes.dart';
 import '../config/tab_shell.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/plan_controller.dart';
 import '../design/design.dart';
 import '../features/owner_core/data/owner_api.dart';
 import '../features/owner_core/data/owner_result.dart';
 import '../features/owner_core/session/owner_session_hooks.dart';
+import '../screens/profile_screen.dart';
 import '../utils/account_delete_message.dart';
 import '../utils/app_toast.dart';
 
@@ -29,6 +31,12 @@ abstract final class AccountBlockerStrings {
   static const offlineFirst = 'Take your listing offline first.';
   static const confirmOrDecline = 'Confirm or decline the trip first.';
   static const couldNotTurnOff = 'Could not turn it off. Please try again.';
+  static const cancelFirst = 'Cancel your subscription first';
+  static const cancelSub = 'Your plan renews automatically. Cancel it in Google Play, then come back and delete your account.';
+  static const manageInPlay = 'Manage in Google Play';
+  static const cannotCancel = 'Cannot cancel? Contact support';
+  static const justCancelled = 'Just cancelled? Try again in a minute.';
+  static const cancelledNow = 'Subscription cancelled. You can delete your account now.';
 }
 
 abstract final class AccountBlockerActions {
@@ -40,6 +48,8 @@ abstract final class AccountBlockerActions {
   static const openTrip = 'OpenTrip';
   static const goOffline = 'GoOffline';
   static const settleUp = 'SettleUp';
+  static const managePlay = 'ManagePlay';
+  static const activeSubscription = 'ActiveSubscription';
 
   static String? buttonOf(AccountDeleteBlock b) => switch (b.action) {
         openEnquiry || openTripReplies => AccountBlockerStrings.openEnquiry,
@@ -48,6 +58,7 @@ abstract final class AccountBlockerActions {
         openTaxiOffer || openTrip => AccountBlockerStrings.openRequest,
         goOffline => AccountBlockerStrings.turnOff,
         settleUp => AccountBlockerStrings.settleUp,
+        managePlay => AccountBlockerStrings.manageInPlay,
         _ => null,
       };
 
@@ -62,6 +73,8 @@ abstract final class AccountBlockerActions {
         return AccountBlockerStrings.activeBooking;
       case 'SelectedTaxiOffer':
         return AccountBlockerStrings.travellerChoseYou;
+      case activeSubscription:
+        return AccountBlockerStrings.cancelFirst;
       case 'LiveListing':
         return b.args['listingKind'] == 'Taxi' ? AccountBlockerStrings.availableOn : AccountBlockerStrings.acceptingOn;
     }
@@ -75,6 +88,10 @@ abstract final class AccountBlockerActions {
         return AccountBlockerStrings.offlineFirst;
       case 'SelectedTaxiOffer':
         return AccountBlockerStrings.confirmOrDecline;
+      case activeSubscription:
+        return b.message.contains(AccountBlockerStrings.justCancelled)
+            ? '${AccountBlockerStrings.cancelSub}\n${AccountBlockerStrings.justCancelled}'
+            : AccountBlockerStrings.cancelSub;
     }
     final line = b.message.isNotEmpty ? b.message : AccountDeleteMessage.lineOf(b);
     return line == title ? null : line;
@@ -93,12 +110,53 @@ class AccountBlockersSheet extends StatefulWidget {
   State<AccountBlockersSheet> createState() => _AccountBlockersSheetState();
 }
 
-class _AccountBlockersSheetState extends State<AccountBlockersSheet> {
+class _AccountBlockersSheetState extends State<AccountBlockersSheet> with WidgetsBindingObserver {
   late final List<AccountDeleteBlock> _rows = List.of(widget.blocks);
   // Keyed by the block, not the row index: removing a row never moves a spinner (FX-27).
   final Set<String> _busy = {};
 
   static String _keyOf(AccountDeleteBlock b) => '${b.code}:${b.targetId ?? ''}:${b.args['listingKind'] ?? ''}';
+
+  bool _recheck = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // Back from Google Play: one plan refresh; once auto-renew is off the row goes and deletion can be tried again.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _recheck) {
+      _recheck = false;
+      _afterManage();
+    }
+  }
+
+  Future<void> _manage() async {
+    if (!Get.isRegistered<PlanController>()) return;
+    _recheck = true;
+    await Get.find<PlanController>().openManageSubscription();
+  }
+
+  Future<void> _afterManage() async {
+    if (!Get.isRegistered<PlanController>()) return;
+    final plan = Get.find<PlanController>();
+    await plan.refreshPlan(force: true);
+    if (!mounted) return;
+    final play = plan.myPlan.value.play;
+    if (play != null && play.autoRenewEnabled) return;
+    setState(() => _rows.removeWhere((r) => r.code == AccountBlockerActions.activeSubscription));
+    AppToast.info(AccountBlockerStrings.cancelledNow);
+    if (_rows.isEmpty) Navigator.of(context).pop();
+  }
 
   Future<void> _turnOff(AccountDeleteBlock b) async {
     final key = _keyOf(b);
@@ -166,8 +224,25 @@ class _AccountBlockersSheetState extends State<AccountBlockersSheet> {
                     busy: _busy.contains(_keyOf(_rows[i])),
                     onPressed: AccountBlockerActions.buttonOf(_rows[i]) == null
                         ? null
-                        : () => _rows[i].action == AccountBlockerActions.goOffline ? _turnOff(_rows[i]) : _open(_rows[i]),
+                        : () {
+                            final b = _rows[i];
+                            if (b.action == AccountBlockerActions.goOffline) {
+                              _turnOff(b);
+                            } else if (b.action == AccountBlockerActions.managePlay) {
+                              _manage();
+                            } else {
+                              _open(b);
+                            }
+                          },
                   ),
+                  if (_rows[i].code == AccountBlockerActions.activeSubscription)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: ProfileActions.contactSupport,
+                        child: Text(AccountBlockerStrings.cannotCancel, style: Ink3D.text(12, FontWeight.w600, ListingTone.indigo.text, letterSpacing: 0)),
+                      ),
+                    ),
                 ],
               ],
             ),

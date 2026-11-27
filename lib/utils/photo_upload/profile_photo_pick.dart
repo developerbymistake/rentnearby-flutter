@@ -13,7 +13,7 @@ import 'profile_photo_crop.dart';
 
 abstract final class ProfilePhotoPick {
   // Null = cancelled or rejected (the toast is already shown).
-  static Future<File?> pick(BuildContext context) async {
+  static Future<File?> pick(BuildContext context, {PhotoCropShape shape = PhotoCropShape.profile}) async {
     final tone = ListingTone.indigo;
     final source = await Sheet3D.show<ImageSource>(
       context,
@@ -44,7 +44,7 @@ abstract final class ProfilePhotoPick {
     if (picked == null) return null;
     File? cropped;
     try {
-      cropped = await ProfilePhotoCrop.crop(picked.path);
+      cropped = await ProfilePhotoCrop.crop(picked.path, shape: shape);
     } finally {
       if (cropped?.path != picked.path) await _drop(File(picked.path));
     }

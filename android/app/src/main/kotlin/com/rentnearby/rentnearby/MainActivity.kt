@@ -22,6 +22,7 @@ class MainActivity : FlutterActivity() {
     private val endAlert = Runnable { setRingAlert(false) }
     private var alertTag: String? = null
     private var cover: View? = null
+    private var quotePdf: QuotePdfChannel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -38,11 +39,15 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         handler.removeCallbacks(endAlert)
         removeCover()
+        quotePdf?.dispose()
+        quotePdf = null
         super.onDestroy()
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        quotePdf?.dispose()
+        quotePdf = QuotePdfChannel.register(this, flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SETTINGS_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "openBatterySettings" -> result.success(

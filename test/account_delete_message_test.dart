@@ -25,6 +25,7 @@ void main() {
     'OpenTaxiRequest': 'You have an open taxi request. Cancel it first.',
     'OpenStayEnquiry': 'You have an open stay enquiry. Close it first.',
     'LiveListing': 'Take your listing offline first.',
+    'ActiveSubscription': 'You have an active subscription. Cancel it in Google Play first, then delete your account.',
   };
 
   for (final e in expected.entries) {

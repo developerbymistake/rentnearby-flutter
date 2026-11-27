@@ -136,6 +136,11 @@ class AppRoutes {
   static const String stayBalanceDue = '/stay-balance-due';
   static const String staySpecialPrices = '/stay-special-prices';
   static const String stayPlanVisible = '/stay-plan-visible';
+  static const String stayQuotations = '/stay-quotations';
+  static const String stayQuotationBusiness = '/stay-quotation-business';
+  static const String stayQuotationEdit = '/stay-quotation-edit';
+  static const String stayQuotationTemplate = '/stay-quotation-template';
+  static const String stayQuotationPreview = '/stay-quotation-preview';
   static const String stayAttention = '/stay-attention';
   static const String stayLiveEdit = '/stay-live-edit';
   static const String taxiCalendarEntry = '/taxi-calendar-entry';
@@ -159,6 +164,11 @@ class AppRoutes {
     stayPlanVisible,
     stayAttention,
     stayLiveEdit,
+    stayQuotations,
+    stayQuotationBusiness,
+    stayQuotationEdit,
+    stayQuotationTemplate,
+    stayQuotationPreview,
   };
   static const Set<String> taxiDriverNewRoutes = {
     taxiCalendarEntry,

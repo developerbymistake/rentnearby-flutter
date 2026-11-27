@@ -11,7 +11,10 @@ import '../../stay/enquiries/stay_enquiry_owner_view.dart';
 import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/models/trip_offer_model.dart';
 import '../../owner_core/home/numbers_row.dart';
+import '../../../config/app_routes.dart';
+import '../quotation/model/quote_prefill.dart';
 import '../stay_owner_deps.dart';
+import '../strings/stay_quote_strings.dart';
 import '../strings/stay_work_strings.dart';
 import 'stay_work_format.dart';
 import 'widgets/enquiry_card_parts.dart';
@@ -115,6 +118,12 @@ class _StayOwnerEnquiryCardState extends State<StayOwnerEnquiryCard> {
 
   Widget _tap(Widget child) => GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => setState(() => _open = !_open), child: child);
 
+  void _makeQuotation() => Get.toNamed(AppRoutes.stayQuotationEdit, arguments: {'prefill': QuotePrefill.fromEnquiry(e).toArgs()});
+
+  Widget _quoteRow(bool busy) => EnquiryButtons(busy: busy, buttons: [EnquiryButton(StayQuoteStrings.makeQuotation, EnquiryButtonKind.plain, _makeQuotation)]);
+
+  MenuItem3D _quoteItem() => MenuItem3D(label: StayQuoteStrings.makeQuotation, art: ListingArt.memo, onTap: _makeQuotation);
+
   EnquiryButton _callButton() => EnquiryButton(StayWorkStrings.call, EnquiryButtonKind.plain, () => StayEnquiryActions.callGuest(e));
 
   List<EnquiryButton> _newButtons(BuildContext context, {required String primary}) => [
@@ -149,6 +158,7 @@ class _StayOwnerEnquiryCardState extends State<StayOwnerEnquiryCard> {
             if (asked != null && asked > 0) EnquiryKv(StayWorkStrings.guestAsked, StayWorkStrings.perNight(StayWorkFormat.inr(asked))),
           ]),
         EnquiryButtons(busy: busy, buttons: _newButtons(context, primary: StayWorkStrings.sendOffer)),
+        _quoteRow(busy),
       ],
     );
   }
@@ -191,12 +201,14 @@ class _StayOwnerEnquiryCardState extends State<StayOwnerEnquiryCard> {
           EnquiryKv(StayWorkStrings.offersSent, StayWorkStrings.nOfThree(e.offerCount < 1 ? 1 : e.offerCount)),
         ]),
         EnquiryButtons(busy: busy, buttons: _newButtons(context, primary: StayWorkStrings.sendNewOffer)),
+        _quoteRow(busy),
       ],
     );
   }
 
   void _confirmedMenu(BuildContext context) {
     showReplyMenu(_menuKey, [
+      _quoteItem(),
       if ((e.traveller.id ?? '').isNotEmpty)
         MenuItem3D(label: StayWorkStrings.reportTraveller, art: ListingArt.warning, onTap: () => StayEnquiryActions.reportTraveller(context, e)),
       MenuItem3D(label: StayWorkStrings.cancelBooking, art: ListingArt.locked, danger: true, onTap: () => StayEnquiryActions.cancel(context, e)),
@@ -320,6 +332,7 @@ class _StayOwnerEnquiryCardState extends State<StayOwnerEnquiryCard> {
 
   void _closedMenu(BuildContext context) {
     showReplyMenu(_menuKey, [
+      _quoteItem(),
       if ((e.traveller.id ?? '').isNotEmpty) ...[
         MenuItem3D(label: StayWorkStrings.reportTraveller, art: ListingArt.warning, onTap: () => StayEnquiryActions.reportTraveller(context, e)),
         MenuItem3D(label: StayWorkStrings.block, art: ListingArt.locked, danger: true, onTap: () => StayEnquiryActions.block(context, e)),
@@ -335,7 +348,6 @@ class _StayOwnerEnquiryCardState extends State<StayOwnerEnquiryCard> {
     final when = v.cancelledAt ?? e.updatedAt;
     final reason = e.cancelReason;
     final entry = v.calendarEntryId;
-    final hasMenu = (e.traveller.id ?? '').isNotEmpty;
     return EnquiryCardFrame(
       semantics: _guest,
       children: [
@@ -348,7 +360,7 @@ class _StayOwnerEnquiryCardState extends State<StayOwnerEnquiryCard> {
           chip: closedChip(kind),
           menuKey: _menuKey,
           menuLabel: StayWorkStrings.moreActionsFor(_guest),
-          onMenu: hasMenu ? () => _closedMenu(context) : null,
+          onMenu: () => _closedMenu(context),
         )),
         if (v.problemReported) EnquiryNote(text: StayWorkStrings.problemStrip, art: ListingArt.warning, tone: EnquiryChipTone.red),
         if (_open && cancelledByYou) ...[

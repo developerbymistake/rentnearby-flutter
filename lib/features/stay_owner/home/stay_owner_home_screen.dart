@@ -261,6 +261,7 @@ class StayHomeBody extends StatelessWidget {
       children.add(const StaySectionTitle(title: StayHomeStrings.quickActions));
       children.add(_quick(context));
     }
+    if (live) children.add(StayOwnerDeps.quotationsCard());
     children.add(Padding(
       padding: DS.insets(t: 30),
       child: WorkoutCard(

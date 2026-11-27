@@ -18,6 +18,9 @@ class PlanLimitsModel {
   final bool monthSummary;
   final bool reminders;
   final int specialPrices;
+  final int quotationsPerMonth;
+  final int quotationsUsed;
+  final DateTime? quotationsResetsAt;
 
   const PlanLimitsModel({
     this.listingLimit = 1,
@@ -37,6 +40,9 @@ class PlanLimitsModel {
     this.monthSummary = false,
     this.reminders = false,
     this.specialPrices = 1,
+    this.quotationsPerMonth = 2,
+    this.quotationsUsed = 0,
+    this.quotationsResetsAt,
   });
 
   static bool _switch(Object? v) => v == true || (v is num && v > 0) || v == 'true';
@@ -59,6 +65,9 @@ class PlanLimitsModel {
         monthSummary: _switch(j['monthSummary']),
         reminders: _switch(j['reminders']),
         specialPrices: BuddyJson.integer(j['specialPrices'], 1),
+        quotationsPerMonth: BuddyJson.integer(j['quotationsPerMonth'], 2),
+        quotationsUsed: BuddyJson.integer(j['quotationsUsed']),
+        quotationsResetsAt: BuddyJson.time(j['quotationsResetsAt']),
       );
 }
 

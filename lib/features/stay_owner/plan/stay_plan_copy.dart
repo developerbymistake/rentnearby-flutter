@@ -9,6 +9,7 @@ import '../../../widgets/plan_words.dart';
 import '../../owner_core/home/owner_home_models.dart';
 import '../../owner_core/plan/plan_card_state.dart';
 import '../../owner_core/plan/plan_keys.dart';
+import '../strings/stay_quote_strings.dart';
 import 'stay_plan_strings.dart';
 
 class StayPlanCopy extends PlanRoleCopy {
@@ -67,6 +68,7 @@ class StayPlanCopy extends PlanRoleCopy {
           const PlanHeroLine(StayPlanStrings.featuredNearYou),
           PlanHeroLine(StayPlanStrings.photosRooms(l.photos, l.roomTypes)),
           PlanHeroLine(StayPlanStrings.jobPosts(l.jobsPosts)),
+          PlanHeroLine(StayQuoteStrings.planPerk(l.quotationsPerMonth)),
         ];
       case PlanCardState.trial:
       case PlanCardState.cancelled:
@@ -150,6 +152,7 @@ class StayPlanCopy extends PlanRoleCopy {
       row(StayPlanStrings.rowReminder, ListingArt.alarmClock, flag(v.free(PlanKey.reminders) > 0), flag(v.plus(PlanKey.reminders) > 0)),
       row(StayPlanStrings.rowSummary, ListingArt.moneyBag, flag(v.free(PlanKey.monthSummary) > 0), flag(v.plus(PlanKey.monthSummary) > 0)),
       row(StayPlanStrings.rowSpecial, ListingArt.diyaLamp, n(v.free(PlanKey.specialPrices)), n(v.plus(PlanKey.specialPrices))),
+      row(StayQuoteStrings.planRow, ListingArt.memo, n(v.free(PlanKey.quotationsPerMonth)), n(v.plus(PlanKey.quotationsPerMonth))),
     ];
   }
 

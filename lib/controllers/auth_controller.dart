@@ -29,6 +29,7 @@ import '../features/social/social_session_hooks.dart';
 import '../features/owner_core/data/owner_cache.dart';
 import '../features/owner_core/plan/plan_bindings.dart';
 import '../features/owner_core/session/owner_session_hooks.dart';
+import '../features/stay_owner/quotation/data/quote_wipe.dart';
 import '../features/trip/traveller_session.dart';
 import '../navigation/traveller_gate.dart';
 
@@ -419,12 +420,14 @@ class AuthController extends GetxController {
   Future<void> _applySession(Map<String, dynamic> data) async {
     final token = data['token'] as String;
     final userData = data['user'] as Map<String, dynamic>;
+    final previousUserId = user.value?.id ?? StorageService.getUser()?.id;
     await StorageService.saveToken(token);
     final had = canUseTravellerFeatures;
     _syncRoleFromToken(token);
     if (had && !canUseTravellerFeatures) TravellerSession.clear();
     final userModel = UserModel.fromJson(userData);
     StorageService.saveUser(userModel);
+    if (previousUserId != null && previousUserId != userModel.id) unawaited(QuoteLocalWipe.run(previousUserId));
     user.value = userModel;
     _syncProfileFields(userModel);
     signupUsername.value = null;
@@ -483,6 +486,9 @@ class AuthController extends GetxController {
     } catch (_) {}
     try {
       await StorageService.clearAll();
+    } catch (_) {}
+    try {
+      await QuoteLocalWipe.run(buddyUserId).timeout(hubDisconnectTimeout);
     } catch (_) {}
     final imageDisk = _clearImageCaches();
     try {

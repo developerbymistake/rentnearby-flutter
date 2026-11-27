@@ -34,4 +34,22 @@ void main() {
     expect(File('android/app/src/main/res/values-v35/styles.xml').readAsStringSync(), contains('android:windowOptOutEdgeToEdgeEnforcement'));
     expect(File('android/app/proguard-rules.pro').readAsStringSync(), contains('-keep class com.yalantis.ucrop** { *; }'));
   });
+
+  test('Quotation PDFs: storage permission only up to Android 9, channel registered, print helper kept in android.print', () {
+    final manifest = File('android/app/src/main/AndroidManifest.xml').readAsStringSync();
+    expect(manifest, contains('<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>'));
+    expect(manifest.contains('READ_EXTERNAL_STORAGE'), isFalse);
+    expect(manifest.contains('MANAGE_EXTERNAL_STORAGE'), isFalse);
+    final activity = File('android/app/src/main/kotlin/com/rentnearby/rentnearby/MainActivity.kt').readAsStringSync();
+    expect(activity, contains('QuotePdfChannel.register(this, flutterEngine.dartExecutor.binaryMessenger)'));
+    final helper = File('android/app/src/main/kotlin/android/print/QuotePdfPrinter.kt').readAsStringSync();
+    expect(helper, contains('package android.print'));
+    expect(helper, contains('@Keep'));
+    final channel = File('android/app/src/main/kotlin/com/rentnearby/rentnearby/QuotePdfChannel.kt').readAsStringSync();
+    for (final rule in ['blockNetworkLoads = true', 'allowFileAccess = false', 'allowContentAccess = false', 'onRenderProcessGone', 'Base64.NO_WRAP', 'MIXED_CONTENT_NEVER_ALLOW']) {
+      expect(channel, contains(rule), reason: rule);
+    }
+    expect(channel.contains('addJavascriptInterface'), isFalse);
+    expect(channel.contains('enableSlowWholeDocumentDraw'), isFalse);
+  });
 }

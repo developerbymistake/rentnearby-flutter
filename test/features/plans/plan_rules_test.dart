@@ -165,11 +165,12 @@ void main() {
       expect(rows.length, 10);
     });
 
-    test('P2 has 14 rows with the morning reminder', () {
+    test('P2 has 15 rows with the morning reminder and quotations a month', () {
       final rows = const StayPlanCopy().compareRows(s);
-      expect(rows.length, 14);
+      expect(rows.length, 15);
       expect(rows.map((r) => r.label), contains('Morning reminder'));
-      expect(rows.where((r) => r.tag != null).length, 11);
+      expect(rows.map((r) => r.label), contains('Quotations a month'));
+      expect(rows.where((r) => r.tag != null).length, 12);
     });
 
     test('catalog missing: seed values, never unlocked', () {

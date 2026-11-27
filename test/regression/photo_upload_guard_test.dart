@@ -7,6 +7,7 @@ const _helper = 'lib/utils/photo_upload/app_photo_pick.dart';
 
 // Every file that picks or uploads a photo through AppPhotoPick. A new caller is a conscious edit here.
 const _callers = {
+  'lib/features/stay_owner/quotation/data/quote_api.dart',
   'lib/controllers/profile_photo_controller.dart',
   'lib/features/stay/setup/stay_basic_details_screen.dart',
   'lib/features/stay/setup/stay_repository.dart',
@@ -83,6 +84,7 @@ void main() {
 
   test('FormData is built only in the listed upload files', () {
     const uploaders = {
+    'lib/features/stay_owner/quotation/data/quote_api.dart',
       'lib/controllers/profile_photo_controller.dart',
       'lib/features/stay/setup/stay_repository.dart',
       'lib/features/taxi/setup/taxi_repository.dart',

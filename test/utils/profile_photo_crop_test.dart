@@ -63,6 +63,36 @@ void main() {
     expect(android.toolbarWidgetColor, DesignColors.onPrimary);
   });
 
+  test('logo crop: square box, rectangle frame, same size and quality', () async {
+    final c = _Cropper('/tmp/logo.jpg');
+    ImageCropperPlatform.instance = c;
+    expect((await ProfilePhotoCrop.crop('/tmp/picked.jpg', shape: PhotoCropShape.square))?.path, '/tmp/logo.jpg');
+    final call = c.calls.single;
+    expect(call['ratio'], const CropAspectRatio(ratioX: 1, ratioY: 1));
+    expect(call['maxWidth'], 1280);
+    expect(call['format'], ImageCompressFormat.jpg);
+    expect(call['quality'], 85);
+    final android = (call['ui'] as List<PlatformUiSettings>).whereType<AndroidUiSettings>().single;
+    expect(android.cropStyle, CropStyle.rectangle);
+    expect(android.lockAspectRatio, isTrue);
+    expect(android.aspectRatioPresets, [CropAspectRatioPreset.square]);
+  });
+
+  test('stamp or signature crop: free box, wide presets, same size and quality', () async {
+    final c = _Cropper('/tmp/sign.jpg');
+    ImageCropperPlatform.instance = c;
+    await ProfilePhotoCrop.crop('/tmp/picked.jpg', shape: PhotoCropShape.free);
+    final call = c.calls.single;
+    expect(call['ratio'], isNull);
+    expect(call['maxHeight'], 1280);
+    expect(call['quality'], 85);
+    final android = (call['ui'] as List<PlatformUiSettings>).whereType<AndroidUiSettings>().single;
+    expect(android.cropStyle, CropStyle.rectangle);
+    expect(android.lockAspectRatio, isFalse);
+    expect(android.initAspectRatio, CropAspectRatioPreset.original);
+    expect(android.aspectRatioPresets, contains(CropAspectRatioPreset.ratio3x2));
+  });
+
   test('cancel and a failing crop screen return null', () async {
     ImageCropperPlatform.instance = _Cropper(null);
     expect(await ProfilePhotoCrop.crop('/tmp/a.jpg'), isNull);
