@@ -17,6 +17,7 @@ class PostDraft {
     this.text = '',
     this.chips = const [],
     this.textEdited = false,
+    this.notifyNearby = false,
   });
 
   static const String within = 'within';
@@ -25,6 +26,7 @@ class PostDraft {
   static const int maxMonths = 6;
   static const int maxText = 500;
   static const int startAheadDays = 365;
+  static const int nearbyAheadDays = 60;
 
   final List<TripCityModel> cities;
   final String whenKind;
@@ -36,6 +38,9 @@ class PostDraft {
   final String text;
   final List<String> chips;
   final bool textEdited;
+
+  /// Not stored with the draft: the switch starts OFF every time.
+  final bool notifyNearby;
 
   bool get isExact => whenKind == exact;
 
@@ -55,6 +60,7 @@ class PostDraft {
     String? text,
     List<String>? chips,
     bool? textEdited,
+    bool? notifyNearby,
   }) =>
       PostDraft(
         cities: cities ?? this.cities,
@@ -67,6 +73,7 @@ class PostDraft {
         text: text ?? this.text,
         chips: chips ?? this.chips,
         textEdited: textEdited ?? this.textEdited,
+        notifyNearby: notifyNearby ?? this.notifyNearby,
       );
 
   static String dateText(DateTime d) =>
@@ -81,6 +88,7 @@ class PostDraft {
         'joinGender': joinGender,
         'seats': seats,
         'text': text.trim(),
+        'notifyNearby': notifyNearby,
       };
 
   String autoText() {

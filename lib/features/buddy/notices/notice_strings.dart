@@ -70,5 +70,7 @@ abstract final class NoticeStrings {
   static const String joinAcceptedPreview = 'You are in. It is in My Trips.';
   static String joinDeclined(String? city) => city == null ? 'Not this time' : 'Not this time for $city';
   static String followedPosted(String actor, String? city) => city == null ? '$actor posted a trip' : '$actor posted a trip to $city';
+  static String nearbyPostedOne(String actor) => '$actor posted a trip near you';
+  static String nearbyPostedMany(int n) => '$n new trips near you';
   static String quoted(String text) => '“$text”';
 }

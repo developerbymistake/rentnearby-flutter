@@ -17,6 +17,7 @@ abstract final class RoomLock {
   static const String awaitingReply = 'awaitingReply';
   static const String limit = 'limit';
   static const String left = 'left';
+  static const String plus = 'plus';
 }
 
 abstract final class RoomBucket {

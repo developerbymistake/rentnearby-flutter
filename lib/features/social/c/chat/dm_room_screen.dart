@@ -165,6 +165,10 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
     _c.refusal.value = null;
     final type = r.type;
     if (type == SocialErrorTypes.awaitingReply || type == SocialErrorTypes.guidelinesNotAccepted) return;
+    if (type == SocialErrorTypes.plusRequired && _c.isTrip) {
+      PlusSheets.limitReached(context, errorType: type!, data: r.data, from: 'chat', title: SocialStringsC.groupChatPlusTitle, line: SocialStringsC.groupChatPlusLine);
+      return;
+    }
     if (PlusSheets.handles(type)) {
       PlusSheets.limitReached(context, errorType: type!, data: r.data, from: 'chat');
       return;
@@ -533,6 +537,7 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
     final p = _c.preflight.value;
     final notice = _noticeText;
     if (notice != null) return ChatNoticePanel3D(key: const ValueKey('dm_notice'), tone: _tone, text: notice);
+    if (_c.groupChatLocked) return _lockBar(SocialStringsC.groupChatPlusTitle, SocialStringsC.groupChatPlusLine, 'dm_lock_group_plus', button: SocialStringsC.seePlus);
     final lock = _c.lock;
     final newChats = _newChats();
     if (lock == RoomLock.awaitingReply) {
@@ -560,7 +565,7 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
         child: child,
       );
 
-  Widget _lockBar(String title, String line, String key) {
+  Widget _lockBar(String title, String line, String key, {String button = SocialStringsC.chatMorePlus}) {
     final canUpgrade = SocialMeController.maybe?.me.value?.limits.canUpgrade ?? true;
     return _panel(
       child: Column(
@@ -582,7 +587,7 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
             GradientPillButton(
               key: const ValueKey('dm_chat_more_plus'),
               tone: ListingTone.cF,
-              label: SocialStringsC.chatMorePlus,
+              label: button,
               onTap: _openPlus,
             ),
           ],

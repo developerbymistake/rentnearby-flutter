@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 
 import 'b/social_bindings_b.dart';
 import 'c/social_bindings_c.dart';
+import 'shared/social_area_sync.dart';
 import 'shared/social_live.dart';
 import 'shared/social_me_controller.dart';
 
@@ -10,6 +11,7 @@ abstract final class SocialSessionHooks {
     SocialMeController.maybe?.clear();
     if (Get.isRegistered<SocialMeController>()) Get.delete<SocialMeController>(force: true);
     SocialLive.reset();
+    SocialAreaSync.reset();
     SocialSessionB.clear();
     SocialSessionC.clear();
   }

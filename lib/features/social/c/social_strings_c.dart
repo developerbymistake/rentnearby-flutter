@@ -30,6 +30,8 @@ abstract final class SocialStringsC {
   static const String safety = 'Never send money to someone you have not met.';
   static const String firstMessageTitle = 'Make your first message count';
   static const String chatMorePlus = 'Chat more with Plus';
+  static const String groupChatPlusTitle = 'Chat with your trip group with Plus';
+  static const String groupChatPlusLine = 'You can read the chat. Plus lets you send messages.';
   static String freeCountLine(LimitLine l, String peer) =>
       'Free: first message to ${l.limit} new people a month (${l.left} left). $peer can reply for free.';
   static String firstFreeLine(LimitLine l) => 'Your first message to a new person is free · ${l.left} of ${l.limit} left this month';
@@ -80,6 +82,8 @@ abstract final class SocialStringsC {
   static const String genderOnlySub = 'Men-only and Anyone are free';
   static const String nearMe = 'Near me filter';
   static const String nearMeSub = 'See trips starting close to you';
+  static const String groupChatPerk = 'Trip group chat';
+  static const String groupChatPerkSub = 'Send messages to everyone on your trip';
   static const String alwaysFree = 'Always free: replying to people who wrote to you, follow, privacy, report and block.';
   static String footerTitle(String cycle) => 'Bakhli Plus · $cycle';
   static String footerToday(String price) => '$price today';

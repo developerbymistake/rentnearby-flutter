@@ -1,3 +1,5 @@
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/features/social/c/plus/seeker_plan_keys.dart';
 import 'package:bakhli/features/social/c/plus/seeker_plus_controller.dart';
 import 'package:bakhli/features/social/c/social_strings_c.dart';
 import 'package:bakhli/features/social/shared/social_me_controller.dart';
@@ -22,7 +24,7 @@ void main() {
     Get.put<SocialMeController>(FakeSocialMeController(plusLimits()));
     final plans = FakePlanController(paid: true)..catalog.value = PlanCatalogModel({'Seeker': [seekerPlus()]});
     final c = SeekerPlusController(plans: plans);
-    expect(c.perks().where((p) => p.subtitle != null && p.title != SocialStringsC.genderOnly && p.title != SocialStringsC.nearMe), isEmpty);
+    expect(c.perks().where((p) => p.subtitle != null && p.title != SocialStringsC.genderOnly && p.title != SocialStringsC.nearMe && p.title != SocialStringsC.groupChatPerk), isEmpty);
   });
 
   test('the women-only perk uses the woman raising hand art', () {
@@ -36,5 +38,31 @@ void main() {
     final plans = FakePlanController()..catalog.value = PlanCatalogModel({'Seeker': [seekerPlus()]});
     final c = SeekerPlusController(plans: plans);
     expect(c.perks().first.subtitle, SocialStringsC.chatPeopleSub(3));
+  });
+
+  test('A1 the Plus screen tells buyers that Plus unlocks the trip group chat', () {
+    Get.put<SocialMeController>(FakeSocialMeController(freeLimits()));
+    final c = SeekerPlusController(plans: FakePlanController());
+    final perk = c.perks().firstWhere((p) => p.title == SocialStringsC.groupChatPerk);
+    expect(perk.subtitle, SocialStringsC.groupChatPerkSub);
+    expect(perk.art, ListingArt.speechBalloon);
+    expect(SeekerPlanKeys.groupChat, 'SeekerGroupChat');
+  });
+
+  test('A1 no group chat perk when the Plus plan does not include it', () {
+    Get.put<SocialMeController>(FakeSocialMeController(freeLimits()));
+    final plus = PlanModel.fromJson({
+      'id': 'p2',
+      'code': 'SEEKER_PLUS',
+      'name': 'Bakhli Plus',
+      'isDefault': false,
+      'features': {'SeekerGroupChat': 0, 'SeekerNearMe': 1},
+      'prices': [
+        {'cycleMonths': 1, 'priceInr': 200, 'perMonthInr': 200, 'playBasePlanId': 'cycle-1m'},
+      ],
+    }, 'Seeker');
+    final plans = FakePlanController()..catalog.value = PlanCatalogModel({'Seeker': [seekerFree(), plus]});
+    final c = SeekerPlusController(plans: plans);
+    expect(c.perks().where((p) => p.title == SocialStringsC.groupChatPerk), isEmpty);
   });
 }

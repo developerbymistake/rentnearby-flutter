@@ -6,6 +6,15 @@ abstract final class SocialNavB {
   static int _feedsOpen = 0;
   static final RxInt posted = 0.obs;
 
+  /// One line for the live card after a post (nearby at 7 am, or notifications used up); read once.
+  static String? postedNote;
+
+  static String? takePostedNote() {
+    final n = postedNote;
+    postedNote = null;
+    return n;
+  }
+
   static void feedOpened() => _feedsOpen++;
 
   static void feedClosed() {

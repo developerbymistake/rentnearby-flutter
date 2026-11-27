@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../../../design/design.dart';
 import '../../../../navigation/traveller_gate.dart';
+import '../../../buddy/shared/widgets/buddy_snack.dart';
 import '../../a/widgets/social_chips_a.dart';
 import '../../shared/social_error_types.dart';
 import '../../shared/social_me_controller.dart';
@@ -12,18 +14,29 @@ import 'social_widgets_b.dart';
 
 // The one way into the Post your trip wizard from Home, My Trips and the feed: the public-trip and active-trip caps are checked first.
 abstract final class PostTripEntry {
-  static Future<void> open(BuildContext context) async {
-    final limits = SocialMeController.maybe?.me.value?.limits;
+  /// [tripId] = post an existing trip (trip overview menu): the active-trip cap does not apply, the trip already exists.
+  static Future<void> open(BuildContext context, {String? tripId}) async {
+    final me = SocialMeController.maybe;
+    if (me != null && me.me.value == null) await me.refreshQuiet();
+    if (!context.mounted) return;
+    final limits = me?.me.value?.limits;
     if (limits != null && limits.publicTrips.reached) {
       await PlusSheets.limitReached(context, errorType: SocialErrorTypes.publicTripLimit, data: {'limit': limits.publicTrips.limit}, from: 'post');
       return;
     }
-    if (limits != null && limits.activeTrips.reached) {
+    if (tripId == null && limits != null && limits.activeTrips.reached) {
       await PlusSheets.limitReached(context, errorType: SocialErrorTypes.tripLimitReached, data: {'limit': limits.activeTrips.limit}, from: 'post');
       return;
     }
-    await SocialNav.openPostTrip();
+    if (limits != null && limits.publishes.reached) {
+      BuddySnack.show(context, SocialStringsB.publishLimit(limits.publishNextAt?.toLocal()), danger: true);
+      return;
+    }
+    await SocialNav.openPostTrip(tripId: tripId);
   }
+
+  /// The line the post entries show in place of their invitation once the live post cap is reached ('' = none).
+  static String hint() => SocialStringsB.postEntryHint(SocialMeController.maybe?.me.value?.limits);
 }
 
 enum FindBuddiesPostPlace { home, myTrips }
@@ -48,7 +61,17 @@ class FindBuddiesPostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!TravellerGate.allowed) return const SizedBox.shrink();
+    final me = SocialMeController.maybe;
+    if (me == null) return _card(context, '');
+    return Obx(() {
+      me.me.value;
+      return _card(context, PostTripEntry.hint());
+    });
+  }
+
+  Widget _card(BuildContext context, String hint) {
     if (_home) {
+      final line = hint.isEmpty ? SocialStringsB.homePostLine : hint;
       return KeyedSubtree(
         key: homeKey,
         child: WorkoutCard(
@@ -57,16 +80,16 @@ class FindBuddiesPostCard extends StatelessWidget {
           art: ListingArt.backpack,
           eyebrow: SocialStringsB.homePostEyebrow,
           title: SocialStringsB.homePostTitle,
-          subtitle: SocialStringsB.homePostLine,
+          subtitle: line,
           actionLabel: SocialStringsB.post,
           margin: const EdgeInsets.only(left: 18, right: 18, bottom: 4),
-          semanticsLabel: '${SocialStringsB.homePostEyebrow} ${SocialStringsB.homePostTitle}. ${SocialStringsB.homePostLine} ${SocialStringsB.post}',
+          semanticsLabel: '${SocialStringsB.homePostEyebrow} ${SocialStringsB.homePostTitle}. $line ${SocialStringsB.post}',
           onTap: () => PostTripEntry.open(context),
         ),
       );
     }
     const title = SocialStringsB.myTripsPostTitle;
-    const line = SocialStringsB.myTripsPostLine;
+    final line = hint.isEmpty ? SocialStringsB.myTripsPostLine : hint;
     const art = ListingArt.backpack;
     void open() => PostTripEntry.open(context);
     return Padding(

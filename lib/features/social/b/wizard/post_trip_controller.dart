@@ -50,6 +50,36 @@ class PostTripController extends GetxController {
   // Spec 22: Anyone and Men only are free; Women only needs Plus.
   bool get canWomenOnly => limits?.genderOnlyTrips ?? false;
 
+  LimitUse get notifyUse => limits?.notifiedPosts ?? SocialLimits.defaultNotifiedPosts;
+
+  bool get notifyUsedUp => notifyUse.reached;
+
+  bool get notifyPrivate => SocialMeController.maybe?.profile?.isPrivate ?? false;
+
+  bool get notifyTooFar {
+    final d = draft.value;
+    final start = d.startDate;
+    if (!d.isExact || start == null) return false;
+    return start.difference(_today()).inDays > PostDraft.nearbyAheadDays;
+  }
+
+  // Server safety rule: a Men only / Women only post reaches nearby travellers only from a poster of that gender.
+  // Profile not loaded yet: the server answer decides.
+  bool get notifyGender {
+    final code = draft.value.joinGender;
+    final gender = SocialMeController.maybe?.profile?.gender;
+    if (code == 'A' || gender == null) return false;
+    return !((code == 'M' && gender == 'Male') || (code == 'F' && gender == 'Female'));
+  }
+
+  bool get canNotifyNearby => !notifyUsedUp && !notifyPrivate && !notifyTooFar && !notifyGender;
+
+  void setNotifyNearby(bool on) {
+    if (on && !canNotifyNearby) return;
+    if (draft.value.notifyNearby == on) return;
+    draft.value = draft.value.copyWith(notifyNearby: on);
+  }
+
   bool allowedJoin(String code) => code == 'A' || code == 'M' || (code == 'F' && canWomenOnly);
 
   List<String> get postChips {
@@ -268,7 +298,7 @@ class PostTripController extends GetxController {
     if (busy.value) return const BuddyFailed(message: '');
     busy.value = true;
     try {
-      final d = draft.value;
+      final d = draft.value.copyWith(notifyNearby: draft.value.notifyNearby && canNotifyNearby);
       final r = fromTrip ? await _api.publish(tripId!, d) : await _api.create(d, clientTripId: clientTripId);
       if (r.isOk && persist) await PostDraftStore.clear().catchError((Object _) {});
       return r;

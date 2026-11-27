@@ -17,16 +17,19 @@ import '../social_strings_b.dart';
 import '../widgets/social_widgets_b.dart';
 
 class JoinRequestSheet extends StatefulWidget {
-  const JoinRequestSheet({super.key, required this.trip, this.api = const JoinApi()});
+  const JoinRequestSheet({super.key, required this.trip, this.api = const JoinApi(), this.onStale});
 
   final PublicTrip trip;
   final JoinApi api;
 
+  /// Told about a refusal that makes the shown post out of date (Full, removed member), so the page updates at once.
+  final void Function(String? type)? onStale;
+
   static const Key noteKey = ValueKey('join_note');
   static const Key sendKey = ValueKey('join_send');
 
-  static Future<bool> show(BuildContext context, PublicTrip trip, {JoinApi api = const JoinApi()}) async {
-    final ok = await Sheet3D.show<bool>(context, builder: (_) => JoinRequestSheet(trip: trip, api: api));
+  static Future<bool> show(BuildContext context, PublicTrip trip, {JoinApi api = const JoinApi(), void Function(String? type)? onStale}) async {
+    final ok = await Sheet3D.show<bool>(context, builder: (_) => JoinRequestSheet(trip: trip, api: api, onStale: onStale));
     return ok == true;
   }
 
@@ -47,7 +50,15 @@ class _JoinRequestSheetState extends State<JoinRequestSheet> {
     SocialErrorTypes.alreadyMember,
     SocialErrorTypes.askAgainLater,
     SocialErrorTypes.tripGenderMismatch,
+    SocialErrorTypes.tripRequestsFull,
+    SocialErrorTypes.cannotRejoin,
   };
+
+  static String? _calm(String? type) => switch (type) {
+        SocialErrorTypes.tripRequestsFull => SocialStringsB.requestsFullNow,
+        SocialErrorTypes.cannotRejoin => SocialStringsB.cannotRejoin,
+        _ => null,
+      };
 
   @override
   void initState() {
@@ -83,8 +94,11 @@ class _JoinRequestSheetState extends State<JoinRequestSheet> {
           if (host.mounted) await PlusSheets.limitReached(host, errorType: type!, data: data, from: 'join');
           return;
         }
-        if (_staleTypes.contains(type)) SocialLive.posts.value++;
-        setState(() => _error = message ?? SocialStrings.failed);
+        if (_staleTypes.contains(type)) {
+          widget.onStale?.call(type);
+          SocialLive.posts.value++;
+        }
+        setState(() => _error = _calm(type) ?? message ?? SocialStrings.failed);
       case BuddyOffline():
         setState(() => _error = SocialStrings.offline);
       case BuddyFailed():

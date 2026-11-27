@@ -38,6 +38,7 @@ class TravelBuddiesScreen extends StatefulWidget {
   static const Key filterKey = ValueKey('feed_filter');
   static const Key bellKey = ValueKey('feed_bell');
   static const Key postKey = ValueKey('feed_post_trip');
+  static const Key postHintKey = ValueKey('feed_post_hint');
   static const Key searchKey = ValueKey('feed_search');
   static const Key liveKey = ValueKey('feed_live');
   static const Key liveCloseKey = ValueKey('feed_live_close');
@@ -57,6 +58,7 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
   Worker? _postedAgain;
   bool _snackShown = false;
   String? _liveTitle;
+  String? _liveNote;
   bool _live = false;
   Timer? _liveTimer;
 
@@ -94,8 +96,10 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
     if (_snackShown || !mounted || c.state.value != FeedLoad.ready) return;
     _snackShown = true;
     final city = c.mine.isEmpty || c.mine.first.cityNames.isEmpty ? null : c.mine.first.cityNames.first;
+    final note = SocialNavB.takePostedNote();
     setState(() {
       _liveTitle = city == null ? null : SocialStringsB.liveTitle(city);
+      _liveNote = note;
       _live = true;
     });
     _liveTimer?.cancel();
@@ -132,7 +136,7 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (title != null) Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(14, FontWeight.w600, Ink3D.title, letterSpacing: 0)),
-                  Text(SocialStringsB.liveBody, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
+                  Text(_liveNote ?? SocialStringsB.liveBody, maxLines: 3, overflow: TextOverflow.ellipsis, style: Ink3D.text(13, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
                 ],
               ),
             ),
@@ -190,7 +194,7 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
   Future<void> _postTrip() => PostTripEntry.open(context);
 
   Future<void> _request(PublicTrip t) async {
-    final ok = await JoinRequestSheet.show(context, t);
+    final ok = await JoinRequestSheet.show(context, t, onStale: (type) => c.applyRefusal(t.tripId, type));
     if (!ok || !mounted) return;
     c.applyMyJoin(t.tripId, 'requested');
     BuddySnack.show(context, SocialStringsB.requestSent);
@@ -305,10 +309,16 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
         if (me != null)
           Obx(() {
             final l = me.me.value?.limits;
-            if (l == null || l.isPlus) return const SizedBox.shrink();
+            final hint = SocialStringsB.postEntryHint(l);
+            if (hint.isEmpty && (l == null || l.isPlus)) return const SizedBox.shrink();
             return Padding(
               padding: DS.gapInsets(l: 22, r: 22, b: 12),
-              child: Text(SocialStringsB.freeLine(l), textAlign: TextAlign.center, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
+              child: Text(
+                hint.isEmpty ? SocialStringsB.freeLine(l!) : hint,
+                key: hint.isEmpty ? null : TravelBuddiesScreen.postHintKey,
+                textAlign: TextAlign.center,
+                style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0),
+              ),
             );
           }),
       ],
@@ -351,6 +361,18 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
         );
       case 'declined':
         return GradientPillButton(tone: teal, label: SocialStringsB.notThisTime, enabled: false, height: SocialButtonsA.midHeight, fontSize: SocialButtonsA.midFont, onTap: null);
+      case 'removed':
+        return GradientPillButton(
+          key: ValueKey('feed_removed_${t.tripId}'),
+          tone: teal,
+          label: SocialStringsB.cannotRejoin,
+          enabled: false,
+          offColor: Form3D.fillOff,
+          offLabelColor: BuddyLook.subText,
+          height: SocialButtonsA.midHeight,
+          fontSize: SocialButtonsA.midFont,
+          onTap: null,
+        );
     }
     if (JoinGenderRule.blocks(t)) {
       return GradientPillButton(
@@ -366,8 +388,16 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
         onTap: null,
       );
     }
-    if (t.seatsLeft <= 0) {
-      return GradientPillButton(tone: teal, label: SocialStringsB.full, enabled: false, height: SocialButtonsA.midHeight, fontSize: SocialButtonsA.midFont, onTap: null);
+    if (t.fullForOthers) {
+      return GradientPillButton(
+        key: ValueKey('feed_full_${t.tripId}'),
+        tone: teal,
+        label: SocialStringsB.fullLabel(t.seatsLeft),
+        enabled: false,
+        height: SocialButtonsA.midHeight,
+        fontSize: SocialButtonsA.midFont,
+        onTap: null,
+      );
     }
     return GradientPillButton(
       key: ValueKey('feed_request_${t.tripId}'),
@@ -381,20 +411,21 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
 
   // Mock D10g: the own post card keeps the ⋮ next to 'Your post', same Remove item as the Trip post page.
   List<TripPostMenuItem> _ownMenu(PublicTrip t) => [
-        TripPostMenuItem(
-          art: ListingArt.locked,
-          title: SocialStringsB.removePost,
-          subtitle: SocialStringsB.removePostLine,
-          danger: true,
-          onSelected: () async {
-            final r = await c.removeMyPost(t.tripId);
-            if (!mounted) return;
-            if (r.isOk) {
-              BuddySnack.show(context, SocialStringsB.postRemoved);
-            } else if (r is BuddyFailed<void> && r.message.isNotEmpty) {
-              BuddySnack.show(context, r.message, danger: true);
-            }
+        TripPostActions.removeItem(
+          context,
+          t,
+          remove: () => c.removeMyPost(t.tripId),
+          onRemoved: () => BuddySnack.show(context, SocialStringsB.postRemoved),
+          onFailed: (r) {
+            final text = switch (r) {
+              BuddyRefused(:final message) => message ?? SocialStrings.failed,
+              BuddyOffline() => SocialStrings.offline,
+              BuddyFailed(:final message) => message.isEmpty ? null : message,
+              _ => null,
+            };
+            if (text != null) BuddySnack.show(context, text, danger: true);
           },
+          onBlocked: (b) => c.applyRemovalBlock(t.tripId, b),
         ),
       ];
 

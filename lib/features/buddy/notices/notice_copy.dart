@@ -156,6 +156,9 @@ abstract final class NoticeCopy {
         return _social(n, NoticeStrings.joinDeclined(_text(n.tripCity)), null, AppRoutes.travelBuddies, const {}, place: _text(n.tripCity));
       case NoticeKinds.followedPosted:
         return _social(n, NoticeStrings.followedPosted(actor, _text(n.tripCity)), null, AppRoutes.tripPost, tripArgs, place: _text(n.tripCity));
+      case NoticeKinds.nearbyPosted:
+        final one = !many && n.tripId != null;
+        return _social(n, one ? NoticeStrings.nearbyPostedOne(actor) : NoticeStrings.nearbyPostedMany(n.count), null, one ? AppRoutes.tripPost : AppRoutes.travelBuddies, one ? tripArgs : const {});
       case NoticeKinds.shareChanged:
         return _money(
           NoticeStrings.shareChangedTitle,

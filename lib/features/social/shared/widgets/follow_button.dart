@@ -5,6 +5,7 @@ import '../../../buddy/shared/buddy_look.dart';
 import '../../../buddy/shared/buddy_result.dart';
 import '../../../buddy/shared/widgets/buddy_snack.dart';
 import '../data/follow_api.dart';
+import '../social_error_types.dart';
 import '../social_live.dart';
 import '../social_strings.dart';
 
@@ -99,7 +100,7 @@ class _FollowButtonState extends State<FollowButton> {
     if (!mounted) return;
     final text = switch (r) {
       BuddyOffline() => SocialStrings.offline,
-      BuddyRefused(:final message) => message ?? SocialStrings.failed,
+      BuddyRefused(:final type, :final message) => type == SocialErrorTypes.tooManyRequests ? SocialStrings.followLimit : (message ?? SocialStrings.failed),
       _ => SocialStrings.failed,
     };
     BuddySnack.show(context, text, danger: true);

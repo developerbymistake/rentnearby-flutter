@@ -27,6 +27,7 @@ import '../widgets/trip_lifecycle_actions.dart';
 import '../../buddy/offline/widgets/lost_changes_banner.dart';
 import '../../buddy/viewer/widgets/shared_with_me_section.dart';
 import '../../social/b/widgets/find_buddies_post_card.dart';
+import '../../social/shared/post_removal.dart';
 
 class MyTripsScreen extends StatefulWidget {
   final bool root;
@@ -138,6 +139,10 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
   }
 
   Future<void> _delete(TripSummaryModel t) async {
+    if (PostRemovalRule.lockOnly(t.postUnlocksAt) case final block?) {
+      await PostRemovalNotice.show(context, t.id, block);
+      return;
+    }
     final rows = t.progress.rows;
     final stays = rows.where((r) => (r.state == TripRowState.confirmed || r.state == TripRowState.booked) && r.key.kind == TripEasyRowKind.stay).length;
     final taxis = rows.where((r) => (r.state == TripRowState.confirmed || r.state == TripRowState.booked) && r.key.kind == TripEasyRowKind.taxi).length;

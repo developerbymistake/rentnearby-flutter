@@ -34,6 +34,9 @@ class TripPostScreen extends StatefulWidget {
   static const Key joinRequestsKey = ValueKey('trip_post_join_requests');
   static const Key openTripKey = ValueKey('trip_post_open_trip');
   static const Key onlyForKey = ValueKey('trip_post_only_for');
+  static const Key fullKey = ValueKey('trip_post_full');
+  static const Key removedKey = ValueKey('trip_post_removed');
+  static const Key ownerNoteKey = ValueKey('trip_post_owner_note');
 
   @override
   State<TripPostScreen> createState() => _TripPostScreenState();
@@ -67,7 +70,7 @@ class _TripPostScreenState extends State<TripPostScreen> {
   }
 
   Future<void> _request(PublicTrip t) async {
-    final ok = await JoinRequestSheet.show(context, t);
+    final ok = await JoinRequestSheet.show(context, t, onStale: c.applyRefusal);
     if (!ok || !mounted) return;
     c.markRequested();
     BuddySnack.show(context, SocialStringsB.requestSent, bottom: _snackBottom);
@@ -91,21 +94,19 @@ class _TripPostScreenState extends State<TripPostScreen> {
         if (mounted) Navigator.of(context).maybePop();
       },
       own: [
-        TripPostMenuItem(
-          art: ListingArt.locked,
-          title: SocialStringsB.removePost,
-          subtitle: SocialStringsB.removePostLine,
-          danger: true,
-          onSelected: () async {
-            final r = await c.unpublish();
-            if (!mounted) return;
-            if (r.isOk) {
-              BuddySnack.show(context, SocialStringsB.postRemoved);
-              Navigator.of(context).maybePop();
-            } else {
-              _fail(r);
-            }
+        TripPostActions.removeItem(
+          context,
+          t,
+          remove: c.unpublish,
+          onRemoved: () {
+            BuddySnack.show(context, SocialStringsB.postRemoved);
+            Navigator.of(context).maybePop();
           },
+          onFailed: (r) {
+            if (r is BuddyFailed<void> && r.message.isEmpty) return;
+            _fail(r);
+          },
+          onBlocked: c.applyRemovalBlock,
         ),
       ],
     );
@@ -191,7 +192,7 @@ class _TripPostScreenState extends State<TripPostScreen> {
       (SocialStringsB.factWhen, SocialFormats.when(t.when)),
       (SocialStringsB.factHowLong, SocialFormats.days(t.days)),
       (SocialStringsB.factWho, SocialFormats.whoCanJoin(t.joinGender)),
-      (SocialStringsB.factSeats, SocialStringsB.seatsFact(t.seatsLeft)),
+      (SocialStringsB.factSeats, t.requestsFull && !t.isMine ? SocialStringsB.full : SocialStringsB.seatsFact(t.seatsLeft)),
     ];
     return Container(
       margin: DS.gapInsets(l: 18, t: 18, r: 18),
@@ -213,6 +214,13 @@ class _TripPostScreenState extends State<TripPostScreen> {
         ],
       ),
     );
+  }
+
+  String? _ownerNote(PublicTrip t) {
+    if (!t.isMine) return null;
+    if (t.requestsFull) return SocialStringsB.requestsFullOwner(t.waitingRequests ?? PublicTrip.requestsCap);
+    if (t.nearbyPending) return SocialStringsB.nearbyTomorrow;
+    return null;
   }
 
   Widget _text(PublicTrip t) => Container(
@@ -273,6 +281,15 @@ class _TripPostScreenState extends State<TripPostScreen> {
           ),
         'member' => WhitePillButton(tone: teal, label: SocialStringsB.openTrip, onTap: () => Get.toNamed(AppRoutes.tripView, arguments: {'tripId': t.tripId})),
         'declined' => GradientPillButton(tone: teal, label: SocialStringsB.notThisTime, enabled: false, onTap: null),
+        'removed' => GradientPillButton(
+            key: TripPostScreen.removedKey,
+            tone: teal,
+            label: SocialStringsB.cannotRejoin,
+            enabled: false,
+            onTap: null,
+            offColor: Form3D.fillOff,
+            offLabelColor: BuddyLook.subText,
+          ),
         _ when JoinGenderRule.blocks(t) => GradientPillButton(
             key: TripPostScreen.onlyForKey,
             tone: teal,
@@ -283,8 +300,8 @@ class _TripPostScreenState extends State<TripPostScreen> {
             offColor: Form3D.fillOff,
             offLabelColor: BuddyLook.subText,
           ),
-        _ => t.seatsLeft <= 0
-            ? GradientPillButton(tone: teal, label: SocialStringsB.full, enabled: false, onTap: null)
+        _ => t.fullForOthers
+            ? GradientPillButton(key: TripPostScreen.fullKey, tone: teal, label: SocialStringsB.fullLabel(t.seatsLeft), enabled: false, onTap: null)
             : GradientPillButton(key: TripPostScreen.requestKey, tone: teal, label: SocialStringsB.requestToJoin, onTap: () => _request(t)),
       };
     }
@@ -337,6 +354,7 @@ class _TripPostScreenState extends State<TripPostScreen> {
                     _cover(t),
                     _facts(t),
                     if (t.text.trim().isNotEmpty) _text(t),
+                    if (_ownerNote(t) case final note?) Padding(key: TripPostScreen.ownerNoteKey, padding: DS.gapInsets(l: 22, t: 14, r: 22), child: Text(note, style: Ink3D.text(13, FontWeight.w400, Ink3D.grey, height: 1.45, letterSpacing: 0))),
                     const SafetyLine(text: SocialStrings.safetyMeet),
                     Gap.v(12),
                   ],

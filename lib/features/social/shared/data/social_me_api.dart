@@ -18,6 +18,8 @@ class SocialMeApi {
   Future<BuddyResult<MyProfile>> updatePrivacy(Map<String, dynamic> body) =>
       BuddyApiBase.run(() async => MyProfile.fromJson(BuddyApiBase.dataOf(await ApiService.put('/social/me/privacy', body))));
 
+  Future<BuddyResult<void>> updateArea(String districtId) => BuddyApiBase.run(() async => ApiService.put('/social/me/area', {'districtId': districtId}));
+
   Future<BuddyResult<void>> acceptGuidelines() => BuddyApiBase.run(() async => ApiService.post('/social/me/guidelines', <String, dynamic>{}));
 
   Future<BuddyResult<TravellerProfile>> traveller(String userId) => BuddyApiBase.run(() async =>

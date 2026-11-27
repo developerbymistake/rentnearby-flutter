@@ -12,6 +12,7 @@ abstract final class SeekerPlanKeys {
   static const String newChats = 'SeekerNewChatsPerMonth';
   static const String genderOnly = 'SeekerGenderOnlyTrips';
   static const String nearMe = 'SeekerNearMe';
+  static const String groupChat = 'SeekerGroupChat';
 
   static PlanController? get plans => Get.isRegistered<PlanController>() ? Get.find<PlanController>() : null;
 
