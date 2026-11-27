@@ -23,6 +23,7 @@ import '../widgets/trip_leg_fold_state.dart';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import '../trip_strings_v2_plan.dart';
 import '../widgets/trip_add_city_card.dart';
+import '../widgets/trip_archived_view.dart';
 import '../widgets/trip_day_spot_list.dart';
 import '../widgets/trip_day_chips.dart';
 import '../widgets/trip_days_sheet.dart';
@@ -283,7 +284,10 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     TripNavigation.openStayFlow(context);
   }
 
-  bool get _exitGuard => _c.trip.value != null && _c.plan.value != null && !_c.tripGone.value && !_c.plannerOff.value;
+  bool get _archivedHere => _c.isArchived && (_tripId == null || _c.trip.value?.id == _tripId);
+
+  bool get _exitGuard =>
+      _c.trip.value != null && _c.plan.value != null && !_c.tripGone.value && !_c.plannerOff.value && !_archivedHere;
 
   bool _askingExit = false;
 
@@ -300,13 +304,16 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   @override
   Widget build(BuildContext context) {
     final page = _page(context);
-    return Obx(() => PopScope(
-          canPop: !_exitGuard,
-          onPopInvokedWithResult: (didPop, _) {
-            if (!didPop) _askExit();
-          },
-          child: page,
-        ));
+    return Obx(() {
+      if (_archivedHere) return TripArchivedView(trip: _c.trip.value!);
+      return PopScope(
+        canPop: !_exitGuard,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _askExit();
+        },
+        child: page,
+      );
+    });
   }
 
   Widget _page(BuildContext context) {

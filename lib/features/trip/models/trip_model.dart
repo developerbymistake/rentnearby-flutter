@@ -1,6 +1,7 @@
 import '../../buddy/sharing/models/sharing_models.dart';
 import '../trip_strings_mca_a4.dart';
 import '../widgets/trip_status.dart';
+import 'trip_archive_model.dart';
 import 'trip_enquiry_model.dart';
 import 'trip_journey_model.dart';
 import 'trip_plan_model.dart';
@@ -31,6 +32,13 @@ class TripPlanLockReasons {
 }
 
 String? _text(Object? v) => v is String && v.isNotEmpty ? v : null;
+
+// An archived trip may send no plan at all: an empty one-city plan stands in.
+TripPlan _planOf(Map<String, dynamic> json) {
+  final p = json['plan'];
+  if (p is Map<String, dynamic>) return TripPlan.fromJson(p);
+  return TripPlan.fromJson({'cityKey': json['cityKey'], 'cityName': json['cityName']});
+}
 
 class TripPlanLock {
   final bool locked;
@@ -126,6 +134,9 @@ class TripModel {
   final TripSharingBlock? sharing;
   final bool inactiveByPlan;
   final bool isPublic;
+  final bool archived;
+  final DateTime? archivedAt;
+  final TripArchiveSummary? archive;
 
   const TripModel({
     required this.id,
@@ -159,9 +170,23 @@ class TripModel {
     this.sharing,
     this.inactiveByPlan = false,
     this.isPublic = false,
+    this.archived = false,
+    this.archivedAt,
+    this.archive,
   }) : _legCities = legCities;
 
   List<String> get legCities => _legCities ?? [cityName];
+
+  TripArchiveSummary get archiveOrFallback =>
+      archive ??
+      TripArchiveSummary.fallback(
+        title: title,
+        legCities: legCities,
+        startDate: startDate,
+        endDate: endDate,
+        dayCount: dayCount,
+        spotCount: spotCount,
+      );
 
   static TripSharingBlock? _sharingOf(Object? s) => s is Map<String, dynamic> ? TripSharingBlock.fromJson(s) : null;
 
@@ -247,6 +272,9 @@ class TripModel {
         sharing: sharing ?? this.sharing,
         inactiveByPlan: inactiveByPlan ?? this.inactiveByPlan,
         isPublic: isPublic ?? this.isPublic,
+        archived: archived,
+        archivedAt: archivedAt,
+        archive: archive,
       );
 
   factory TripModel.fromJson(Map<String, dynamic> json) => TripModel(
@@ -260,7 +288,7 @@ class TripModel {
         cityLongitude: (json['cityLongitude'] as num?)?.toDouble() ?? 0,
         dayCount: (json['dayCount'] as num?)?.toInt() ?? 0,
         spotCount: (json['spotCount'] as num?)?.toInt() ?? 0,
-        plan: TripPlan.fromJson(json['plan'] as Map<String, dynamic>),
+        plan: _planOf(json),
         enquiries: ((json['enquiries'] as List?) ?? const [])
             .whereType<Map<String, dynamic>>()
             .map(TripEnquiryModel.fromJson)
@@ -288,6 +316,9 @@ class TripModel {
         sharing: _sharingOf(json['sharing']),
         inactiveByPlan: json['inactiveByPlan'] == true,
         isPublic: json['isPublic'] == true,
+        archived: json['archived'] == true,
+        archivedAt: _instant(json['archivedAt']),
+        archive: json['archived'] == true ? TripArchiveSummary.tryParse(json['summary']) : null,
       );
 }
 
@@ -431,6 +462,8 @@ class TripSummaryModel {
   final List<String>? _legCities;
   final TripProgress progress;
   final bool inactiveByPlan;
+  final bool archived;
+  final DateTime? archivedAt;
 
   const TripSummaryModel({
     required this.id,
@@ -453,6 +486,8 @@ class TripSummaryModel {
     List<String>? legCities,
     this.progress = const TripProgress(),
     this.inactiveByPlan = false,
+    this.archived = false,
+    this.archivedAt,
   }) : _legCities = legCities;
 
   List<String> get legCities => _legCities ?? [cityName];
@@ -511,6 +546,8 @@ class TripSummaryModel {
         legCities: _legCities,
         progress: progress,
         inactiveByPlan: inactiveByPlan,
+        archived: archived,
+        archivedAt: archivedAt,
       );
 
   TripSummaryModel withMuted(DateTime? at) => _with(mutedAt: at, completedAt: completedAt);
@@ -539,6 +576,8 @@ class TripSummaryModel {
         legCities: _legCitiesOf(json['legCities']),
         progress: TripProgress.tryParse(json['progress']) ?? const TripProgress(),
         inactiveByPlan: json['inactiveByPlan'] == true,
+        archived: json['archived'] == true,
+        archivedAt: _instant(json['archivedAt']),
       );
 }
 

@@ -37,6 +37,7 @@ class TripErrorTypes {
   static const String tooManySpotsForDays = 'TooManySpotsForDays';
   static const String nameInvalid = 'TripNameInvalid';
   static const String tripChanged = 'TripChanged';
+  static const String tripArchived = 'TripArchived';
 }
 
 class TripCitySupply {

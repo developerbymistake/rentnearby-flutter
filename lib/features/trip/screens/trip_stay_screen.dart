@@ -25,6 +25,7 @@ import '../trip_strings_v2_easy.dart';
 import '../trip_strings_v2_find.dart';
 import '../utils/trip_clock.dart';
 import '../utils/trip_format.dart';
+import '../widgets/trip_archived_view.dart';
 import '../widgets/trip_arrange_confirm.dart';
 import '../widgets/trip_filter_chips.dart';
 import '../widgets/trip_list_look.dart';
@@ -94,8 +95,10 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
     }
     _nearYou = map['nearLat'] is num && map['nearLng'] is num;
     _supply.setNear((map['nearLat'] as num?)?.toDouble(), (map['nearLng'] as num?)?.toDouble());
-    _supply.ensureStays(_leg, onlyDays: _only);
-    _planWorker = ever(_plan.plan, (_) => _supply.ensureStays(_leg));
+    if (!_plan.isArchived) _supply.ensureStays(_leg, onlyDays: _only);
+    _planWorker = ever(_plan.plan, (_) {
+      if (!_plan.isArchived) _supply.ensureStays(_leg);
+    });
     _fullWorker = ever(TripShortlistController.to.stepFull, (TripStepFull? full) {
       if (full == null || !mounted) return;
       TripShortlistController.to.stepFull.value = null;
@@ -625,6 +628,8 @@ class _TripStayScreenState extends State<TripStayScreen> with TickerProviderStat
 
   @override
   Widget build(BuildContext context) {
+    final t = _plan.trip.value;
+    if (t != null && t.archived) return TripArchivedView(trip: t);
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {

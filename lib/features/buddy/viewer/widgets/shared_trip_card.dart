@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../design/design.dart';
+import '../../../trip/trip_strings_archived.dart';
 import '../../../trip/utils/trip_clock.dart';
 import '../../../trip/widgets/hub/hub_ring.dart';
 import '../../../trip/widgets/hub/hub_tokens.dart';
@@ -32,6 +33,14 @@ class SharedTripCard extends StatelessWidget {
       children: [
         ViewerCardTitle(t.title),
         ViewerMetaRow(badge: ViewerStrings.viewer, tone: BuddyBadgeTone.view, line: ViewerStrings.byLine(t.ownerName, dates)),
+        if (t.archived)
+          Padding(
+            padding: EdgeInsets.only(bottom: DS.gv(10)),
+            child: const Align(
+              alignment: Alignment.centerLeft,
+              child: StatusPill3D(key: ValueKey('shared_card_archived'), label: TripStringsArchived.archivedTag, status: StatusTone3D.closed, onGradient: false),
+            ),
+          ),
         Row(
           children: [
             Expanded(

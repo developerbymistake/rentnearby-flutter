@@ -53,7 +53,7 @@ void main() {
       ...social,
     };
     expect(AppRoutes.travellerOnly, want);
-    expect(AppRoutes.travellerOnly, hasLength(38));
+    expect(AppRoutes.travellerOnly, hasLength(39));
   });
 
   test('every traveller route opens for a seeker only', () {

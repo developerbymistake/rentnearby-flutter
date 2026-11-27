@@ -93,6 +93,7 @@ class AppRoutes {
 
   static const String tripCustomize = '/trip-customize';
   static const String tripOverview = '/trip-overview';
+  static const String tripArchived = '/trip-archived';
   static const String tripTaxiRequest = '/trip-taxi-request';
   static const String tripTaxiStatus = '/trip-taxi-status';
   static const String taxiRequestRing = '/taxi-request-ring';
@@ -174,6 +175,7 @@ class AppRoutes {
   static const Set<String> travellerOnly = {
     tripCustomize,
     tripOverview,
+    tripArchived,
     tripTaxiRequest,
     tripTaxiStatus,
     tripWhere,

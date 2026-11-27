@@ -83,9 +83,9 @@ class MyTripsController extends GetxController {
     return _repo.cachedList(activeState)?.value.items ?? const <TripSummaryModel>[];
   }
 
-  List<TripSummaryModel> get _openTrips => _barSource.where((t) => !_doneIds.contains(t.id)).toList();
+  List<TripSummaryModel> get _openTrips => _barSource.where((t) => !t.archived && !_doneIds.contains(t.id)).toList();
 
-  TripListGroups get groups => TripBarRules.group(active.where((t) => !_doneIds.contains(t.id)).toList(), _today);
+  TripListGroups get groups => TripBarRules.group(active.where((t) => !t.archived && !_doneIds.contains(t.id)).toList(), _today);
 
   TripSummaryModel? get runningTrip {
     final now = _today;
