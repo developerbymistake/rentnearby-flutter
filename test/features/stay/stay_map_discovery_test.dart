@@ -7,7 +7,9 @@ import 'package:bakhli/features/trip/map/discovery_api.dart';
 import 'package:bakhli/features/trip/map/discovery_overlay.dart';
 import 'package:bakhli/features/trip/map/trip_discovery_layer.dart';
 import 'package:bakhli/features/trip/map/trip_marker_images.dart';
+import 'package:bakhli/features/trip/widgets/map_spot_card_host.dart';
 import 'package:bakhli/features/trip/widgets/trip_map_controls.dart';
+import 'package:bakhli/features/trip/widgets/trip_map_spot_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -299,7 +301,9 @@ void main() {
         width: width,
         textScale: 1.3,
       );
+      await tester.pump(MapSpotCardHost.openDuration);
       expect(find.byKey(const ValueKey('disc-card')), findsOneWidget);
+      expect(tester.widget<TripMapSpotCard>(find.byType(TripMapSpotCard)).tone?.g2, ListingPalette.forest.g2);
       expect(find.byKey(const ValueKey('disc-card-details')), findsOneWidget);
       for (final k in ['disc-card-add', 'disc-card-remove', 'disc-card-inday']) {
         expect(find.byKey(ValueKey(k)), findsNothing);
@@ -315,6 +319,11 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('disc-card-close')));
       await tester.pump();
       expect(l.selected.value, isNull);
+      expect(find.byKey(const ValueKey('disc-card')), findsOneWidget, reason: 'the card slides away, it does not vanish in one frame');
+      await tester.pump(MapSpotCardHost.closeDuration);
+      await tester.pump(MapSpotCardHost.closeDuration);
+      await tester.pump();
+      expect(find.byKey(const ValueKey('disc-card')), findsNothing);
       l.dispose();
     });
   }

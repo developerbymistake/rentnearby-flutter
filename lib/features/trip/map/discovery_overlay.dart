@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../trip_strings_map_disc.dart';
+import '../widgets/map_spot_card_host.dart';
 import '../widgets/trip_map_controls.dart';
 import '../widgets/trip_map_scale_bar.dart';
 import '../widgets/trip_map_spot_card.dart';
@@ -107,32 +108,41 @@ class DiscoveryOverlay extends StatelessWidget {
                 child: TripMapLoadingChip(key: const ValueKey('disc-chip'), text: chip, loading: loading, palette: palette),
               ),
             ),
-          if (sel != null)
-            Positioned(
-              left: s,
-              right: s,
-              top: isTop ? top + DS.gv(cardGapTop) : null,
-              bottom: isTop ? null : host.bottomInset() + DS.gv(cardGapBottom),
-              child: Align(
-                alignment: isTop ? Alignment.topCenter : Alignment.bottomCenter,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: cardMax),
-                  child: TripMapSpotCard(
-                    spot: sel,
-                    mode: m,
-                    plannedDay: m == DiscoveryMode.full ? plannedDay : null,
-                    targetDay: m == DiscoveryMode.full ? host.targetDayFor?.call(sel) : null,
-                    line: host.lineFor?.call(sel),
-                    onAdd: host.onAdd == null ? null : () => host.onAdd!(sel),
-                    onRemove: host.onRemove == null ? null : () => host.onRemove!(sel),
-                    onDetails: host.onDetails == null ? null : () => host.onDetails!(sel),
-                    onClose: () => layer.clearSelection(),
-                    dayColorOf: dayColorOf,
-                    tipX: tipX == null ? null : tipX - s - cardShift,
-                  ),
+          Positioned(
+            key: const ValueKey('disc-card-slot'),
+            left: s,
+            right: s,
+            top: isTop ? top + DS.gv(cardGapTop) : null,
+            bottom: isTop ? null : host.bottomInset() + DS.gv(cardGapBottom),
+            child: Align(
+              alignment: isTop ? Alignment.topCenter : Alignment.bottomCenter,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: cardMax),
+                child: MapSpotCardHost(
+                  id: sel?.id,
+                  label: sel?.name,
+                  edge: isTop ? MapSpotCardEdge.top : MapSpotCardEdge.bottom,
+                  onClose: () => layer.clearSelection(),
+                  child: sel == null
+                      ? null
+                      : TripMapSpotCard(
+                          spot: sel,
+                          mode: m,
+                          tone: ListingTone.palette(palette),
+                          plannedDay: m == DiscoveryMode.full ? plannedDay : null,
+                          targetDay: m == DiscoveryMode.full ? host.targetDayFor?.call(sel) : null,
+                          line: host.lineFor?.call(sel),
+                          onAdd: host.onAdd == null ? null : () => host.onAdd!(sel),
+                          onRemove: host.onRemove == null ? null : () => host.onRemove!(sel),
+                          onDetails: host.onDetails == null ? null : () => host.onDetails!(sel),
+                          onClose: () => layer.clearSelection(),
+                          dayColorOf: dayColorOf,
+                          tipX: tipX == null ? null : tipX - s - cardShift,
+                        ),
                 ),
               ),
             ),
+          ),
         ],
       );
     });
