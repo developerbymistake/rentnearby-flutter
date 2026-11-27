@@ -6,6 +6,7 @@ import '../data/trip_city_catalog.dart';
 import '../models/trip_city_model.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
+import 'trip_city_sheet.dart';
 import 'trip_city_tile.dart';
 
 class TripPopularRail extends StatefulWidget {
@@ -58,6 +59,16 @@ class _TripPopularRailState extends State<TripPopularRail> {
     return [...mine, ...others];
   }
 
+  Future<void> _seeAll() async {
+    final pick = await TripCitySheet.pick(context);
+    if (pick == null) return;
+    if (pick.draftLegs.isNotEmpty) {
+      await TripNavigation.openCreate(pick.cities, draftLegs: pick.draftLegs);
+      return;
+    }
+    await TripNavigation.startWithCities(pick.cities);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!Get.isRegistered<LocationController>()) return _rail(null);
@@ -73,10 +84,10 @@ class _TripPopularRailState extends State<TripPopularRail> {
       children: [
         Semantics(
           header: true,
-          child: const TitleRow3D(
+          child: TitleRow3D(
             title: TripStrings.popularDestinations,
             action: 'See all',
-            onAction: TripNavigation.openTripsTab,
+            onAction: _seeAll,
           ),
         ),
         LayoutBuilder(builder: (context, box) {
