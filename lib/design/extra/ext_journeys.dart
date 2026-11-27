@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/tokens/design_colors.dart';
 
 import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
@@ -23,7 +24,7 @@ abstract final class JourneyInk {
   static List<BoxShadow> get sheetShadow => [BoxShadow(color: Color(0x2E000000), offset: DS.shadowOffset(const Offset(0, -4)), blurRadius: DS.shadowBlur(24))];
   static const Color ok = Color(0xFF2E7D32);
   static const Color bad = Color(0xFFC2410C);
-  static const Color booked = Color(0xFF2633C5);
+  static const Color booked = DesignColors.brandNavy;
   static const Color changeLine = Color(0xFFF57C00);
   static const Color warnLine = Color(0xFFFF8A3D);
   static const Color warnFill = Color(0xFFFFF1DE);
@@ -672,7 +673,7 @@ class JourneyTripCard3D extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: t.gradient,
           borderRadius: DS.br(CardRadius.card),
-          boxShadow: [BoxShadow(color: Color(0x805C5EDD), offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(10))],
+          boxShadow: [BoxShadow(color: DesignColors.brandRoyal50, offset: DS.shadowOffset(const Offset(1.1, 4)), blurRadius: DS.shadowBlur(10))],
         ),
         child: Row(
           children: [

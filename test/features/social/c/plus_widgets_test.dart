@@ -12,6 +12,14 @@ import '../../../support/buddy_render.dart';
 import 'plus_fakes.dart';
 import 'social_c_test_kit.dart';
 
+// The route starts its slide-in on the first frame after the tap, so one long pump leaves it at the start position.
+Future<void> _settleSheet(WidgetTester t) async {
+  await t.pump();
+  for (var i = 0; i < 6; i++) {
+    await t.pump(const Duration(milliseconds: 100));
+  }
+}
+
 void main() {
   useBuddyRenderScale();
   tearDown(Get.reset);
@@ -92,13 +100,16 @@ void main() {
     Get.put<SocialMeController>(FakeSocialMeController(freeLimits()));
     await pumpSocial(t, Builder(builder: (c) => Scaffold(body: Center(child: TextButton(onPressed: () => PlusSheets.limitReached(c, errorType: SocialErrorTypes.newChatLimit, data: const {'limit': 3}), child: const Text('open'))))));
     await t.tap(find.text('open'));
-    await t.pump(const Duration(milliseconds: 500));
+    await _settleSheet(t);
     expect(find.byKey(const ValueKey('plus_limit_sheet')), findsOneWidget);
     expect(find.text(SocialStringsC.limitReachedTitle), findsOneWidget);
     expect(find.text(SocialStringsC.seePlus), findsOneWidget);
     expect(find.text(SocialStringsC.notNow), findsOneWidget);
+    final notNow = t.getRect(find.text(SocialStringsC.notNow));
+    expect(notNow.bottom, lessThanOrEqualTo(t.view.physicalSize.height / t.view.devicePixelRatio), reason: 'the sheet has finished sliding in');
     await t.tap(find.text(SocialStringsC.notNow));
-    await t.pump(const Duration(milliseconds: 500));
+    await _settleSheet(t);
+    expect(find.byKey(const ValueKey('plus_limit_sheet')), findsNothing);
     await disposeSocial(t);
   });
 }

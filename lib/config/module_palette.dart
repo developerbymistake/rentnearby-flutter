@@ -39,7 +39,7 @@ class ModulePalette {
 
   static const jobs = ModulePalette(
     accent: DesignColors.lunchStart,
-    accentDark: DesignColors.lunchEnd,
+    accentDark: DesignColors.brandNavy,
     accentLight: DesignColors.ringLight,
     surface: DesignColors.statusOfferSoft,
     gradient: DesignGradients.lunch,

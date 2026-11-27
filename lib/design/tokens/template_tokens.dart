@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'design_colors.dart';
 
 class TemplateTokens {
   TemplateTokens._();
@@ -10,8 +11,8 @@ class TemplateTokens {
   static const Color white10 = Color(0x1AFFFFFF);
 
   static const Color fitnessNearlyWhite = Color(0xFFFAFAFA);
-  static const Color fitnessBackground = Color(0xFFF2F3F8);
-  static const Color nearlyDarkBlue = Color(0xFF2633C5);
+  static const Color fitnessBackground = DesignColors.scaffold;
+  static const Color nearlyDarkBlue = DesignColors.brandNavy;
   static const Color nearlyBlue = Color(0xFF00B6F0);
   static const Color nearlyBlack = Color(0xFF213333);
   static const Color slateGrey = Color(0xFF3A5160);
@@ -31,7 +32,7 @@ class TemplateTokens {
   static const Color hotelScaffold = Color(0xFFF6F6F6);
   static const Color hotelDivider = Color(0xFFE0E0E0);
 
-  static const Color bottomBarAccent = Color(0xFF6A88E5);
+  static const Color bottomBarAccent = DesignColors.brandRoyal;
   static const Color glassFill = Color(0xFFD7E0F9);
   static const Color splashText = Color(0xFF132137);
 
@@ -43,8 +44,8 @@ class TemplateTokens {
 
   static const Color mealBreakfastStart = Color(0xFFFA7D82);
   static const Color mealBreakfastEnd = Color(0xFFFFB295);
-  static const Color mealLunchStart = Color(0xFF738AE6);
-  static const Color mealLunchEnd = Color(0xFF5C5EDD);
+  static const Color mealLunchStart = DesignColors.brandNavy;
+  static const Color mealLunchEnd = DesignColors.brandRoyal;
   static const Color mealSnackStart = Color(0xFFFE95B6);
   static const Color mealSnackEnd = Color(0xFFFF5287);
   static const Color mealDinnerStart = Color(0xFF6F72CA);

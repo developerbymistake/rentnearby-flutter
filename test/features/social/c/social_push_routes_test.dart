@@ -19,6 +19,7 @@ void main() {
       AppRoutes.joinRequests,
       AppRoutes.dmRoom,
       AppRoutes.seekerPlus,
+      AppRoutes.travelLevels,
     ]) {
       expect(NotificationService.isOnTopOfMain(route), isTrue, reason: route);
     }

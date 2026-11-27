@@ -16,14 +16,14 @@ import 'kit_tone.dart';
 import '../tokens/card_tokens.dart';
 
 abstract final class AuthInk {
-  static const Color page = Color(0xFFF2F3F8);
+  static const Color page = DesignColors.scaffold;
   static const Color input = Color(0xFF253840);
   static const Color warn = Color(0xFFE07A00);
   static const Color box = Color(0xFFC3C7D0);
   static const Color linkOff = Color(0xFFB0B4BD);
   static const Color ringBad = Color(0xFFFA7D82);
   static const Color pendBg = Color(0xFFE6E8FB);
-  static const Color pendText = Color(0xFF2633C5);
+  static const Color pendText = DesignColors.brandNavy;
   static const Color badBg = Color(0xFFFFE6E8);
   static const Color badText = Color(0xFFB83A40);
   static const Color laterBg = Color(0xFFFFF1DE);

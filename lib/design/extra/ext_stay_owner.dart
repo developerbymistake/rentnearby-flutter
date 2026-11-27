@@ -25,7 +25,7 @@ abstract final class StayOwnerArt {
 abstract final class StayOwnerInk {
   static const Color sectionLabel = Color(0xFF5F6B76);
   static const Color mapBase = Color(0xFFE8EEDD);
-  static const Color waitBase = Color(0xFFF2F3F8);
+  static const Color waitBase = DesignColors.scaffold;
   static const Color danger = Color(0xFFE0525C);
   static const Color newBadge = Color(0xFFC0404A);
   static const Color live = Color(0xFF2E7D32);

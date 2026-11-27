@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../../utils/app_toast.dart';
 import '../../trip_strings_hub.dart';
 import 'hub_tile_config.dart';
+import 'hub_tokens.dart';
 
 class HubTile extends StatelessWidget {
   const HubTile({super.key, required this.config, required this.onTap});
@@ -248,10 +249,10 @@ class HubTileShapePainter extends CustomPainter {
     canvas.drawPath(
       under.shift(Offset(0, DS.s(14))),
       Paint()
-        ..color = const Color(0x611E286E)
+        ..color = HubTokens.deviceShadowFar
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, DS.s(12)),
     );
-    canvas.drawPath(device.shift(Offset(0, DS.s(5))), Paint()..color = const Color(0x61374196));
+    canvas.drawPath(device.shift(Offset(0, DS.s(5))), Paint()..color = HubTokens.deviceShadowNear);
 
     canvas.save();
     canvas.transform(storage);

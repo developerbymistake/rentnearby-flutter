@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../tokens/design_colors.dart';
 
 import 'art_3d.dart';
 import 'pill_buttons_3d.dart';
@@ -68,7 +69,7 @@ class FieldMessage extends StatelessWidget {
 }
 
 class _FillColor extends WidgetStateColor {
-  const _FillColor() : super(0xFFF2F3F8);
+  const _FillColor() : super(DesignColors.scaffoldArgb);
 
   @override
   Color resolve(Set<WidgetState> states) {

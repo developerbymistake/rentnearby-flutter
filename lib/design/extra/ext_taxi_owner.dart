@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/tokens/design_colors.dart';
 
 import '../tokens/card_tokens.dart';
 import '../tokens/design_scale.dart';
@@ -30,7 +31,7 @@ abstract final class TaxiOwnerLook {
   static const Color off = Color(0xFF767676);
   static const Color review = Color(0xFFB86E00);
   static const Color rejected = Color(0xFFD93A3A);
-  static const Color info = Color(0xFF2633C5);
+  static const Color info = DesignColors.brandNavy;
   static const Color urgent = Color(0xFFFFD27A);
   static const Color urgentText = Color(0xFF7A4A00);
   static const Color divider = Color(0x40FFFFFF);

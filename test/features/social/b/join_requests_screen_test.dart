@@ -117,4 +117,16 @@ void main() {
     expect(find.text(SocialStringsB.noRequestsTitle), findsOneWidget);
     await drain(t);
   });
+
+  testWidgets('each request card shows the requester trophy and trips', (t) async {
+    final server = installServer();
+    server.on('GET', _path, _page([
+      {..._item('jr-r', 'rohan', 'Rohan Mehta', 1), 'person': {...rowJson('rohan', 'Rohan Mehta', followsMe: true), 'completedTrips': 18, 'level': 2}},
+      _item('jr-m', 'meera', 'Meera Joshi', 2),
+    ]));
+    await pumpSocial(t, const JoinRequestsScreen(tripId: 'trip-1'));
+    expect(find.descendant(of: find.byKey(JoinRequestsScreen.levelKey('jr-r')), matching: find.text('18 trips')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(JoinRequestsScreen.levelKey('jr-m')), matching: find.text('0 trips')), findsOneWidget);
+    await drain(t);
+  });
 }

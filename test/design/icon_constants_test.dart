@@ -19,6 +19,8 @@ void main() {
       ListingArt.droplet, ListingArt.rock, ListingArt.framedPicture, ListingArt.lion, ListingArt.bridge,
       ListingArt.castle, ListingArt.crown, ListingArt.diyaLamp, ListingArt.tree, ListingArt.tulip,
       ListingArt.tent, ListingArt.beach, ListingArt.worldMap, ListingArt.roundPushpin,
+      ListingArt.trophyLevel0, ListingArt.trophyLevel1, ListingArt.trophyLevel2, ListingArt.trophyLevel3,
+      ListingArt.trophyLevel4, ListingArt.trophyLevel5, ListingArt.trophyLevel6,
       TravelIcon.stay, TravelIcon.profile, TravelIcon.fox, TravelIcon.hinduTemple, TravelIcon.tulip,
     ];
     for (final a in all) {

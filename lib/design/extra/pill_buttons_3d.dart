@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/tokens/design_colors.dart';
 
 import '../tokens/design_scale.dart';
 import 'art_3d.dart';
 import 'motion_kit.dart';
 
 abstract final class Form3D {
-  static const Color fill = Color(0xFFF2F3F8);
+  static const Color fill = DesignColors.scaffold;
   static const Color fillOff = Color(0xFFECEEF3);
   static const Color fillError = Color(0xFFFFF4F4);
   static const Color error = Color(0xFFE0525C);

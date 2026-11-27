@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/tokens/design_colors.dart';
 
 import '../../../design/extra/art_3d.dart';
 import '../../../design/extra/ext_buddy.dart';
@@ -25,9 +26,9 @@ abstract final class BuddyLook {
   static const Color chevron = Color(0xFFB8BCC6);
   static const Color checkOff = Color(0xFFC9CDD6);
   static const Color pillOff = Color(0xFFECEDF2);
-  static const Color closeBg = Color(0xFFF2F3F8);
+  static const Color closeBg = DesignColors.scaffold;
   static const Color closeX = Color(0xFFE5484D);
-  static const Color indigoText = Color(0xFF2633C5);
+  static const Color indigoText = DesignColors.brandNavy;
   static const Color cardShadow = Color(0xFF3A5160);
   static const Color reasonBg = Color(0xFFFFF1EC);
   static const Color scanDark = Color(0xFF0E1116);
@@ -58,7 +59,7 @@ abstract final class BuddyLook {
   );
 
   static const List<List<Color>> avatarGradients = [
-    [Color(0xFF738AE6), Color(0xFF5C5EDD)],
+    [DesignColors.brandNavy, DesignColors.brandRoyal],
     [Color(0xFF1FA396), Color(0xFF14756B)],
     [Color(0xFFF0508A), Color(0xFFB0245A)],
     [Color(0xFFFFC371), Color(0xFFFF8A3D)],
@@ -82,7 +83,7 @@ abstract final class BuddyLook {
   static const Map<BuddyBadgeColor, (Color, Color)> badge = {
     BuddyBadgeColor.teal: (Color(0xFFEAF8F6), Color(0xFF14756B)),
     BuddyBadgeColor.grey: (Color(0xFFE3E5EC), Color(0xFF4A4F5C)),
-    BuddyBadgeColor.view: (Color(0xFFEEF0FC), Color(0xFF2633C5)),
+    BuddyBadgeColor.view: (DesignColors.brandTint, DesignColors.brandNavy),
     BuddyBadgeColor.owner: (Color(0xFFFFF0F5), Color(0xFFB0245A)),
     BuddyBadgeColor.pending: (Color(0xFFFFF4E0), Color(0xFF8A5200)),
     BuddyBadgeColor.ok: (Color(0xFFE8F5E9), Color(0xFF17501B)),
@@ -90,7 +91,7 @@ abstract final class BuddyLook {
   };
 
   static const Map<NoteToneColor, (Color, Color)> note = {
-    NoteToneColor.indigo: (Color(0xFFEEF0FC), Color(0xFF2633C5)),
+    NoteToneColor.indigo: (DesignColors.brandTint, DesignColors.brandNavy),
     NoteToneColor.teal: (Color(0xFFEAF8F6), Color(0xFF14756B)),
     NoteToneColor.rose: (Color(0xFFFFF0F5), Color(0xFFB0245A)),
     NoteToneColor.danger: (Color(0xFFFDECEE), Color(0xFFB83A40)),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/tokens/design_colors.dart';
 
 import 'art_3d.dart';
 import 'motion_kit.dart';
@@ -259,7 +260,7 @@ class ChatCard3D extends StatelessWidget {
       constraints: BoxConstraints(minHeight: DS.s(32) * _scale(context).clamp(1.0, 1.4)),
       padding: EdgeInsets.symmetric(horizontal: DS.s(11)),
       decoration: BoxDecoration(
-        color: c.selected ? null : (c.selectable ? Colors.white : const Color(0xFFF2F3F8)),
+        color: c.selected ? null : (c.selectable ? Colors.white : DesignColors.scaffold),
         gradient: c.selected ? tone.gradient : null,
         borderRadius: DS.circular(18),
         border: Border.all(color: c.selectable && !c.selected ? tone.haloBase.withValues(alpha: 0.5) : Colors.transparent, width: 1.5),

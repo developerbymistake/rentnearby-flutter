@@ -14,6 +14,7 @@ import '../../shared/social_strings.dart';
 import '../../shared/widgets/follow_button.dart';
 import '../../shared/widgets/mutuals_line.dart';
 import '../../shared/widgets/person_actions.dart';
+import '../../shared/widgets/travel_level_widgets.dart';
 import '../social_strings_a.dart';
 import 'profile_sections.dart';
 import 'traveller_profile_controller.dart';
@@ -164,10 +165,11 @@ class _TravellerProfileScreenState extends State<TravellerProfileScreen> {
             person: p.person,
             gender: p.gender,
             about: p.privateLocked ? '' : p.about,
-            trips: p.trips,
+            trips: p.completedTrips,
             followers: p.followers,
             following: p.following,
             pill: _pill(p),
+            trailing: TravellerLevelMark(trips: p.completedTrips, level: p.level),
             after: mutuals,
           ),
           _actions(p),

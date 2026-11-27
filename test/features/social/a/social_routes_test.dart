@@ -22,6 +22,7 @@ const _social = {
   AppRoutes.joinRequests: '/join-requests',
   AppRoutes.dmRoom: '/dm-room',
   AppRoutes.seekerPlus: '/seeker-plus',
+  AppRoutes.travelLevels: '/travel-levels',
 };
 
 void main() {
@@ -36,9 +37,9 @@ void main() {
   });
   tearDown(Get.reset);
 
-  test('the 11 social routes have the contract paths', () {
+  test('the 12 social routes have the contract paths', () {
     _social.forEach((constant, path) => expect(constant, path));
-    expect(_social, hasLength(11));
+    expect(_social, hasLength(12));
   });
 
   test('every social route is registered, gated by TravellerOnlyMiddleware and in travellerOnly', () {
@@ -50,8 +51,8 @@ void main() {
     }
   });
 
-  test('lane A owns settings, editProfile, traveller, people and addBuddies', () {
-    expect({for (final p in socialPagesA) p.name}, {AppRoutes.settings, AppRoutes.editProfile, AppRoutes.traveller, AppRoutes.people, AppRoutes.addBuddies});
+  test('lane A owns settings, editProfile, traveller, people, addBuddies and travelLevels', () {
+    expect({for (final p in socialPagesA) p.name}, {AppRoutes.settings, AppRoutes.editProfile, AppRoutes.traveller, AppRoutes.people, AppRoutes.addBuddies, AppRoutes.travelLevels});
   });
 
   test('a seeker opens every social route; owner shells cannot', () {

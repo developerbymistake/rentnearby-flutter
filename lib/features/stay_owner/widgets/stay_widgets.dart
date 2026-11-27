@@ -24,14 +24,14 @@ abstract final class StayLook {
   static const Color amberSoft = Color(0xFFFFF4E0);
   static const Color amberText = Color(0xFF8A5200);
   static const Color indigoSoft = Color(0xFFE9ECFB);
-  static const Color indigoText = Color(0xFF2633C5);
+  static const Color indigoText = DesignColors.brandNavy;
   static const Color greenSoft = Color(0xFFE3F1E4);
   static const Color greenText = Color(0xFF17501B);
   static const Color tealSoft = Color(0xFFE6F6F3);
   static const Color rowLine = Color(0xFFEEF0F4);
   static const Color lockedRow = Color(0xFFF7F8FD);
   static const Color dangerLine = Color(0xFFF0B7BB);
-  static const Color artTint = Color(0x245C5EDD);
+  static const Color artTint = DesignColors.brandRoyal14;
   static const Color artTintRed = Color(0x24E0525C);
   static const Color artTintAmber = Color(0x2EF2A93B);
   static const Color artTintTeal = Color(0x291FA396);

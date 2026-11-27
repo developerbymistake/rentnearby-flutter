@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/tokens/design_colors.dart';
 
 import 'art_3d.dart';
 import 'buttons_kit.dart';
@@ -107,7 +108,7 @@ class GuideSheetScaffold extends StatelessWidget {
     final pad = MediaQuery.paddingOf(context);
     return DecoratedBox(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFF2F3F8), Colors.white]),
+        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [DesignColors.scaffold, Colors.white]),
       ),
       child: Stack(
         clipBehavior: Clip.none,

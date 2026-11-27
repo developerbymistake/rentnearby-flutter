@@ -16,6 +16,7 @@ import '../../shared/social_me_controller.dart';
 import '../../shared/social_models.dart';
 import '../../shared/social_nav.dart';
 import '../../shared/social_strings.dart';
+import '../../shared/widgets/travel_level_widgets.dart';
 import '../social_strings_a.dart';
 import 'profile_sections.dart';
 
@@ -110,10 +111,11 @@ class _ProfileContent extends StatelessWidget {
           person: profile.person,
           gender: profile.gender,
           about: profile.about,
-          trips: profile.trips,
+          trips: profile.completedTrips,
           followers: profile.followers,
           following: profile.following,
           photo: _MyPhoto(initial: profile.initial),
+          after: LevelPanelCard(trips: profile.completedTrips, level: profile.level, onTap: SocialNav.openTravelLevels),
           onFollowers: () => SocialNav.openPeople(tab: 'followers'),
           onFollowing: () => SocialNav.openPeople(tab: 'following'),
         ),

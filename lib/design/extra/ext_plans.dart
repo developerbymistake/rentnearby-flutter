@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:bakhli/design/tokens/design_colors.dart';
 
 import '../tokens/listing_palette.dart';
 import 'art_3d.dart';
@@ -17,7 +18,7 @@ class PlanInk {
   static const Color warn = Color(0xFFB9770E);
   static const Color muted = Color(0xFF767676);
   static const Color label = Color(0xFF4A6572);
-  static const Color headRow = Color(0xFFF2F3F8);
+  static const Color headRow = DesignColors.scaffold;
   static const Color line = Color(0xFFEEF0F4);
   static const Color number = Color(0xFF9A9A9A);
   static const Color copy = Color(0xFF6A6A6A);
@@ -40,8 +41,8 @@ class PlanInk {
   static const Color onCardFill = Color(0x33FFFFFF);
   static const Color onCardRing = Color(0xBFFFFFFF);
   static const Color pillFill = Color(0x42FFFFFF);
-  static const Color chipRing = Color(0xFF5C5EDD);
-  static const Color chipText = Color(0xFF2633C5);
+  static const Color chipRing = DesignColors.brandRoyal;
+  static const Color chipText = DesignColors.brandNavy;
   static const Color testPill = Color(0x29000000);
   static const Color newFill = Color(0xFFFDE6E8);
 }

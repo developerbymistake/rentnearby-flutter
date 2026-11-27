@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../extra/kit_tone.dart';
+import 'design_colors.dart';
 
 class ListingPalette {
   const ListingPalette({
@@ -34,14 +35,14 @@ class ListingPalette {
   Color get glowShadow => shadow.withValues(alpha: shadowAlpha);
 
   static const ListingPalette indigo = ListingPalette(
-    g1: Color(0xFF738AE6),
-    g2: Color(0xFF5C5EDD),
-    text: Color(0xFF2633C5),
-    page: Color(0xFFF2F3F8),
-    tint: Color(0xFFEEF0FC),
-    line: Color(0xFFD5D9F5),
-    shadow: Color(0xFF5C5EDD),
-    button: Color(0xFFDADDF7),
+    g1: DesignColors.brandNavy,
+    g2: DesignColors.brandRoyal,
+    text: DesignColors.brandNavy,
+    page: DesignColors.brandPage,
+    tint: DesignColors.brandTint,
+    line: DesignColors.brandLine,
+    shadow: DesignColors.brandRoyal,
+    button: DesignColors.brandButton,
   );
 
   static const ListingPalette forest = ListingPalette(
@@ -105,7 +106,7 @@ class MealsGradient {
   static const double haloAlpha = 0.16;
 
   static const MealsGradient cA = MealsGradient(g1: Color(0xFFFA7D82), g2: Color(0xFFFFB295), shadow: Color(0xFFFFB295), shadowAlpha: 0.6, buttonColor: Color(0xFFFA7D82));
-  static const MealsGradient cB = MealsGradient(g1: Color(0xFF738AE6), g2: Color(0xFF5C5EDD), shadow: Color(0xFF5C5EDD), shadowAlpha: 0.6);
+  static const MealsGradient cB = MealsGradient(g1: DesignColors.brandNavy, g2: DesignColors.brandRoyal, shadow: DesignColors.brandRoyal, shadowAlpha: 0.6);
   static const MealsGradient cC = MealsGradient(g1: Color(0xFFFE95B6), g2: Color(0xFFFF5287), shadow: Color(0xFFFF5287), shadowAlpha: 0.6);
   static const MealsGradient cD = MealsGradient(g1: Color(0xFF6F72CA), g2: Color(0xFF1E1466), shadow: Color(0xFF1E1466), shadowAlpha: 0.6);
   static const MealsGradient cE = MealsGradient(g1: Color(0xFF66BB6A), g2: Color(0xFF2E7D32), shadow: Color(0xFF2E7D32), shadowAlpha: 0.55);
@@ -182,6 +183,13 @@ abstract final class ListingArt {
   static const String sunrise = '${_dir}sunrise.png';
   static const String bell = '${_dir}bell.png';
   static const String gear = '${_dir}gear.png';
+  static const String trophyLevel0 = '${_dir}trophy_level_0.png';
+  static const String trophyLevel1 = '${_dir}trophy_level_1.png';
+  static const String trophyLevel2 = '${_dir}trophy_level_2.png';
+  static const String trophyLevel3 = '${_dir}trophy_level_3.png';
+  static const String trophyLevel4 = '${_dir}trophy_level_4.png';
+  static const String trophyLevel5 = '${_dir}trophy_level_5.png';
+  static const String trophyLevel6 = '${_dir}trophy_level_6.png';
 
   static String forVehicle(String? name) {
     final v = (name ?? '').toLowerCase();
