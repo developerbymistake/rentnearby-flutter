@@ -4,7 +4,7 @@ import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/ext_journeys.dart';
 import '../../../../config/app_routes.dart';
 import '../../../../models/browse_item.dart';
-import '../../../../utils/contact_launcher.dart';
+import '../../../../widgets/listing_contact_actions.dart';
 import '../../../stay/models/stay_nearby_model.dart';
 import '../../../trip/utils/trip_format.dart';
 import '../taxi_ways_strings.dart';
@@ -12,8 +12,6 @@ import '../taxi_ways_strings.dart';
 class DestinationStayCard extends StatelessWidget {
   final StayNearbyModel stay;
   final String cityName;
-  final DateTime date;
-  final int people;
   final double? width;
   final int index;
 
@@ -21,8 +19,6 @@ class DestinationStayCard extends StatelessWidget {
     super.key,
     required this.stay,
     required this.cityName,
-    required this.date,
-    required this.people,
     this.width,
     this.index = 0,
   });
@@ -31,14 +27,7 @@ class DestinationStayCard extends StatelessWidget {
 
   void _open() => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': stay.id});
 
-  void _ask() {
-    final phone = stay.ownerPhone;
-    if (phone == null || phone.isEmpty) {
-      _open();
-      return;
-    }
-    ContactLauncher.whatsApp(phone, message: TaxiWaysStrings.roomAskMessage(cityName, date, people));
-  }
+  void _call(BuildContext context) => ListingContactActions.call(context, kind: ListingKind.stay, id: stay.id);
 
   @override
   Widget build(BuildContext context) {
@@ -58,9 +47,10 @@ class DestinationStayCard extends StatelessWidget {
       art: hasPhoto ? null : ListingArt.stay,
       number: price == null ? null : BrowseItem.inr(price),
       unit: price == null ? '' : ' /night',
-      buttonLabel: TaxiWaysStrings.askRoom,
+      buttonLabel: TaxiWaysStrings.call,
       width: width ?? DS.s(160),
-      onTap: _ask,
+      onTap: _open,
+      onButtonTap: () => _call(context),
     );
   }
 }

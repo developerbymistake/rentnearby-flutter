@@ -127,9 +127,6 @@ class TaxiWaysStrings {
   static String stayIn(String city) => 'Stay in $city';
   static String staysCount(int n, DateTime date) => '$n stays · ${TripFormat.shortDate(date)}';
   static String perNight(int x) => '${BrowseItem.inr(x)} / night';
-  static const String askRoom = 'Ask for a room';
-  static String roomAskMessage(String city, DateTime date, int people) =>
-      'Hi, I reach $city on ${TripFormat.shortDate(date)}, ${TaxiWaysStrings.people(people)}. Is a room free?';
   static String reachBy(String place) => 'Reach $place by train or bus';
   static const String reachBody = 'Drivers start from there';
   static const String waysAbove = '↑ the ways to go are above';

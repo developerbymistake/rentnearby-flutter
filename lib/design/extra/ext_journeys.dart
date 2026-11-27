@@ -1429,6 +1429,7 @@ class JourneyRailCard3D extends StatelessWidget {
     this.number,
     this.unit = '',
     this.onTap,
+    this.onButtonTap,
     this.width = 160,
   });
 
@@ -1442,6 +1443,7 @@ class JourneyRailCard3D extends StatelessWidget {
   final String? number;
   final String unit;
   final VoidCallback? onTap;
+  final VoidCallback? onButtonTap;
   final double width;
 
   static EdgeInsets get cellPadding => EdgeInsets.fromLTRB(DS.s(8), DS.s(46), DS.s(8), DS.s(14));
@@ -1482,7 +1484,7 @@ class JourneyRailCard3D extends StatelessWidget {
               ),
             ),
             Gap.v(8),
-            WhitePillButton(tone: tone, label: buttonLabel, onTap: onTap, onGradient: true, height: 34, fontSize: 13),
+            WhitePillButton(tone: tone, label: buttonLabel, onTap: onButtonTap ?? onTap, onGradient: true, height: 34, fontSize: 13),
           ],
         ),
       ),
