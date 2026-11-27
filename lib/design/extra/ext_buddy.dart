@@ -92,14 +92,23 @@ class UsernameLockedPill extends StatelessWidget {
       text = p.width;
       p.dispose();
     }
-    return DS.s(8) + DS.s(24) + DS.s(6) + text + DS.s(6) + DS.s(16) + DS.s(8) + DS.s(4);
+    return DS.s(8) + DS.s(24) + DS.s(6) + text + DS.s(34) + DS.s(4);
   }
 
   Widget _compact() {
     final name = username;
-    final body = Container(
+    final copy = Tap3D(
+      onTap: name == null ? null : onCopy,
+      label: copyLabel,
+      child: SizedBox(
+        width: DS.s(34),
+        height: DS.s(KitMetrics.touch),
+        child: Center(child: Icon(Icons.copy_rounded, size: DS.s(16), color: name == null ? DesignColors.tealDeep.withValues(alpha: Alpha.v45) : DesignColors.tealDeep)),
+      ),
+    );
+    return Container(
       constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch)),
-      padding: DS.insets(l: 8, t: 4, r: 8, b: 4),
+      padding: DS.insets(l: 8, t: 0, r: 0, b: 0),
       decoration: BoxDecoration(
         color: DesignColors.scaffold,
         borderRadius: DS.circular(22),
@@ -116,12 +125,10 @@ class UsernameLockedPill extends StatelessWidget {
                 ? Semantics(label: loadingLabel, child: const BuddySkeletonBar(width: 96, height: 12))
                 : FitLine3D(text: name, style: compactStyle),
           ),
-          Gap.h(6),
-          Icon(Icons.copy_rounded, size: DS.s(16), color: name == null ? DesignColors.tealDeep.withValues(alpha: Alpha.v45) : DesignColors.tealDeep),
+          copy,
         ],
       ),
     );
-    return Tap3D(onTap: name == null ? null : onCopy, label: copyLabel, child: body);
   }
 
   @override
