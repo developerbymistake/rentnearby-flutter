@@ -10,7 +10,7 @@ import '../models/trip_spot_category.dart';
 import '../trip_strings_map_disc.dart';
 import 'trip_spot_row.dart';
 
-enum TripMapCardButton { primary, soft, danger }
+enum TripMapCardButton { primary, white, danger }
 
 class TripMapSpotCard extends StatelessWidget {
   final DiscoverySpot spot;
@@ -24,8 +24,10 @@ class TripMapSpotCard extends StatelessWidget {
   final VoidCallback? onClose;
   final Color Function(int day)? dayColorOf;
   final double? tipX;
+  final ListingTone? tone;
 
   static const double photo = 84;
+  static const double artSize = 56;
   static const double maxWidth = 420;
 
   const TripMapSpotCard({
@@ -41,7 +43,10 @@ class TripMapSpotCard extends StatelessWidget {
     this.onClose,
     this.dayColorOf,
     this.tipX,
+    this.tone,
   });
+
+  ListingTone get _tone => tone ?? ListingTone.indigo;
 
   bool get _planned => mode == DiscoveryMode.full && plannedDay != null;
 
@@ -50,10 +55,11 @@ class TripMapSpotCard extends StatelessWidget {
   static TextStyle get categoryStyle => TypeTokens.style(11, FontWeight.w500, color: TypeTokens.secondary);
 
   List<Widget> _buttons() {
-    final details = _CardButton(key: const ValueKey('disc-card-details'), kind: TripMapCardButton.soft, label: TripMapDiscStrings.details, onTap: onDetails);
+    final t = _tone;
+    final details = _CardButton(key: const ValueKey('disc-card-details'), kind: TripMapCardButton.white, tone: t, label: TripMapDiscStrings.details, onTap: onDetails);
     if (mode == DiscoveryMode.readOnly) return [details];
     if (_planned) {
-      return [details, _CardButton(key: const ValueKey('disc-card-remove'), kind: TripMapCardButton.danger, label: TripMapDiscStrings.removeFromDay, onTap: onRemove)];
+      return [details, _CardButton(key: const ValueKey('disc-card-remove'), kind: TripMapCardButton.danger, tone: t, label: TripMapDiscStrings.removeFromDay, onTap: onRemove)];
     }
     final day = targetDay;
     if (day == null) return [details];
@@ -61,6 +67,7 @@ class TripMapSpotCard extends StatelessWidget {
       _CardButton(
         key: const ValueKey('disc-card-add'),
         kind: TripMapCardButton.primary,
+        tone: t,
         label: TripMapDiscStrings.addToDay(day),
         onTap: onAdd,
       ),
@@ -79,15 +86,56 @@ class TripMapSpotCard extends StatelessWidget {
         child: Text(TripMapDiscStrings.inDay(day), maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(11, FontWeight.w600, c)),
       );
     }
-    return Row(
+    return Container(
       key: const ValueKey('disc-card-cat'),
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(width: DS.s(8), height: DS.s(8), decoration: BoxDecoration(color: TripSpotCategory.colorOf(spot.category), shape: BoxShape.circle)),
-        Gap.h(5),
-        Flexible(child: Text(TripSpotCategory.label(spot.category), maxLines: 1, overflow: TextOverflow.ellipsis, style: categoryStyle)),
-      ],
+      padding: DS.insets(l: 7.5, r: 10, t: 2, b: 2),
+      decoration: BoxDecoration(color: _tone.tint, borderRadius: DS.br(CardRadius.pill)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(width: DS.s(8), height: DS.s(8), decoration: BoxDecoration(color: TripSpotCategory.colorOf(spot.category), shape: BoxShape.circle)),
+          Gap.h(5.5),
+          Flexible(child: Text(TripSpotCategory.label(spot.category), maxLines: 1, overflow: TextOverflow.ellipsis, style: categoryStyle)),
+        ],
+      ),
     );
+  }
+
+  static List<BoxShadow> get _mediaShadow =>
+      DS.shadows([BoxShadow(color: Ink3D.title.withValues(alpha: Alpha.v22), offset: const Offset(1, 3.75), blurRadius: 7.5)]);
+
+  Widget _media() {
+    final asset = TripSpotLook.assetOf(spot.category);
+    final side = DS.s(photo);
+    if (!spot.hasThumb) {
+      return Container(
+        key: const ValueKey('disc-card-art'),
+        width: side,
+        height: side,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(gradient: TripSpotLook.gradientOf(spot.category), borderRadius: DS.circular(14), boxShadow: _mediaShadow),
+        child: Art3D(asset: asset, size: artSize),
+      );
+    }
+    return SizedBox.square(
+      dimension: side,
+      child: DecoratedBox(
+        decoration: BoxDecoration(borderRadius: DS.circular(14), boxShadow: _mediaShadow),
+        child: ClipRRect(
+          key: const ValueKey('disc-card-photo'),
+          borderRadius: DS.circular(14),
+          child: TripSpotMedia.photo(spot.thumbUrl, SpotPhotoSize.square, TripSpotMedia.fallbackArt(asset)),
+        ),
+      ),
+    );
+  }
+
+  List<BoxShadow> get _cardShadow {
+    final grey = TripLook.dayCardShadow.first;
+    return DS.shadows([
+      BoxShadow(color: _tone.haloBase.withValues(alpha: Alpha.v26), offset: const Offset(1.1, 4), blurRadius: 14),
+      BoxShadow(color: grey.color.withValues(alpha: Alpha.v14), offset: grey.offset, blurRadius: grey.blurRadius),
+    ]);
   }
 
   @override
@@ -125,11 +173,11 @@ class TripMapSpotCard extends StatelessWidget {
   Widget _card(String text, List<Widget> buttons) {
     return Container(
       key: const ValueKey('disc-card'),
-      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(20), boxShadow: DS.shadows(TripLook.dayCardShadow)),
+      decoration: BoxDecoration(color: DesignColors.surface, borderRadius: DS.circular(20), boxShadow: _cardShadow),
       child: Stack(
         children: [
           Padding(
-            padding: DS.all(10),
+            padding: DS.insets(l: 10, t: 10, r: 10, b: 12),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -137,26 +185,17 @@ class TripMapSpotCard extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (spot.hasThumb) ...[
-                      ClipRRect(
-                        key: const ValueKey('disc-card-photo'),
-                        borderRadius: DS.circular(14),
-                        child: SizedBox.square(
-                          dimension: DS.s(photo),
-                          child: TripSpotMedia.photo(spot.thumbUrl, SpotPhotoSize.square, TripSpotMedia.fallbackArt(TripSpotLook.assetOf(spot.category))),
-                        ),
-                      ),
-                      Gap.h(10),
-                    ],
+                    _media(),
+                    Gap.h(12.5),
                     Expanded(
                       child: Padding(
-                        padding: DS.insets(r: 28, t: 2),
+                        padding: DS.insets(r: 30, t: 2),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _head(),
-                            Gap.v(3),
+                            Gap.v(4),
                             Text(spot.name, key: const ValueKey('disc-card-title'), maxLines: 2, overflow: TextOverflow.ellipsis, style: titleStyle),
                             if (text.isNotEmpty) ...[
                               Gap.v(2),
@@ -168,12 +207,12 @@ class TripMapSpotCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                Gap.v(10),
+                Gap.v(14),
                 IntrinsicHeight(
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      for (var i = 0; i < buttons.length; i++) ...[if (i > 0) Gap.h(8), Expanded(child: buttons[i])],
+                      for (var i = 0; i < buttons.length; i++) ...[if (i > 0) Gap.h(10), Expanded(child: buttons[i])],
                     ],
                   ),
                 ),
@@ -189,10 +228,11 @@ class TripMapSpotCard extends StatelessWidget {
               label: TripMapDiscStrings.semClose,
               exclude: true,
               child: Container(
+                key: const ValueKey('disc-card-close-dot'),
                 width: DS.s(26),
                 height: DS.s(26),
-                decoration: const BoxDecoration(color: Form3D.fill, shape: BoxShape.circle),
-                child: Icon(Icons.keyboard_arrow_down_rounded, size: DS.s(18), color: Ink3D.grey),
+                decoration: BoxDecoration(color: _tone.tint, shape: BoxShape.circle),
+                child: Icon(Icons.keyboard_arrow_down_rounded, size: DS.s(18), color: _tone.text),
               ),
             ),
           ),
@@ -204,29 +244,30 @@ class TripMapSpotCard extends StatelessWidget {
 
 class _CardButton extends StatelessWidget {
   final TripMapCardButton kind;
+  final ListingTone tone;
   final String label;
   final VoidCallback? onTap;
 
-  const _CardButton({super.key, required this.kind, required this.label, required this.onTap});
+  const _CardButton({super.key, required this.kind, required this.tone, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final tone = ListingTone.indigo;
-    final (Color? fill, Color fg, Border? border) = switch (kind) {
-      TripMapCardButton.primary => (null, DesignColors.surface, null),
-      TripMapCardButton.soft => (ListingPalette.indigo.button, ListingPalette.indigo.text, null),
-      TripMapCardButton.danger => (ListingPalette.coral.tint, ListingPalette.coral.text, Border.all(color: ListingPalette.coral.line, width: DS.s(1))),
+    final primary = kind == TripMapCardButton.primary;
+    final fg = switch (kind) {
+      TripMapCardButton.primary => DesignColors.surface,
+      TripMapCardButton.white => tone.text,
+      TripMapCardButton.danger => Form3D.errorText,
     };
     final live = onTap != null;
     final body = ConstrainedBox(
       constraints: BoxConstraints(minHeight: DS.s(KitMetrics.touch)),
       child: DecoratedBox(
+        key: const ValueKey('disc-card-btn-face'),
         decoration: BoxDecoration(
-          color: fill,
-          gradient: kind == TripMapCardButton.primary ? tone.gradient : null,
-          border: border,
+          color: primary ? null : DesignColors.surface,
+          gradient: primary ? tone.gradient : null,
           borderRadius: DS.br(CardRadius.pill),
-          boxShadow: kind == TripMapCardButton.primary && live ? tone.glow() : null,
+          boxShadow: primary ? (live ? tone.glow() : null) : DS.shadows(Ink3D.softShadow),
         ),
         child: Padding(
           padding: DS.sym(h: 8, v: 6),

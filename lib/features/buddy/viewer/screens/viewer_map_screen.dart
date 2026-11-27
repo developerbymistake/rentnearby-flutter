@@ -8,6 +8,7 @@ import '../../../trip/map/trip_discovery_layer.dart';
 import '../../../trip/models/trip_spot_model.dart';
 import '../../../trip/trip_strings_archived.dart';
 import '../../../trip/utils/trip_spots_cache.dart';
+import '../../../trip/widgets/map_spot_card_host.dart';
 import '../../../trip/widgets/trip_map_controls.dart';
 import '../../../trip/widgets/trip_map_spot_card.dart';
 import '../../../trip/widgets/trip_plan_header.dart';
@@ -209,26 +210,34 @@ class _ViewerMapScreenState extends State<ViewerMapScreen> {
                   bottom: safe + DS.gv(24),
                   child: TripMapControls.column(showEye: false, map: () => _map, onLocate: () => DiscoveryCamera.toUser(_map)),
                 ),
-                if (picked != null)
-                  Positioned(
-                    left: s,
-                    right: s,
-                    top: _topHeight() + DS.gv(12),
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: DS.s(TripMapSpotCard.maxWidth)),
-                        child: TripMapSpotCard(
-                          key: ValueKey('viewer_card_${picked.spot.id}'),
-                          spot: picked.disc,
-                          mode: DiscoveryMode.readOnly,
-                          line: picked.line,
-                          onDetails: () => _details(picked),
-                          onClose: () => _onTap(null),
-                        ),
+                Positioned(
+                  key: const ValueKey('viewer_card_slot'),
+                  left: s,
+                  right: s,
+                  top: _topHeight() + DS.gv(12),
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: DS.s(TripMapSpotCard.maxWidth)),
+                      child: MapSpotCardHost(
+                        id: picked?.spot.id,
+                        label: picked?.spot.name,
+                        onClose: () => _onTap(null),
+                        child: picked == null
+                            ? null
+                            : TripMapSpotCard(
+                                key: ValueKey('viewer_card_${picked.spot.id}'),
+                                spot: picked.disc,
+                                mode: DiscoveryMode.readOnly,
+                                tone: ListingTone.indigo,
+                                line: picked.line,
+                                onDetails: () => _details(picked),
+                                onClose: () => _onTap(null),
+                              ),
                       ),
                     ),
                   ),
+                ),
               ],
               Positioned(left: 0, right: 0, top: 0, child: _top(context, t, scene, selected)),
             ],

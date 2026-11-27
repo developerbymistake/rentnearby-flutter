@@ -19,6 +19,7 @@ import 'package:bakhli/features/map_discovery/pack/map_pack_models.dart';
 import 'package:bakhli/features/trip/map/discovery_api.dart';
 import 'package:bakhli/features/trip/map/map_marker_sizes.dart';
 import 'package:bakhli/features/trip/map/trip_route_stops.dart';
+import 'package:bakhli/features/trip/widgets/map_spot_card_host.dart';
 import 'package:bakhli/features/trip/widgets/trip_map_controls.dart';
 import 'package:bakhli/features/trip/widgets/trip_map_spot_card.dart';
 import 'package:bakhli/features/trip/widgets/trip_spot_detail_sheet.dart';
@@ -279,6 +280,7 @@ void main() {
       final view = _FakeMap.last!;
       view.onTap(view.scene.stopAt(2, 2));
       await t.pump();
+      await t.pump(MapSpotCardHost.openDuration);
       expect(find.byType(TripMapSpotCard), findsOneWidget);
       expect(t.widget<TripMapSpotCard>(find.byType(TripMapSpotCard)).onAdd, isNull);
       expect(find.text('Kainchi Dham'), findsOneWidget);
@@ -290,12 +292,22 @@ void main() {
 
       await t.tap(find.byKey(const ValueKey('disc-card-close')));
       await t.pump();
+      expect(_FakeMap.last!.picked, isNull);
+      expect(find.byType(TripMapSpotCard), findsOneWidget, reason: 'the card stays for the exit animation');
+      expect(t.widget<IgnorePointer>(find.byKey(const ValueKey('map-card-exit-guard'))).ignoring, isTrue);
+      await t.pump(MapSpotCardHost.closeDuration);
+      await t.pump(MapSpotCardHost.closeDuration);
+      await t.pump();
       expect(find.byType(TripMapSpotCard), findsNothing);
 
       _FakeMap.last!.onTap(_FakeMap.last!.scene.stopAt(1, 0));
       await t.pump();
+      await t.pump(MapSpotCardHost.openDuration);
       expect(find.byType(TripMapSpotCard), findsOneWidget);
       _FakeMap.last!.onTap(null);
+      await t.pump();
+      await t.pump(MapSpotCardHost.closeDuration);
+      await t.pump(MapSpotCardHost.closeDuration);
       await t.pump();
       expect(find.byType(TripMapSpotCard), findsNothing);
       expect(_FakeMap.created, 1);
@@ -305,6 +317,7 @@ void main() {
       await _pumpMap(t);
       _FakeMap.last!.onTap(_FakeMap.last!.scene.stopAt(2, 0));
       await t.pump();
+      await t.pump(MapSpotCardHost.openDuration);
       await t.tap(find.byKey(const ValueKey('disc-card-details')));
       await t.pump();
       await t.pump(const Duration(milliseconds: 400));

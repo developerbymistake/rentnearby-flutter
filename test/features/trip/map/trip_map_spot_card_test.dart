@@ -184,6 +184,87 @@ void main() {
     expect(tip.center.dx, closeTo(card.left + 100, 1.5));
   });
 
+  group('3D restyle (map spot card mock)', () {
+    BoxDecoration face(WidgetTester tester, String key) => tester
+        .widget<DecoratedBox>(find.descendant(of: find.byKey(ValueKey(key)), matching: find.byKey(const ValueKey('disc-card-btn-face'))))
+        .decoration as BoxDecoration;
+    Color labelColor(WidgetTester tester, String text) => tester.renderObject<RenderParagraph>(find.text(text)).text.style!.color!;
+    BoxDecoration deco(WidgetTester tester, String key) => tester.widget<Container>(find.byKey(ValueKey(key))).decoration! as BoxDecoration;
+
+    testWidgets('default tone is indigo: gradient Add, white Details pill with indigo text', (tester) async {
+      await _pump(tester, TripMapSpotCard(spot: _photo, mode: DiscoveryMode.full, targetDay: 1, onAdd: () {}, onDetails: () {}), 360, 1);
+      final tone = ListingTone.indigo;
+      expect(face(tester, 'disc-card-add').gradient, tone.gradient);
+      expect(face(tester, 'disc-card-add').boxShadow, tone.glow());
+      final det = face(tester, 'disc-card-details');
+      expect(det.color, DesignColors.surface);
+      expect(det.gradient, isNull);
+      expect(det.boxShadow, DS.shadows(Ink3D.softShadow));
+      expect(labelColor(tester, TripMapDiscStrings.details), tone.text);
+    });
+
+    testWidgets('forest tone reaches every tone slot (Add, Details, category pill, close dot, card glow)', (tester) async {
+      final tone = ListingTone.forest;
+      await _pump(tester, TripMapSpotCard(spot: _photo, mode: DiscoveryMode.full, targetDay: 1, tone: tone, onAdd: () {}, onDetails: () {}), 360, 1);
+      expect(face(tester, 'disc-card-add').gradient, tone.gradient);
+      expect(labelColor(tester, TripMapDiscStrings.details), tone.text);
+      expect(deco(tester, 'disc-card-cat').color, tone.tint);
+      expect(deco(tester, 'disc-card-close-dot').color, tone.tint);
+      expect(tester.widget<Icon>(find.descendant(of: find.byKey(const ValueKey('disc-card-close')), matching: find.byType(Icon))).color, tone.text);
+      final shadows = deco(tester, 'disc-card').boxShadow!;
+      expect(shadows.first.color, tone.haloBase.withValues(alpha: Alpha.v26));
+      expect(shadows.length, 2);
+    });
+
+    testWidgets('Remove from day is a white pill with the danger text, no coral box', (tester) async {
+      await _pump(tester, TripMapSpotCard(spot: _photo, mode: DiscoveryMode.full, plannedDay: 2, tone: ListingTone.forest, onRemove: () {}, onDetails: () {}), 360, 1);
+      final rem = face(tester, 'disc-card-remove');
+      expect(rem.color, DesignColors.surface);
+      expect(rem.border, isNull);
+      expect(labelColor(tester, TripMapDiscStrings.removeFromDay), Form3D.errorText);
+    });
+
+    testWidgets('disabled button keeps the 45% opacity', (tester) async {
+      await _pump(tester, const TripMapSpotCard(spot: _photo, mode: DiscoveryMode.readOnly), 360, 1);
+      final op = tester.widget<Opacity>(find.descendant(of: find.byKey(const ValueKey('disc-card-details')), matching: find.byType(Opacity)));
+      expect(op.opacity, Alpha.v45);
+    });
+
+    testWidgets('photo spot: the photo only, no icon or sticker on it (owner 2026-11-27)', (tester) async {
+      await _pump(tester, const TripMapSpotCard(spot: _photo, mode: DiscoveryMode.readOnly), 360, 1);
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const ValueKey('disc-card-art')), findsNothing);
+      expect(find.byKey(const ValueKey('disc-card-sticker')), findsNothing);
+      expect(find.byKey(const ValueKey('disc-card-photo')), findsOneWidget);
+      expect(find.descendant(of: find.byKey(const ValueKey('disc-card-photo')), matching: find.byType(Art3D)), findsNothing);
+    });
+
+    testWidgets('no-photo spot: category gradient tile with the 3D art, same slot size as a photo', (tester) async {
+      await _pump(tester, const TripMapSpotCard(spot: _dot, mode: DiscoveryMode.readOnly), 360, 1);
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const ValueKey('disc-card-photo')), findsNothing);
+      expect(find.byKey(const ValueKey('disc-card-sticker')), findsNothing);
+      final art = find.byKey(const ValueKey('disc-card-art'));
+      expect(deco(tester, 'disc-card-art').gradient, TripSpotLook.gradientOf('waterfall'));
+      expect(tester.getSize(art), Size.square(DS.s(TripMapSpotCard.photo)));
+      final a = tester.widget<Art3D>(find.descendant(of: art, matching: find.byType(Art3D)));
+      expect(a.asset, TripSpotLook.assetOf('waterfall'));
+      expect(a.size, TripMapSpotCard.artSize);
+    });
+
+    testWidgets('photo and no-photo cards have the same height (no jump between spots)', (tester) async {
+      await _pump(tester, const TripMapSpotCard(spot: _photo, mode: DiscoveryMode.readOnly, line: 'Shimla'), 360, 1);
+      final h1 = tester.getSize(find.byKey(const ValueKey('disc-card'))).height;
+      await _pump(tester, const TripMapSpotCard(spot: _dot, mode: DiscoveryMode.readOnly, line: 'Shimla'), 360, 1);
+      expect(tester.getSize(find.byKey(const ValueKey('disc-card'))).height, closeTo(h1, 0.5));
+    });
+
+    testWidgets('plain round corners radius 20', (tester) async {
+      await _pump(tester, const TripMapSpotCard(spot: _dot, mode: DiscoveryMode.readOnly), 360, 1);
+      expect(deco(tester, 'disc-card').borderRadius, DS.circular(20));
+    });
+  });
+
   group('DiscoveryOverlay', () {
     DiscoveryHost host({List<DiscoverySpot>? added, int? target = 2}) => DiscoveryHost(
           anchorLayerId: () => null,
