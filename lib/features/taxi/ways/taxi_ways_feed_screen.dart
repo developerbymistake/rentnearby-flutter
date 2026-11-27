@@ -666,7 +666,6 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen>
         AtDestinationSection(
           cityName: r.to.name.isNotEmpty ? r.to.name : c.to.value.name,
           date: c.date.value,
-          people: c.people.value,
           localTaxis: r.localTaxis,
           stays: r.stays,
           reachFirstPlace: r.reachFirstPlace,

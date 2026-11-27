@@ -12,7 +12,6 @@ import 'widgets/reach_by_train_card.dart';
 class AtDestinationSection extends StatefulWidget {
   final String cityName;
   final DateTime date;
-  final int people;
   final List<TaxiBrowseItem> localTaxis;
   final List<StayNearbyModel> stays;
   final WayPlace? reachFirstPlace;
@@ -23,7 +22,6 @@ class AtDestinationSection extends StatefulWidget {
     super.key,
     required this.cityName,
     required this.date,
-    required this.people,
     required this.localTaxis,
     required this.stays,
     required this.reachFirstPlace,
@@ -124,7 +122,7 @@ class _AtDestinationSectionState extends State<AtDestinationSection> with Ticker
 
   Widget _stays() {
     DestinationStayCard card(StayNearbyModel s, int i, double w) => DestinationStayCard(
-        key: ValueKey(s.id), stay: s, cityName: widget.cityName, date: widget.date, people: widget.people, width: w, index: i);
+        key: ValueKey(s.id), stay: s, cityName: widget.cityName, width: w, index: i);
     return LayoutBuilder(builder: (context, c) {
       if (c.maxWidth >= _tablet) {
         final w = (c.maxWidth - DS.s(40)) / 3;

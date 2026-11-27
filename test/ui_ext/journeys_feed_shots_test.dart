@@ -161,7 +161,8 @@ void main() {
       await t.pump(const Duration(milliseconds: 300));
       await settlePhone(t);
       await shot(t, 'feed_dest_end_$tag');
-      expect(find.text('Ask for a room', skipOffstage: false), findsWidgets);
+      expect(find.text('Ask for a room', skipOffstage: false), findsNothing);
+      expect(find.text('Call', skipOffstage: false), findsWidgets);
       expect(t.takeException(), isNull);
       debugDisableShadows = true;
     });
