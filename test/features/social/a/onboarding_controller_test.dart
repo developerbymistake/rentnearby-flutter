@@ -1,13 +1,14 @@
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/features/social/a/onboarding/onboarding_controller.dart';
 import 'package:bakhli/features/social/a/social_strings_a.dart';
+import 'package:bakhli/models/user_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
 import '../shared/social_test_support.dart';
 
-OnboardingController _make({bool existing = false}) {
-  final c = OnboardingController(existing: existing, phone: existing ? null : '9897012345', clock: () => DateTime(2026, 11, 26));
+OnboardingController _make() {
+  final c = OnboardingController(clock: () => DateTime(2026, 11, 26));
   Get.put(c);
   return c;
 }
@@ -37,6 +38,7 @@ void main() {
 
   test('step 1 stays off with a hint per missing field', () {
     final c = _make();
+    c.name.value = '';
     expect(c.canNext, isFalse);
     expect(c.missingHint, 'Add your name, gender and birth month and year');
     c.name.value = 'Rahul Verma';
@@ -117,10 +119,10 @@ void main() {
     });
   });
 
-  test('existing account: name prefilled; finish calls PUT /social/me/onboarding and marks the profile done', () async {
+  test('name prefilled from the account made on Fill basic details; finish calls PUT /social/me/onboarding and marks the profile done', () async {
     final server = installServer();
     server.on('PUT', '/social/me/onboarding', myProfileJson());
-    final c = _make(existing: true);
+    final c = _make();
     expect(c.name.value, 'Rahul Verma');
     _fillStep1(c);
     _fillStep2(c);
@@ -133,10 +135,10 @@ void main() {
     expect(Get.find<AuthController>().user.value!.profileCompleted, isTrue);
   });
 
-  test('existing account: Under18 shows the server message and stays', () async {
+  test('Under18 shows the server message and stays', () async {
     final server = installServer();
     server.refuse('PUT', '/social/me/onboarding', status: 400, type: 'Under18', message: 'Bakhli is for people who are 18 or over.');
-    final c = _make(existing: true);
+    final c = _make();
     _fillStep1(c);
     _fillStep2(c);
     c.useExample('Hills over beaches. Chai at every stop.');
@@ -144,26 +146,22 @@ void main() {
     expect(c.error.value, 'Bakhli is for people who are 18 or over.');
   });
 
-  test('new account: finish sends the profile fields to complete-onboarding', () async {
+  test('the traveller form never creates an account: finish only calls PUT /social/me/onboarding', () async {
     final server = installServer();
-    server.on('POST', '/auth/phone/complete-onboarding', {
-      'token': 'x.y.z',
-      'user': {'id': 'me', 'phoneNumber': '9897012345', 'createdAt': '2026-11-26T00:00:00Z', 'profileCompleted': true, 'gender': 'Male'},
-    });
+    server.on('PUT', '/social/me/onboarding', myProfileJson());
     final c = _make();
     _fillStep1(c);
     _fillStep2(c);
     c.useExample('Hills over beaches. Chai at every stop.');
-    await c.finish();
-    final body = server.calls('POST', '/auth/phone/complete-onboarding').single.data as Map;
-    expect(body['phoneNumber'], '9897012345');
-    expect(body['name'], 'Rahul Verma');
-    expect(body['gender'], 'Male');
-    expect(body['birthMonth'], 8);
-    expect(body['birthYear'], 1998);
-    expect(body['interests'], ['Mountains', 'Treks', 'Food']);
-    expect(body['skills'], ['Driver']);
-    expect(body['places'], ['Rishikesh']);
-    expect(body['about'], 'Hills over beaches. Chai at every stop.');
+    expect(await c.finish(), isTrue);
+    expect(server.calls('POST', '/auth/phone/complete-onboarding'), isEmpty);
+    expect(server.calls('PUT', '/social/me/onboarding'), hasLength(1));
+  });
+
+  test('a user without a name yet starts with an empty name', () {
+    Get.find<AuthController>().user.value = UserModel(id: 'me', phoneNumber: '9897012345', createdAt: DateTime(2026), roleConfirmed: true, profileCompleted: false);
+    final c = _make();
+    expect(c.name.value, isEmpty);
+    expect(c.missingHint, 'Add your name, gender and birth month and year');
   });
 }

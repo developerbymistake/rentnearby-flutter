@@ -3,6 +3,7 @@ import '../config/app_map_state.dart';
 
 const _pauseRoutes = {
   '/phone-verify',
+  '/basic-details',
   '/onboarding',
   '/chat-conversation',
   '/chats-list',

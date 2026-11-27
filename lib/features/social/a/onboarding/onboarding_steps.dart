@@ -5,7 +5,6 @@ import '../../../../config/profile_photo_strings.dart';
 import '../../../../controllers/profile_photo_controller.dart';
 import '../../../../design/design.dart';
 import '../../../../design/extra/ext_auth.dart';
-import '../../../../design/extra/ext_buddy.dart';
 import '../../../../utils/input_formatters.dart';
 import '../../../../widgets/profile_photo_circle.dart';
 import '../../../buddy/shared/buddy_look.dart';
@@ -61,11 +60,14 @@ class OnboardingStepDots extends StatelessWidget {
 }
 
 class OnboardingHeader extends StatelessWidget {
-  const OnboardingHeader({super.key, required this.step, this.onBack, this.onMenu});
+  const OnboardingHeader({super.key, this.step = 0, this.onBack, this.onMenu, this.title = SocialStringsA.obTitle, this.subtitle, this.showSteps = true});
 
   final int step;
   final VoidCallback? onBack;
   final void Function(Rect anchor)? onMenu;
+  final String title;
+  final String? subtitle;
+  final bool showSteps;
 
   static const double edge = 18;
   static const double cardGap = 24;
@@ -119,11 +121,11 @@ class OnboardingHeader extends StatelessWidget {
                   children: [
                     Semantics(
                       header: true,
-                      child: Text(SocialStringsA.obTitle, key: titleKey, style: Ink3D.text(24, FontWeight.w700, white, height: 1.15, letterSpacing: 0)),
+                      child: Text(title, key: titleKey, style: Ink3D.text(24, FontWeight.w700, white, height: 1.15, letterSpacing: 0)),
                     ),
                     Padding(
                       padding: EdgeInsets.only(top: DS.s(4)),
-                      child: Text(subtitleOf(step), style: Ink3D.text(14, FontWeight.w400, white.withValues(alpha: Alpha.v92), letterSpacing: 0)),
+                      child: Text(subtitle ?? subtitleOf(step), style: Ink3D.text(14, FontWeight.w400, white.withValues(alpha: Alpha.v92), letterSpacing: 0)),
                     ),
                   ],
                 ),
@@ -138,8 +140,10 @@ class OnboardingHeader extends StatelessWidget {
                 ),
             ],
           ),
-          Gap.v(16),
-          OnboardingStepDots(step: step),
+          if (showSteps) ...[
+            Gap.v(16),
+            OnboardingStepDots(step: step),
+          ],
         ],
       ),
     );
@@ -160,8 +164,8 @@ class OnboardingCard extends StatelessWidget {
       );
 }
 
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel(this.text, {this.top = true});
+class OnboardingFieldLabel extends StatelessWidget {
+  const OnboardingFieldLabel(this.text, {super.key, this.top = true});
 
   final String text;
   final bool top;
@@ -328,10 +332,11 @@ class GenderCards extends StatelessWidget {
 
 // Step 1 photo: dashed circle on the left, "Add a photo" + why on the right. Tap = [onTap] (a failed upload re-picks).
 class OnboardingPhotoRow extends StatelessWidget {
-  const OnboardingPhotoRow({super.key, required this.controller, required this.onTap});
+  const OnboardingPhotoRow({super.key, required this.controller, required this.onTap, this.url});
 
   final ProfilePhotoController controller;
   final VoidCallback onTap;
+  final String? url;
 
   static final ListingTone _tone = ListingTone.indigo;
   static const double _photo = 96;
@@ -374,7 +379,9 @@ class OnboardingPhotoRow extends StatelessWidget {
                     Center(
                       child: ProfilePhotoCircle(
                         size: DS.s(_photo),
+                        url: url,
                         localPath: local,
+                        placeholderPath: controller.placeholderPath,
                         busy: busy,
                         progress: busy ? controller.progress.value : null,
                         ring: false,
@@ -417,8 +424,7 @@ class OnboardingStepYou extends StatelessWidget {
     required this.onPhoto,
     required this.nameCtrl,
     required this.nameFocus,
-    this.phoneLine,
-    this.idPill,
+    this.photoUrl,
   });
 
   final OnboardingController c;
@@ -426,8 +432,7 @@ class OnboardingStepYou extends StatelessWidget {
   final VoidCallback onPhoto;
   final TextEditingController nameCtrl;
   final FocusNode nameFocus;
-  final Widget? phoneLine;
-  final Widget? idPill;
+  final String? photoUrl;
 
   Future<void> _pickMonth(BuildContext context) async {
     final m = await ChoiceSheet.pick<int>(context,
@@ -444,8 +449,8 @@ class OnboardingStepYou extends StatelessWidget {
   Widget build(BuildContext context) {
     return OnboardingCard(
       children: [
-        OnboardingPhotoRow(controller: photo, onTap: onPhoto),
-        const _FieldLabel(SocialStringsA.fullName),
+        OnboardingPhotoRow(controller: photo, onTap: onPhoto, url: photoUrl),
+        const OnboardingFieldLabel(SocialStringsA.fullName),
         AuthPillInput(
           tone: ListingTone.indigo,
           focusNode: nameFocus,
@@ -463,9 +468,9 @@ class OnboardingStepYou extends StatelessWidget {
             onChanged: (v) => c.name.value = v,
           ),
         ),
-        const _FieldLabel(SocialStringsA.gender),
+        const OnboardingFieldLabel(SocialStringsA.gender),
         Obx(() => GenderCards(selected: c.gender.value, onPick: (g) => c.gender.value = g)),
-        const _FieldLabel(SocialStringsA.birth),
+        const OnboardingFieldLabel(SocialStringsA.birth),
         Obx(() => Row(
               children: [
                 Expanded(
@@ -491,46 +496,8 @@ class OnboardingStepYou extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(8), 0, 0),
           child: Text(SocialStringsA.birthHelp, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
         ),
-        if (phoneLine != null) ...[Gap.v(16), phoneLine!],
-        if (idPill != null) ...[Gap.v(10), idPill!],
       ],
     );
-  }
-}
-
-class OnboardingIdentityChips extends StatelessWidget {
-  const OnboardingIdentityChips({super.key, required this.phone, required this.username, required this.idPill});
-
-  static const Key sideBySideKey = ValueKey('ob_identity_side_by_side');
-  static const double _fitSlack = 1.1;
-
-  final String? phone;
-  final String? username;
-  final Widget Function(bool compact) idPill;
-
-  @override
-  Widget build(BuildContext context) {
-    final line = phone;
-    if (line == null) return idPill(false);
-    return LayoutBuilder(builder: (context, box) {
-      final a = AuthVerifiedRow.compactWidth(context, line);
-      final b = UsernameLockedPill.compactWidth(context, username);
-      final gap = DS.s(8);
-      if (a + b + gap <= box.maxWidth * _fitSlack) {
-        return Row(
-          key: sideBySideKey,
-          children: [
-            Expanded(flex: a.round(), child: AuthVerifiedRow(art: ListingArt.key, text: line, compact: true)),
-            SizedBox(width: gap),
-            Expanded(flex: b.round(), child: idPill(true)),
-          ],
-        );
-      }
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [AuthVerifiedRow(art: ListingArt.key, text: line), Gap.v(10), idPill(false)],
-      );
-    });
   }
 }
 
