@@ -60,6 +60,7 @@ class RoomController extends GetxController {
   final peerLastReadSeq = 0.obs;
   final refusal = Rxn<BuddyRefused<Object?>>();
   final cannotMessageNow = false.obs;
+  final plusLocked = false.obs;
   Future<bool> Function(bool group)? guidelinesPrompt;
   Completer<bool>? _guidelinesAsk;
   final bounced = Rxn<String>();
@@ -96,8 +97,14 @@ class RoomController extends GetxController {
 
   bool get canMessage => room.value != null || (preflight.value?.canMessage ?? false);
 
+  /// Trip group rooms: a member without the group chat entitlement reads but cannot send.
+  bool get groupChatLocked {
+    if (!isTrip) return false;
+    return plusLocked.value || lock == RoomLock.plus || !(SocialMeController.maybe?.me.value?.limits.groupChat ?? true);
+  }
+
   bool get canSend {
-    if (view.value != RoomView.ready || !canMessage || cannotMessageNow.value) return false;
+    if (view.value != RoomView.ready || !canMessage || cannotMessageNow.value || groupChatLocked) return false;
     final r = room.value;
     if (r != null) return r.canSend && r.lock == RoomLock.none && r.status != RoomStatus.declined;
     return lock == RoomLock.none;
@@ -381,6 +388,7 @@ class RoomController extends GetxController {
   }
 
   Future<void> refreshLock() async {
+    plusLocked.value = false;
     if (currentRoomId != null) return _refreshRoom();
     final user = userId;
     if (user == null) return;
@@ -426,7 +434,8 @@ class RoomController extends GetxController {
         type == SocialErrorTypes.guidelinesNotAccepted ||
         type == SocialErrorTypes.textTooLong ||
         type == SocialErrorTypes.roomNotFound ||
-        type == SocialErrorTypes.personNotFound;
+        type == SocialErrorTypes.personNotFound ||
+        (type == SocialErrorTypes.plusRequired && isTrip);
     if (!bounce) {
       _markFailed(cid);
       refusal.value = r;
@@ -444,6 +453,9 @@ class RoomController extends GetxController {
       cannotMessageNow.value = true;
       final p = preflight.value;
       if (p != null) preflight.value = ChatPreflight(room: p.room, peer: p.peer, canMessage: false, lock: p.lock, newChats: p.newChats, isFree: p.isFree);
+    } else if (type == SocialErrorTypes.plusRequired) {
+      plusLocked.value = true;
+      SocialMeController.maybe?.refreshQuiet();
     } else if (type == SocialErrorTypes.roomNotFound || type == SocialErrorTypes.personNotFound) {
       view.value = RoomView.gone;
     }

@@ -10,7 +10,7 @@ PlanModel seekerFree() => PlanModel.fromJson({
       'code': 'SEEKER_FREE',
       'name': 'Free',
       'isDefault': true,
-      'features': {'SeekerActiveTrips': 1, 'SeekerPublicTrips': 1, 'SeekerJoinRequestsPerMonth': 1, 'SeekerNewChatsPerMonth': 3, 'SeekerGenderOnlyTrips': 0, 'SeekerNearMe': 0},
+      'features': {'SeekerActiveTrips': 1, 'SeekerPublicTrips': 1, 'SeekerJoinRequestsPerMonth': 1, 'SeekerNewChatsPerMonth': 3, 'SeekerGenderOnlyTrips': 0, 'SeekerNearMe': 0, 'SeekerGroupChat': 0},
       'prices': [],
     }, 'Seeker');
 
@@ -20,7 +20,7 @@ PlanModel seekerPlus() => PlanModel.fromJson({
       'name': 'Bakhli Plus',
       'tagline': 'Join more trips',
       'isDefault': false,
-      'features': {'SeekerActiveTrips': 10, 'SeekerPublicTrips': 3, 'SeekerJoinRequestsPerMonth': 5, 'SeekerNewChatsPerMonth': 10, 'SeekerGenderOnlyTrips': 1, 'SeekerNearMe': 1},
+      'features': {'SeekerActiveTrips': 10, 'SeekerPublicTrips': 3, 'SeekerJoinRequestsPerMonth': 5, 'SeekerNewChatsPerMonth': 10, 'SeekerGenderOnlyTrips': 1, 'SeekerNearMe': 1, 'SeekerGroupChat': 1},
       'prices': [
         {'cycleMonths': 1, 'priceInr': 200, 'perMonthInr': 200, 'playBasePlanId': 'cycle-1m'},
         {'cycleMonths': 3, 'priceInr': 500, 'perMonthInr': 166, 'playBasePlanId': 'cycle-3m'},

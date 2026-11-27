@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 
 import '../../../buddy/shared/buddy_result.dart';
+import '../../shared/post_removal.dart';
+import '../../shared/social_error_types.dart';
 import '../../shared/social_live.dart';
 import '../../shared/social_models.dart';
 import '../data/public_trips_api.dart';
@@ -115,6 +117,20 @@ class TravelBuddiesController extends GetxController {
   void applyMyJoin(String tripId, String myJoin) {
     final i = items.indexWhere((t) => t.tripId == tripId);
     if (i != -1) items[i] = items[i].copyWith(myJoin: myJoin);
+  }
+
+  /// A refused request updates the card at once: Full for a post with the most pending requests, no Request for a removed member.
+  void applyRefusal(String tripId, String? type) {
+    final i = items.indexWhere((t) => t.tripId == tripId);
+    if (i == -1) return;
+    if (type == SocialErrorTypes.tripRequestsFull) items[i] = items[i].copyWith(requestsFull: true);
+    if (type == SocialErrorTypes.cannotRejoin) items[i] = items[i].copyWith(myJoin: 'removed');
+  }
+
+  void applyRemovalBlock(String tripId, PostRemovalBlock block) {
+    if (block is! PostLockedBlock || block.unlocksAt == null) return;
+    final i = mine.indexWhere((t) => t.tripId == tripId);
+    if (i != -1) mine[i] = mine[i].copyWith(unlocksAt: block.unlocksAt);
   }
 
   Future<BuddyResult<void>> removeMyPost(String tripId) async {

@@ -146,7 +146,8 @@ abstract final class SocialStringsA {
   static String blockedCount(int n) => '$n blocked';
   static const String notifyMessages = 'Messages';
   static const String notifyFollows = 'Follows and requests';
-  static const String notifyTrips = 'Plans from people I follow';
+  static const String notifyTrips = 'Trips of people I follow';
+  static const String notifyNearbyTrips = 'Trips near me';
   static const String myTrips = 'My Trips';
   static const String jobs = 'Jobs';
   static const String myJourneys = 'My Journeys';

@@ -23,6 +23,10 @@ import 'package:bakhli/features/social/b/post/trip_post_screen.dart';
 import 'package:bakhli/features/social/b/rail/trips_rail_controller.dart';
 import 'package:bakhli/features/social/b/rail/trips_to_join_rail.dart';
 import 'package:bakhli/features/social/b/social_strings_b.dart';
+import 'package:bakhli/features/social/shared/social_strings.dart';
+import 'package:bakhli/features/social/shared/widgets/public_trip_card.dart';
+import 'package:bakhli/features/social/b/widgets/find_buddies_post_card.dart';
+import 'package:bakhli/features/social/b/wizard/post_about_step.dart';
 import 'package:bakhli/features/social/b/wizard/post_trip_controller.dart';
 import 'package:bakhli/features/social/b/wizard/post_trip_screen.dart';
 import 'package:bakhli/features/social/b/wizard/post_when_step.dart';
@@ -34,6 +38,7 @@ import 'package:bakhli/features/social/c/chat/rooms_controller.dart';
 import 'package:bakhli/features/social/c/plus/seeker_plus_screen.dart';
 import 'package:bakhli/features/social/c/social_strings_c.dart';
 import 'package:bakhli/features/social/shared/social_me_controller.dart';
+import 'package:bakhli/features/social/shared/social_models.dart';
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/models/conversation_model.dart';
@@ -707,6 +712,109 @@ void main() {
       await _open(t, const SeekerPlusScreen(from: 'chat'));
       await _snap(t, 'E15_bakhli_plus');
       await _snapFull(t, 'E15_bakhli_plus', 1500);
+      await _end(t);
+    });
+  });
+
+  group('N post notify (follow-post-push)', () {
+    Map<String, dynamic> withLimits(Map<String, dynamic> me, Map<String, dynamic> extra) => {...me, 'limits': {...me['limits'] as Map<String, dynamic>, ...extra}};
+
+    testWidgets('N1 About with Notify travellers near me ON', (t) async {
+      putSeeker();
+      seedCities();
+      final c = await _wizard(t, step: PostTripController.stepAbout);
+      c.setNotifyNearby(true);
+      await t.ensureVisible(find.byKey(PostAboutStep.notifyKey));
+      await settle(t);
+      await _snap(t, 'N1_wizard_notify_nearby');
+      await _snapFull(t, 'N1_wizard_notify_nearby', 1400);
+      await _end(t);
+    });
+
+    testWidgets('N2 About with the weekly notifications used', (t) async {
+      putSeeker();
+      seedCities();
+      await _wizard(t, step: PostTripController.stepAbout);
+      SocialMeController.to.me.value = SocialMe.fromJson(withLimits(socialMeWith(gender: 'Male'), {
+        'notifyPosts': {'limit': 2, 'used': 2},
+        'notifyNextAt': '2026-12-02T04:00:00Z',
+      }));
+      await settle(t);
+      await t.ensureVisible(find.byKey(PostAboutStep.notifyKey));
+      await settle(t);
+      await _snap(t, 'N2_wizard_notify_used');
+      await _end(t);
+    });
+
+    testWidgets('N3 Feed: a Full post and a removed member', (t) async {
+      putSeeker();
+      final server = installServer();
+      putSocialMe(server, socialMeWith(gender: 'Male'));
+      server.on('GET', '/social/trips/feed', _feedPage(items: [{..._kavyaPost(), 'requestsFull': true}, _amanPost()..['myJoin'] = 'removed']));
+      await _open(t, const TravelBuddiesScreen());
+      await _snapFull(t, 'N3_feed_full_removed', 1700);
+      await _end(t);
+    });
+
+    testWidgets('N4 Free limit reached: Home and My Trips cards, feed Post button', (t) async {
+      putSeeker();
+      final server = installServer();
+      final me = putSocialMe(server, socialMeWith(gender: 'Male', publicUsed: 1));
+      await t.runAsync(me.load);
+      await _open(
+        t,
+        const Scaffold(
+          body: SafeArea(
+            child: SingleChildScrollView(
+              child: Column(children: [FindBuddiesPostCard(place: FindBuddiesPostPlace.home), FindBuddiesPostCard(place: FindBuddiesPostPlace.myTrips)]),
+            ),
+          ),
+        ),
+      );
+      expect(find.text(SocialStringsB.freeLimitHint), findsNWidgets(2));
+      await _snap(t, 'N4_post_cards_free_limit');
+      await _end(t);
+    });
+
+    testWidgets('N5 Trip chat for a Free member: read only with the Plus panel', (t) async {
+      Get.put<SocialMeController>(pf.FakeSocialMeController(SocialLimits.fromJson({...socialMeJson()['limits'] as Map<String, dynamic>, 'groupChat': false})));
+      final api = cf.FakeChatApi()
+        ..roomResult = BuddyOk(ChatRoomModel.fromJson(_tripRoom('r1', 't1', 'Manali')))
+        ..messagesResult = BuddyOk(MessagesPage(items: [
+          cf.msgOf(1, system: 'joined', text: 'Meera joined the trip'),
+          cf.msgOf(2, sender: 'u-rohan', senderName: 'Rohan M.', text: 'Booked the cab for 6 AM from Delhi.'),
+        ], lastSeq: 2));
+      await _open(t, DmRoomScreen(controller: _room(api)));
+      expect(find.byKey(const ValueKey('dm_lock_group_plus')), findsOneWidget);
+      await _snap(t, 'N5_trip_chat_free_member');
+      await _end(t);
+    });
+
+    testWidgets('N6 Settings: Trips of people I follow and Trips near me', (t) async {
+      putSeeker();
+      final server = installServer();
+      server.on('GET', '/social/me', socialMeJson(profile: myProfileJson()));
+      Get.put(SocialMeController(), permanent: true);
+      await _open(t, const SettingsScreen());
+      await t.ensureVisible(find.byKey(SettingsScreen.nearbyKey));
+      await settle(t);
+      await _snap(t, 'N6_settings_notifications');
+      await _end(t);
+    });
+
+    testWidgets('N7 Own post inside the 72-hour lock: Remove greyed with the unlock line, N8 the calm notice', (t) async {
+      putSeeker();
+      final server = installServer();
+      putSocialMe(server, socialMeWith(gender: 'Male', publicUsed: 1));
+      final at = DateTime.now().toUtc().add(const Duration(hours: 40));
+      server.on('GET', '/social/trips/feed', _feedPage(mine: [{..._minePost(), 'unlocksAt': at.toIso8601String()}], items: [_kavyaPost()]));
+      await _open(t, const TravelBuddiesScreen());
+      await _tap(t, find.byKey(PublicTripCard.menuKey).first);
+      expect(find.text(SocialStrings.postLockedLine(at)), findsOneWidget);
+      await _snap(t, 'N7_post_menu_locked');
+      await _tap(t, find.text(SocialStringsB.removePost));
+      expect(find.text(SocialStrings.postLockedTitle), findsOneWidget);
+      await _snap(t, 'N8_post_lock_notice');
       await _end(t);
     });
   });

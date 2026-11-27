@@ -33,6 +33,7 @@ class SettingsScreen extends StatefulWidget {
   static const Key blockedKey = ValueKey('settings_blocked');
   static const Key plusKey = ValueKey('settings_plus');
   static const Key safetyKey = ValueKey('settings_safety_tips');
+  static const Key nearbyKey = ValueKey('settings_notify_nearby');
   static const Key logoutKey = ValueKey('settings_logout');
   static const Key deleteKey = ValueKey('settings_delete');
   static const Key verifiedPillKey = ValueKey('settings_phone_verified');
@@ -242,6 +243,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 IconRow3D(art: ListingArt.speechBalloon, title: SocialStringsA.notifyMessages, trailing: _switch('notifyMessages', p.notifyMessages)),
                 IconRow3D(art: ListingArt.bell, title: SocialStringsA.notifyFollows, divider: true, trailing: _switch('notifyFollows', p.notifyFollows)),
                 IconRow3D(art: ListingArt.luggage, title: SocialStringsA.notifyTrips, divider: true, trailing: _switch('notifyFollowedTrips', p.notifyFollowedTrips)),
+                IconRow3D(art: ListingArt.roundPushpin, title: SocialStringsA.notifyNearbyTrips, divider: true, trailing: _switch('notifyNearbyTrips', p.notifyNearbyTrips, switchKey: SettingsScreen.nearbyKey)),
               ]),
             _activity(),
             _section(SocialStringsA.supportLabel, [

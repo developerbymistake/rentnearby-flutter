@@ -31,6 +31,7 @@ const _rows = [
   SocialStringsA.notifyMessages,
   SocialStringsA.notifyFollows,
   SocialStringsA.notifyTrips,
+  SocialStringsA.notifyNearbyTrips,
   SocialStringsA.myTrips,
   SocialStringsA.myReports,
   SocialStringsA.contactSupport,
@@ -206,6 +207,7 @@ void main() {
     ('notifyMessages', SocialStringsA.notifyMessages),
     ('notifyFollows', SocialStringsA.notifyFollows),
     ('notifyFollowedTrips', SocialStringsA.notifyTrips),
+    ('notifyNearbyTrips', SocialStringsA.notifyNearbyTrips),
   ]) {
     testWidgets('notification switch ${c.$1} sends only its key and shows the saved value', (t) async {
       final server = await open(t);
@@ -219,6 +221,30 @@ void main() {
       await drain(t);
     });
   }
+
+  testWidgets('UC21 Trips of people I follow and Trips near me show the server state after a reload', (t) async {
+    final server = installServer();
+    server.on('GET', '/social/me', socialMeJson(profile: {...myProfileJson(), 'notifyFollowedTrips': false, 'notifyNearbyTrips': false}));
+    Get.put(SocialMeController(), permanent: true);
+    await pumpSocial(t, const SettingsScreen(), size: const Size(392, 3400), pages: _pages);
+    await settle(t);
+    Switch3D rowSwitch(String title) =>
+        t.widget<Switch3D>(find.descendant(of: find.ancestor(of: find.text(title), matching: find.byType(IconRow3D)).first, matching: find.byType(Switch3D)));
+    expect(rowSwitch(SocialStringsA.notifyTrips).value, isFalse);
+    expect(t.widget<Switch3D>(find.byKey(SettingsScreen.nearbyKey)).value, isFalse);
+    await t.pumpWidget(const SizedBox.shrink());
+    server.on('GET', '/social/me', socialMeJson(profile: {...myProfileJson(), 'notifyFollowedTrips': true, 'notifyNearbyTrips': true}));
+    await pumpSocial(t, const SettingsScreen(), size: const Size(392, 3400), pages: _pages);
+    await settle(t);
+    expect(rowSwitch(SocialStringsA.notifyTrips).value, isTrue);
+    expect(t.widget<Switch3D>(find.byKey(SettingsScreen.nearbyKey)).value, isTrue);
+    await drain(t);
+  });
+
+  test('UC21 copy: Trips of people I follow, Trips near me', () {
+    expect(SocialStringsA.notifyTrips, 'Trips of people I follow');
+    expect(SocialStringsA.notifyNearbyTrips, 'Trips near me');
+  });
 
   testWidgets('a refused policy save keeps the old policy and shows the error', (t) async {
     final server = await open(t);

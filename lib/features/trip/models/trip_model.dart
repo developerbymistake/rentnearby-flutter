@@ -127,6 +127,12 @@ class TripModel {
   final bool inactiveByPlan;
   final bool isPublic;
 
+  /// Owner answers: the post cannot be removed (unpublished or the trip deleted) before this moment. Null = no lock or an older answer.
+  final DateTime? postUnlocksAt;
+
+  /// Owner answers: the trip was ever posted and is not over, so Delete needs every other traveller removed first.
+  final bool deleteNeedsAlone;
+
   const TripModel({
     required this.id,
     required this.title,
@@ -159,6 +165,8 @@ class TripModel {
     this.sharing,
     this.inactiveByPlan = false,
     this.isPublic = false,
+    this.postUnlocksAt,
+    this.deleteNeedsAlone = false,
   }) : _legCities = legCities;
 
   List<String> get legCities => _legCities ?? [cityName];
@@ -214,6 +222,8 @@ class TripModel {
     TripSharingBlock? sharing,
     bool? inactiveByPlan,
     bool? isPublic,
+    DateTime? postUnlocksAt,
+    bool? deleteNeedsAlone,
   }) =>
       TripModel(
         id: id,
@@ -247,6 +257,8 @@ class TripModel {
         sharing: sharing ?? this.sharing,
         inactiveByPlan: inactiveByPlan ?? this.inactiveByPlan,
         isPublic: isPublic ?? this.isPublic,
+        postUnlocksAt: postUnlocksAt ?? this.postUnlocksAt,
+        deleteNeedsAlone: deleteNeedsAlone ?? this.deleteNeedsAlone,
       );
 
   factory TripModel.fromJson(Map<String, dynamic> json) => TripModel(
@@ -288,6 +300,8 @@ class TripModel {
         sharing: _sharingOf(json['sharing']),
         inactiveByPlan: json['inactiveByPlan'] == true,
         isPublic: json['isPublic'] == true,
+        postUnlocksAt: _instant(json['postUnlocksAt']),
+        deleteNeedsAlone: json['deleteNeedsAlone'] == true,
       );
 }
 
@@ -431,6 +445,8 @@ class TripSummaryModel {
   final List<String>? _legCities;
   final TripProgress progress;
   final bool inactiveByPlan;
+  final DateTime? postUnlocksAt;
+  final bool deleteNeedsAlone;
 
   const TripSummaryModel({
     required this.id,
@@ -453,6 +469,8 @@ class TripSummaryModel {
     List<String>? legCities,
     this.progress = const TripProgress(),
     this.inactiveByPlan = false,
+    this.postUnlocksAt,
+    this.deleteNeedsAlone = false,
   }) : _legCities = legCities;
 
   List<String> get legCities => _legCities ?? [cityName];
@@ -511,6 +529,8 @@ class TripSummaryModel {
         legCities: _legCities,
         progress: progress,
         inactiveByPlan: inactiveByPlan,
+        postUnlocksAt: postUnlocksAt,
+        deleteNeedsAlone: deleteNeedsAlone,
       );
 
   TripSummaryModel withMuted(DateTime? at) => _with(mutedAt: at, completedAt: completedAt);
@@ -539,6 +559,8 @@ class TripSummaryModel {
         legCities: _legCitiesOf(json['legCities']),
         progress: TripProgress.tryParse(json['progress']) ?? const TripProgress(),
         inactiveByPlan: json['inactiveByPlan'] == true,
+        postUnlocksAt: _instant(json['postUnlocksAt']),
+        deleteNeedsAlone: json['deleteNeedsAlone'] == true,
       );
 }
 

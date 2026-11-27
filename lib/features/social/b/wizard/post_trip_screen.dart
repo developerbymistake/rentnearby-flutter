@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../design/design.dart';
+import '../../../buddy/shared/buddy_json.dart';
 import '../../../buddy/shared/buddy_result.dart';
 import '../../../buddy/shared/widgets/buddy_snack.dart';
 import '../../../buddy/triplimit/trip_limit_models.dart';
@@ -69,12 +70,19 @@ class _PostTripScreenState extends State<PostTripScreen> {
     final r = await c.submit();
     if (!mounted) return;
     switch (r) {
-      case BuddyOk():
+      case BuddyOk(:final value):
         SocialLive.posts.value++;
         if (Get.isRegistered<MyTripsController>()) MyTripsController.to.load();
         SocialMeController.maybe?.refreshQuiet();
+        SocialNavB.postedNote = value.notified == false
+            ? SocialStringsB.notifyUsedUpPosted
+            : (value.notifyNearby ? SocialStringsB.nearbyTomorrow : null);
         SocialNavB.backToTravelBuddies(posted: true);
       case BuddyRefused(:final type, :final message, :final data):
+        if (type == SocialErrorTypes.publishLimit) {
+          BuddySnack.show(context, SocialStringsB.publishLimit(BuddyJson.time(data['nextAllowedAt'])?.toLocal()), danger: true);
+          return;
+        }
         if (type == SocialErrorTypes.tripLimitReached) {
           await TripLimitSheet.show(context, TripSlots.fromRefusal(data), reason: TripLimitReason.plan);
           return;

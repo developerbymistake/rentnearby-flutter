@@ -188,7 +188,8 @@ class TripOverviewScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(extraMenuItems[i].label, style: Ink3D.text(13, FontWeight.w600, extraMenuItems[i].danger ? DesignColors.error : Ink3D.title)),
+                        Text(extraMenuItems[i].label,
+                            style: Ink3D.text(13, FontWeight.w600, extraMenuItems[i].blocked ? Ink3D.grey : (extraMenuItems[i].danger ? DesignColors.error : Ink3D.title))),
                         if (extraMenuItems[i].subtitle != null)
                           Text(extraMenuItems[i].subtitle!, style: Ink3D.text(12, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
                       ],

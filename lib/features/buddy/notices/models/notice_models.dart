@@ -22,8 +22,9 @@ abstract final class NoticeKinds {
   static const String joinAccepted = 'JoinAccepted';
   static const String joinDeclined = 'JoinDeclined';
   static const String followedPosted = 'FollowedPosted';
+  static const String nearbyPosted = 'NearbyPosted';
 
-  static const List<String> social = [followRequest, newFollower, followAccepted, joinRequest, joinAccepted, joinDeclined, followedPosted];
+  static const List<String> social = [followRequest, newFollower, followAccepted, joinRequest, joinAccepted, joinDeclined, followedPosted, nearbyPosted];
 
   static const List<String> all = [
     buddyRequest,

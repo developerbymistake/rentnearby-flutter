@@ -87,6 +87,16 @@ void main() {
     await drain(t);
   });
 
+  testWidgets('abuse guard: the daily follow cap (429 TooManyRequests) shows the calm follow line and rolls back', (t) async {
+    final api = _Api(const BuddyRefused<String>(type: 'TooManyRequests', statusCode: 429, message: 'Too many tries. Please wait.'));
+    await pumpSocial(t, _host(api));
+    await t.tap(find.text(SocialStrings.follow));
+    await settle(t);
+    expect(find.text(SocialStrings.followLimit), findsOneWidget);
+    expect(find.text(SocialStrings.follow), findsOneWidget);
+    await drain(t);
+  });
+
   testWidgets('unfollow failure restores Following', (t) async {
     final api = _Api(const BuddyOk('following'), unfollowResult: const BuddyFailed(message: 'x'));
     await pumpSocial(t, _host(api, iFollow: true));

@@ -16,20 +16,67 @@ import '../../../buddy/shared/widgets/buddy_sheet.dart';
 import '../../../buddy/shared/widgets/buddy_snack.dart';
 import '../../../buddy/shared/widgets/menu_row.dart';
 import '../../shared/data/social_report_api.dart';
+import '../../shared/post_removal.dart';
 import '../../shared/social_models.dart';
 import '../social_strings_b.dart';
 
 class TripPostMenuItem {
-  const TripPostMenuItem({required this.art, required this.title, this.subtitle, this.danger = false, required this.onSelected});
+  const TripPostMenuItem({required this.art, required this.title, this.subtitle, this.danger = false, this.blocked = false, required this.onSelected});
 
   final String art;
   final String title;
   final String? subtitle;
   final bool danger;
+
+  /// Shown greyed with its reason as the subtitle; a tap explains instead of acting.
+  final bool blocked;
   final Future<void> Function() onSelected;
 }
 
 abstract final class TripPostActions {
+  /// 'Remove from Travel buddies' on an own post: greyed with the unlock moment during the 72-hour lock; a late PostLocked refusal explains the same way.
+  static TripPostMenuItem removeItem(
+    BuildContext context,
+    PublicTrip trip, {
+    required Future<BuddyResult<void>> Function() remove,
+    required VoidCallback onRemoved,
+    required void Function(BuddyResult<void> r) onFailed,
+    void Function(PostRemovalBlock block)? onBlocked,
+    DateTime? now,
+  }) {
+    final block = PostRemovalRule.lockOnly(trip.lockedUntil(now: now), now: now);
+    if (block != null) {
+      return TripPostMenuItem(
+        art: ListingArt.locked,
+        title: SocialStringsB.removePost,
+        subtitle: block.line,
+        blocked: true,
+        onSelected: () => PostRemovalNotice.show(context, trip.tripId, block),
+      );
+    }
+    return TripPostMenuItem(
+      art: ListingArt.locked,
+      title: SocialStringsB.removePost,
+      subtitle: SocialStringsB.removePostLine,
+      danger: true,
+      onSelected: () async {
+        final r = await remove();
+        if (!context.mounted) return;
+        if (r.isOk) {
+          onRemoved();
+          return;
+        }
+        final refused = PostRemovalBlock.fromResult(r);
+        if (refused != null) {
+          onBlocked?.call(refused);
+          await PostRemovalNotice.show(context, trip.tripId, refused);
+          return;
+        }
+        onFailed(r);
+      },
+    );
+  }
+
   static Future<void> showMenu(BuildContext context, {required PublicTrip trip, VoidCallback? onBlocked, List<TripPostMenuItem> own = const []}) async {
     final owner = trip.owner;
     final items = trip.isMine
@@ -78,7 +125,10 @@ abstract final class TripPostActions {
               art: items[i].art,
               title: items[i].title,
               subtitle: items[i].subtitle,
-              danger: items[i].danger,
+              danger: items[i].danger && !items[i].blocked,
+              grey: items[i].blocked,
+              subtitleLines: items[i].blocked ? 2 : 1,
+              trailing: items[i].blocked ? Icon(Icons.lock_rounded, size: DS.s(16), color: BuddyLook.greyText) : null,
               onTap: () => Navigator.of(c).pop(i),
             ),
           ],

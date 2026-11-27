@@ -135,6 +135,7 @@ class SeekerPlusController extends GetxController {
       if (join > 0) PlusPerk(art: ListingArt.panda, title: SocialStringsC.joinRequests(join), subtitle: freeJoin == null ? null : SocialStringsC.freeHas(freeJoin)),
       if (plusValue(SeekerPlanKeys.genderOnly) > 0) const PlusPerk(art: HubArt.womanRaising, title: SocialStringsC.genderOnly, subtitle: SocialStringsC.genderOnlySub),
       if (plusValue(SeekerPlanKeys.nearMe) > 0) const PlusPerk(art: ListingArt.roundPushpin, title: SocialStringsC.nearMe, subtitle: SocialStringsC.nearMeSub),
+      if (plusValue(SeekerPlanKeys.groupChat) > 0) const PlusPerk(art: ListingArt.speechBalloon, title: SocialStringsC.groupChatPerk, subtitle: SocialStringsC.groupChatPerkSub),
     ];
   }
 

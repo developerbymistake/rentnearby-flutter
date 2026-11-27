@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../../../services/storage_service.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
+import '../../social/shared/post_removal.dart';
 import '../data/trip_repository.dart';
 import '../models/trip_model.dart';
 import '../trip_strings.dart';
@@ -273,6 +274,11 @@ class MyTripsController extends GetxController {
           active.insert(inActive.clamp(0, active.length), removed);
         }
         _shiftCount(wasPast, 1);
+      }
+      final block = PostRemovalBlock.fromError(e);
+      if (block != null) {
+        await PostRemovalNotice.show(null, id, block);
+        return false;
       }
       AppToast.error(DioErrorMapper.toMessage(e, "Couldn't delete the trip."));
       return false;

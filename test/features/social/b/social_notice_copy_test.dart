@@ -10,7 +10,7 @@ import 'package:get/get.dart';
 import '../../../support/buddy_render.dart';
 import '../shared/social_test_support.dart';
 
-Notice _n(String kind, {String? tripId, String? tripTitle = 'Manali trip', String? tripCity = 'Manali', String? refId, String? preview, bool read = false}) => Notice.fromJson({
+Notice _n(String kind, {String? tripId, String? tripTitle = 'Manali trip', String? tripCity = 'Manali', String? refId, String? preview, bool read = false, int count = 1}) => Notice.fromJson({
       'id': 'n-$kind',
       'kind': kind,
       'tripId': tripId,
@@ -22,7 +22,7 @@ Notice _n(String kind, {String? tripId, String? tripTitle = 'Manali trip', Strin
       'actorPhotoUrl': null,
       'actorUsername': 'Bakhli#52190466',
       'preview': preview,
-      'count': 1,
+      'count': count,
       'createdAt': '2026-11-26T10:00:00Z',
       'updatedAt': '2026-11-26T10:00:00Z',
       'isRead': read,
@@ -32,8 +32,8 @@ void main() {
   useBuddyRenderScale();
   setUpAll(initSocialTestStorage);
 
-  test('all seven social kinds are known', () {
-    expect(NoticeKinds.social, hasLength(7));
+  test('all eight social kinds are known (NearbyPosted added for the 07:00 digest)', () {
+    expect(NoticeKinds.social, hasLength(8));
     for (final k in NoticeKinds.social) {
       expect(NoticeKinds.known(k), isTrue, reason: k);
     }
@@ -53,6 +53,8 @@ void main() {
     (_n(NoticeKinds.joinAccepted, tripId: 'trip-2', tripTitle: 'Rishikesh trip', tripCity: 'Rishikesh'), 'Rohan M. accepted you on Rishikesh', 'You are in. It is in My Trips.', AppRoutes.tripView, {'tripId': 'trip-2'}),
     (_n(NoticeKinds.joinDeclined, tripId: 'trip-3'), 'Not this time for Manali', '', AppRoutes.travelBuddies, <String, dynamic>{}),
     (_n(NoticeKinds.followedPosted, tripId: 'trip-4', tripTitle: 'Spiti trip', tripCity: 'Spiti'), 'Rohan M. posted a trip to Spiti', '', AppRoutes.tripPost, {'tripId': 'trip-4'}),
+    (_n(NoticeKinds.nearbyPosted, tripId: 'trip-5'), 'Rohan M. posted a trip near you', '', AppRoutes.tripPost, {'tripId': 'trip-5'}),
+    (_n(NoticeKinds.nearbyPosted, tripId: null, count: 3), '3 new trips near you', '', AppRoutes.travelBuddies, <String, dynamic>{}),
   ];
 
   for (final (n, line, preview, route, args) in cases) {

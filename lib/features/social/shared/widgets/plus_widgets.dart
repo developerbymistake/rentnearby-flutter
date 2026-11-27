@@ -172,16 +172,17 @@ abstract final class PlusSheets {
     };
   }
 
-  static Future<void> limitReached(BuildContext context, {required String errorType, Map<String, dynamic> data = const {}, String from = 'limit'}) async {
+  static Future<void> limitReached(BuildContext context,
+      {required String errorType, Map<String, dynamic> data = const {}, String from = 'limit', String? title, String? line}) async {
     final me = SocialMeController.maybe;
     final quiet = me?.refreshQuiet();
     final limits = me?.limits ?? SocialLimits.free;
     final canUpgrade = BuddyJson.boolean(data['canUpgrade'], limits.canUpgrade);
     final resets = BuddyJson.time(data['resetsAt']) ?? (errorType == SocialErrorTypes.plusRequired ? null : limits.resetsAt);
-    final line = lineFor(errorType, limits, data);
+    final text = line ?? lineFor(errorType, limits, data);
     final monthly = errorType == SocialErrorTypes.joinRequestLimit || errorType == SocialErrorTypes.newChatLimit;
-    final body = monthly && resets != null ? '$line ${SocialStringsC.resetsOn(BuddyFormat.dayMonth(resets.toLocal()))}' : line;
-    final title = errorType == SocialErrorTypes.plusRequired ? SocialStringsC.plusFeatureTitle : SocialStringsC.limitReachedTitle;
+    final body = monthly && resets != null ? '$text ${SocialStringsC.resetsOn(BuddyFormat.dayMonth(resets.toLocal()))}' : text;
+    final heading = title ?? (errorType == SocialErrorTypes.plusRequired ? SocialStringsC.plusFeatureTitle : SocialStringsC.limitReachedTitle);
     if (!context.mounted) return;
     final tone = ListingTone.indigo;
     await Sheet3D.show<void>(
@@ -189,7 +190,7 @@ abstract final class PlusSheets {
       builder: (c) => Sheet3D(
         tone: tone,
         art: ListingArt.star,
-        title: title,
+        title: heading,
         subtitle: body,
         child: Column(
           key: const ValueKey('plus_limit_sheet'),

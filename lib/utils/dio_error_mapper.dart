@@ -38,6 +38,17 @@ class DioErrorMapper {
     return null;
   }
 
+  /// The `data` object an error envelope carries (e.g. `unlocksAt` of a PostLocked refusal); empty when absent.
+  static Map<String, dynamic> errorData(dynamic e) {
+    if (e is! DioException) return const {};
+    final responseData = e.response?.data;
+    if (responseData is Map<String, dynamic>) {
+      final data = responseData['data'];
+      if (data is Map<String, dynamic>) return data;
+    }
+    return const {};
+  }
+
   static String? serverMessage(dynamic e) {
     if (e is! DioException) return null;
     final responseData = e.response?.data;

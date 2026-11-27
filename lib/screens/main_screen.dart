@@ -16,6 +16,7 @@ import '../features/buddy/buddy_bindings.dart';
 import '../features/buddy/buddy_live.dart';
 import '../features/social/shared/social_me_controller.dart';
 import '../features/social/social_bindings.dart';
+import '../features/social/shared/social_area_sync.dart';
 import '../features/map_discovery/data/map_pack_warmup.dart';
 import '../features/trip/enquiries/my_enquiry_count_controller.dart';
 import '../features/owner_core/session/shell_teardown.dart';
@@ -59,6 +60,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   late final TabConfigController _tabConfigCtrl;
   Worker? _bannerDistrictWorker;
   Worker? _digestTopicWorker;
+  Worker? _socialAreaWorker;
   Worker? _tabLeaveWorker;
   Worker? _tabConfigWorker;
   final _packWarmup = MapPackWarmup();
@@ -132,6 +134,12 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     if (_locationCtrl.selectedDistrict.value != null) {
       NotificationService.to.updateDistrictTopic(_locationCtrl.selectedDistrict.value!.id.toString());
     }
+    if (traveller) {
+      _socialAreaWorker = ever(_locationCtrl.selectedDistrict, (district) {
+        if (SocialMeController.maybe != null) SocialAreaSync.sync(district?.id);
+      });
+      SocialAreaSync.sync(_locationCtrl.selectedDistrict.value?.id);
+    }
     _previousTabIndex = _auth.tabIndex.value;
     // A tab's own screen never pushes further routes onto its local Navigator
     // (all deep navigation goes through the global GetX navigator) — so any
@@ -182,6 +190,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _bannerDistrictWorker?.dispose();
     _digestTopicWorker?.dispose();
+    _socialAreaWorker?.dispose();
     _tabLeaveWorker?.dispose();
     _tabConfigWorker?.dispose();
     _shellWorker?.dispose();
@@ -225,6 +234,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       MyEnquiryCountController.maybe?.refresh();
       BuddyLive.onResume();
       SocialMeController.maybe?.refreshQuiet();
+      if (SocialMeController.maybe != null) SocialAreaSync.sync(_locationCtrl.selectedDistrict.value?.id);
       // Chat badge's app-resume anchor — pushes may have been missed while backgrounded
       // (the hub reconnect above isn't guaranteed to fire if the connection quietly died).
       _chatCtrl.fetchUnreadCount();

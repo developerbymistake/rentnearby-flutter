@@ -4,7 +4,7 @@ import '../../../../design/design.dart';
 import '../buddy_look.dart';
 
 class MenuRow extends StatelessWidget {
-  const MenuRow({super.key, required this.art, required this.title, this.subtitle, this.danger = false, this.grey = false, this.onTap, this.trailing});
+  const MenuRow({super.key, required this.art, required this.title, this.subtitle, this.danger = false, this.grey = false, this.onTap, this.trailing, this.subtitleLines = 1});
 
   static const String chevron = '›';
 
@@ -15,6 +15,7 @@ class MenuRow extends StatelessWidget {
   final bool grey;
   final VoidCallback? onTap;
   final Widget? trailing;
+  final int subtitleLines;
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +55,7 @@ class MenuRow extends StatelessWidget {
                     if (sub != null && sub.isNotEmpty)
                       Padding(
                         padding: EdgeInsets.only(top: DS.s(1)),
-                        child: Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
+                        child: Text(sub, maxLines: subtitleLines, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
                       ),
                   ],
                 ),

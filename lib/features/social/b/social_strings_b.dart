@@ -1,3 +1,4 @@
+import '../../buddy/shared/buddy_format.dart';
 import '../shared/social_formats.dart';
 import '../shared/social_models.dart';
 
@@ -230,6 +231,36 @@ abstract final class SocialStringsB {
   static String joinedTrip(String shortName) => '$shortName joined your trip';
   static String declined(String shortName) => 'Declined $shortName';
   static const String requestGone = 'This request is no longer waiting.';
+
+  // Notify travellers near me (post wizard)
+  static const String notifyNearby = 'Notify travellers near me';
+  static String notifyNearbyLine(LimitUse u) => 'Sent at 7 am · ${u.left} of ${u.limit} left this week';
+  static String notifyUsedLine(LimitUse u) => 'Used ${u.limit} of ${u.limit} this week';
+  static const String notifyPrivateLine = 'Not available with a private profile';
+  static const String notifyGenderLine = 'For trips open to anyone or to your own gender';
+  static const String notifyUsedUp = 'Notifications for this post are used up this week. Your trip is still posted.';
+  static String notifyBackOn(DateTime at) => 'They are back on ${BuddyFormat.weekdayDate(at)}.';
+  static String notifyUsedUpNote(DateTime? back) => back == null ? notifyUsedUp : '$notifyUsedUp ${notifyBackOn(back)}';
+  static const String notifyUsedUpPosted = 'Notifications for this post are used up this week. Your trip is still posted.';
+  static const String nearbyTomorrow = 'Travellers near you hear about it at 7 am.';
+  static String notifyTooFar(int days) => 'For trips starting in the next $days days';
+  static String publishLimit(DateTime? next) =>
+      next == null ? 'You have posted a lot this week. Try again later.' : 'You have posted a lot this week. Try again on ${BuddyFormat.weekdayDate(next)}.';
+
+  // Post entries when the live post cap is reached
+  static const String freeLimitHint = 'Free limit reached. Get Plus.';
+  static String liveLimitHint(int n) => n == 1 ? '1 live post. Remove it to post again.' : '$n live posts. Remove one to post again.';
+  static String postEntryHint(SocialLimits? l) {
+    if (l == null || !l.publicTrips.reached) return '';
+    return l.postNeedsPlus ? freeLimitHint : liveLimitHint(l.publicTrips.limit);
+  }
+
+  // Full and removed states
+  static const String requestsFullLine = 'Not taking more requests';
+  static String fullLabel(int seatsLeft) => seatsLeft > 0 ? '$full · $requestsFullLine' : full;
+  static const String cannotRejoin = 'You can no longer join this trip';
+  static const String requestsFullNow = 'This trip is not taking more requests.';
+  static String requestsFullOwner(int n) => '$n requests waiting. Review them to take more.';
 
   // Trip overview seam
   static const String postToFindBuddies = 'Post your trip';

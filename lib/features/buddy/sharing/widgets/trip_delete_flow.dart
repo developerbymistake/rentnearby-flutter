@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../../../design/design.dart';
 import '../../../../utils/app_toast.dart';
+import '../../../social/shared/post_removal.dart';
 import '../../../trip/controllers/my_trips_controller.dart';
 import '../../../trip/models/trip_model.dart';
 import '../../../trip/models/trip_plan_model.dart';
@@ -158,6 +159,10 @@ abstract final class TripDeleteFlow {
       await settleFirst(context, tripId, OpenPaymentLine.fromRefusal(r.data));
       return false;
     }
+    if (PostRemovalBlock.fromResult(r) case final block?) {
+      await PostRemovalNotice.show(context, tripId, block);
+      return false;
+    }
     SharingDeps.toastError(r);
     return false;
   }
@@ -176,6 +181,9 @@ abstract final class TripDeleteFlow {
       case _OpenBalances(:final lines):
         await settleFirst(context, tripId, lines);
         return false;
+      case _Blocked(:final block):
+        await PostRemovalNotice.show(context, tripId, block);
+        return false;
     }
   }
 }
@@ -192,6 +200,12 @@ class _OpenBalances extends _DeleteOutcome {
   const _OpenBalances(this.lines);
 
   final List<OpenPaymentLine> lines;
+}
+
+class _Blocked extends _DeleteOutcome {
+  const _Blocked(this.block);
+
+  final PostRemovalBlock block;
 }
 
 class OpenPaymentsBox extends StatelessWidget {
@@ -263,6 +277,8 @@ class _DeleteBoxState extends State<_DeleteBox> {
         Navigator.of(context).pop(const _Deleted());
       case BuddyRefused<void>(:final type, :final data) when type == BuddyErrorTypes.tripHasOpenBalances:
         Navigator.of(context).pop(_OpenBalances(OpenPaymentLine.fromRefusal(data)));
+      case BuddyRefused<void>(:final type, :final data) when PostRemovalBlock.fromRefusal(type, data) != null:
+        Navigator.of(context).pop(_Blocked(PostRemovalBlock.fromRefusal(type, data)!));
       default:
         SharingDeps.toastError(r);
     }

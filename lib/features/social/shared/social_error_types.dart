@@ -40,4 +40,9 @@ abstract final class SocialErrorTypes {
   static const String tooManyRequests = 'TooManyRequests';
   static const String seekerOnly = 'SeekerOnly';
   static const String guidelinesNotAccepted = 'GuidelinesNotAccepted';
+  static const String tripRequestsFull = 'TripRequestsFull';
+  static const String cannotRejoin = 'CannotRejoin';
+  static const String publishLimit = 'PublishLimit';
+  static const String postLocked = 'PostLocked';
+  static const String removeMembersFirst = 'RemoveMembersFirst';
 }

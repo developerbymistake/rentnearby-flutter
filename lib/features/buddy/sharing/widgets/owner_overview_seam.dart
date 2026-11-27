@@ -5,6 +5,8 @@ import '../../../../controllers/auth_controller.dart';
 import '../../../../design/tokens/listing_palette.dart';
 import '../../../../utils/app_toast.dart';
 import '../../../social/b/social_strings_b.dart';
+import '../../../social/b/widgets/find_buddies_post_card.dart';
+import '../../../social/shared/post_removal.dart';
 import '../../../social/shared/social_error_types.dart';
 import '../../../social/shared/social_me_controller.dart';
 import '../../../social/shared/social_nav.dart';
@@ -20,13 +22,16 @@ import 'overview_travellers_card.dart';
 import 'trip_delete_flow.dart';
 
 class OverviewMenuItem {
-  const OverviewMenuItem({required this.label, required this.onTap, this.danger = false, this.subtitle, this.art});
+  const OverviewMenuItem({required this.label, required this.onTap, this.danger = false, this.subtitle, this.art, this.blocked = false});
 
   final String label;
   final VoidCallback onTap;
   final bool danger;
   final String? subtitle;
   final String? art;
+
+  /// Greyed with its reason as the subtitle; the tap explains instead of acting.
+  final bool blocked;
 }
 
 class OwnerOverviewExtras {
@@ -121,9 +126,27 @@ abstract final class OwnerOverviewSeam {
       ],
       extraMenuItems: [
         ?_socialItem(context, trip),
-        OverviewMenuItem(label: SharingStrings.deleteTrip, danger: true, onTap: () => TripDeleteFlow.start(context, trip, s)),
+        _deleteItem(context, trip, s, ended: ended, reload: reload),
       ],
     );
+  }
+
+  /// Delete trip: greyed during the 72-hour post lock, or while other travellers are on a posted trip (CONTRACT_SOCIAL 11.9).
+  static PostRemovalBlock? deleteBlock(TripModel trip, TripSharingBlock s, {required bool ended, DateTime? now}) => PostRemovalRule.forDelete(
+        unlocksAt: trip.postUnlocksAt,
+        posted: trip.isPublic || trip.deleteNeedsAlone,
+        otherMembers: s.viewerCount,
+        ended: ended,
+        now: now,
+      );
+
+  static OverviewMenuItem _deleteItem(BuildContext context, TripModel trip, TripSharingBlock s, {required bool ended, VoidCallback? reload}) {
+    final block = deleteBlock(trip, s, ended: ended);
+    if (block == null) return OverviewMenuItem(label: SharingStrings.deleteTrip, danger: true, onTap: () => TripDeleteFlow.start(context, trip, s));
+    return OverviewMenuItem(label: SharingStrings.deleteTrip, subtitle: block.line, blocked: true, onTap: () async {
+          await PostRemovalNotice.show(context, trip.id, block);
+          reload?.call();
+        });
   }
 
   static OverviewMenuItem? _socialItem(BuildContext context, TripModel trip) {
@@ -131,18 +154,12 @@ abstract final class OwnerOverviewSeam {
     if (auth == null || !auth.canUseTravellerFeatures || trip.isCompleted || trip.inactiveByPlan || trip.id.isEmpty) return null;
     final live = trip.isPublic || (SocialMeController.maybe?.profile?.publicTrips.any((t) => t.tripId == trip.id) ?? false);
     if (live) return OverviewMenuItem(label: SocialStringsB.openJoinRequests, onTap: () => SocialNav.openJoinRequests(trip.id));
+    final hint = SocialStringsB.postEntryHint(SocialMeController.maybe?.me.value?.limits);
     return OverviewMenuItem(
       label: SocialStringsB.postToFindBuddies,
-      subtitle: SocialStringsB.postToFindBuddiesLine,
+      subtitle: hint.isEmpty ? SocialStringsB.postToFindBuddiesLine : hint,
       art: ListingArt.backpack,
-      onTap: () {
-        final limits = SocialMeController.maybe?.me.value?.limits;
-        if (limits != null && limits.publicTrips.reached) {
-          PlusSheets.limitReached(context, errorType: SocialErrorTypes.publicTripLimit, data: {'limit': limits.publicTrips.limit}, from: 'post');
-          return;
-        }
-        SocialNav.openPostTrip(tripId: trip.id);
-      },
+      onTap: () => PostTripEntry.open(context, tripId: trip.id),
     );
   }
 

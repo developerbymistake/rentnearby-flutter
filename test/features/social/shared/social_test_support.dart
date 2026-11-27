@@ -32,8 +32,8 @@ class SocialFakeServer implements HttpClientAdapter {
 
   void on(String method, String path, Object? data, {int status = 200}) => routes['$method $path'] = (status, data);
 
-  void refuse(String method, String path, {required int status, required String type, String message = 'Refused'}) =>
-      routes['$method $path'] = (status, {'error': {'type': type, 'message': message}});
+  void refuse(String method, String path, {required int status, required String type, String message = 'Refused', Map<String, dynamic>? data}) =>
+      routes['$method $path'] = (status, {'error': {'type': type, 'message': message}, 'data': ?data});
 
   List<RequestOptions> calls(String method, String path) => [for (final o in seen) if (o.method == method && o.path == path) o];
 
