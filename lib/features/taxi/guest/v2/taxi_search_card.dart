@@ -17,6 +17,7 @@ class TaxiSearchCard extends StatelessWidget {
     required this.onSwap,
     this.onClearFrom,
     this.onClearTo,
+    this.toError,
   });
 
   final String fromLabel;
@@ -30,13 +31,19 @@ class TaxiSearchCard extends StatelessWidget {
   final VoidCallback onSwap;
   final VoidCallback? onClearFrom;
   final VoidCallback? onClearTo;
+  final String? toError;
 
-  static double get swapRoom => DS.s(KitMetrics.touch) + DS.s(4);
+  static const double swapInset = 8;
+  // Rows end before the Swap touch box; dividers start under the text, not the icon.
+  static double get swapRoom => DS.s(KitMetrics.touch) + DS.s(swapInset) + DS.s(4);
+  static double get textStart => DS.s(8) + DS.s(36) + DS.gh(10);
 
-  Widget _divider() => Container(
-        height: DS.s(1),
-        margin: EdgeInsets.symmetric(horizontal: DS.s(14)),
-        color: ListingPalette.coral.line,
+  bool get _hasError => toError != null && toError!.trim().isNotEmpty;
+
+  Widget _divider({required double right, bool error = false}) => Container(
+        height: DS.s(error ? 1.5 : 1),
+        margin: EdgeInsets.only(left: textStart, right: right),
+        color: error ? Form3D.errorText : ListingPalette.coral.line,
       );
 
   @override
@@ -64,7 +71,7 @@ class TaxiSearchCard extends StatelessWidget {
                       clearLabel: TaxiSearchStrings.useMyCentre,
                     ),
                   ),
-                  _divider(),
+                  _divider(right: swapRoom),
                   Padding(
                     padding: EdgeInsets.only(right: swapRoom),
                     child: PlaceSearchBarView(
@@ -76,6 +83,7 @@ class TaxiSearchCard extends StatelessWidget {
                       onTap: onTo,
                       onClear: to == null || to.isEmpty ? null : onClearTo,
                       clearLabel: TaxiSearchStrings.clearTo,
+                      error: toError,
                     ),
                   ),
                 ],
@@ -83,12 +91,12 @@ class TaxiSearchCard extends StatelessWidget {
               Positioned(
                 top: 0,
                 bottom: 0,
-                right: 0,
+                right: DS.s(swapInset),
                 child: Center(child: _SwapButton(enabled: canSwap, onTap: onSwap)),
               ),
             ],
           ),
-          _divider(),
+          _divider(right: DS.s(14), error: _hasError),
           Semantics(
             container: true,
             button: true,

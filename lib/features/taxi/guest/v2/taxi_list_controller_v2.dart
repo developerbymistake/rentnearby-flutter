@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../../../config/app_tabs.dart';
 import '../../../../controllers/auth_controller.dart';
+import '../../../../controllers/location_controller.dart';
 import '../../../../models/place_result_model.dart';
 import '../../../nearby/controllers/nearby_centre_controller.dart';
 import '../../../nearby/models/nearby_models.dart';
@@ -24,6 +25,7 @@ class TaxiListControllerV2 extends GetxController {
   final TaxiFeedRepository _repo;
   final LatLng Function()? _centreOf;
   final String? Function()? _pinLabelOf;
+  final String? Function()? _cityNameOf;
   final RxInt? _centreVersion;
   final RxInt? _tabIndex;
   final DateTime Function() _clock;
@@ -35,6 +37,7 @@ class TaxiListControllerV2 extends GetxController {
     TaxiFeedRepository repo = const TaxiFeedRepository(),
     LatLng Function()? centre,
     String? Function()? pinLabel,
+    String? Function()? cityName,
     RxInt? centreVersion,
     RxInt? tabIndex,
     DateTime Function()? clock,
@@ -43,6 +46,7 @@ class TaxiListControllerV2 extends GetxController {
   })  : _repo = repo,
         _centreOf = centre,
         _pinLabelOf = pinLabel,
+        _cityNameOf = cityName,
         _centreVersion = centreVersion,
         _tabIndex = tabIndex,
         _clock = clock ?? DateTime.now,
@@ -62,6 +66,7 @@ class TaxiListControllerV2 extends GetxController {
   final loadMoreFailed = false.obs;
   final from = Rxn<PlaceResult>();
   final to = Rxn<PlaceResult>();
+  final toError = RxnString();
   late final date = Rx<DateTime>(today);
   final popular = <TaxiPopularRoute>[].obs;
   final refreshTrigger = 0.obs;
@@ -116,13 +121,26 @@ class TaxiListControllerV2 extends GetxController {
     return c.hasPin && l != null && l.trim().isNotEmpty ? l : null;
   }
 
+  static String? _clean(String? s) => s != null && s.trim().isNotEmpty ? s.trim() : null;
+
+  // City of the list centre when no pin is set: the browsed city or the GPS city, then the server header.
+  String? get centreCity {
+    final f = _cityNameOf;
+    final local = f != null ? _clean(f()) : (_centreOf == null && Get.isRegistered<LocationController>() ? _clean(Get.find<LocationController>().effectiveCity?.name) : null);
+    return local ?? _clean(header.value?.centreCityName);
+  }
+
+  String? get centreName => pinLabel ?? (_hasPin ? null : centreCity);
+
+  String get fromName => from.value?.name ?? centreName ?? TaxiSearchStrings.yourLocation;
+
   LatLng get origin => from.value?.latLng ?? centre;
 
   bool get fromMyLocation => from.value == null && !_hasPin;
 
   bool get fromNamed => from.value != null || pinLabel != null;
 
-  PlaceResult get routeFrom => from.value ?? PlaceResult(name: pinLabel ?? TaxiSearchStrings.nearYou, subtitle: '', latLng: origin);
+  PlaceResult get routeFrom => from.value ?? PlaceResult(name: fromName, subtitle: '', latLng: origin);
 
   bool get samePlace {
     final t = to.value;
@@ -192,19 +210,25 @@ class TaxiListControllerV2 extends GetxController {
           TaxiOptionSets.minEndpointDistanceMeters;
 
   void setFrom(PlaceResult p) {
+    toError.value = null;
     from.value = p;
     _reloadFresh();
   }
 
   void useCentreAsFrom() {
     if (from.value == null) return;
+    toError.value = null;
     from.value = null;
     _reloadFresh();
   }
 
-  void setTo(PlaceResult p) => to.value = p;
+  void setTo(PlaceResult p) {
+    toError.value = null;
+    to.value = p;
+  }
 
   void clearTo() {
+    toError.value = null;
     if (to.value == null) return;
     to.value = null;
   }
@@ -215,6 +239,7 @@ class TaxiListControllerV2 extends GetxController {
     final t = to.value;
     if (t == null || !canSwap) return;
     final f = routeFrom;
+    toError.value = null;
     from.value = t;
     to.value = f;
     _reloadFresh();
@@ -224,6 +249,7 @@ class TaxiListControllerV2 extends GetxController {
     if (_opening) return;
     final f = r.from;
     final t = r.to;
+    toError.value = null;
     from.value = f;
     to.value = t;
     final c = r.cities;
@@ -241,6 +267,20 @@ class TaxiListControllerV2 extends GetxController {
     if (identical(f, p.from) && identical(t, p.to)) return p.cities;
     if (identical(f, p.to) && identical(t, p.from)) return p.cities.reversed;
     return null;
+  }
+
+  // Search taxis is never off: an empty or same-place To shows the field error under To.
+  Future<void> submit() {
+    if (to.value == null) {
+      toError.value = TaxiSearchStrings.toRequired;
+      return Future.value();
+    }
+    if (samePlace) {
+      toError.value = TaxiSearchStrings.samePlace;
+      return Future.value();
+    }
+    toError.value = null;
+    return search();
   }
 
   Future<void> search() async {
@@ -270,6 +310,7 @@ class TaxiListControllerV2 extends GetxController {
     if (!TaxiJourneyDate.same(currentDay.value, day)) currentDay.value = day;
     if (!TaxiJourneyDate.same(date.value, day)) date.value = day;
     _popularPick = null;
+    toError.value = null;
     if (to.value == null && from.value == null) return;
     to.value = null;
     from.value = null;

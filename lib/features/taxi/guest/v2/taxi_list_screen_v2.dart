@@ -179,12 +179,6 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
         ));
   }
 
-  String _fromText() {
-    final f = _ctrl.from.value;
-    if (f != null) return f.name;
-    return _ctrl.pinLabel ?? TaxiSearchStrings.nearYou;
-  }
-
   Widget _buildSelectors() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -193,11 +187,12 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
           final f = _ctrl.from.value;
           final t = _ctrl.to.value;
           final d = _ctrl.date.value;
+          final err = _ctrl.toError.value;
           NearbyCentreController.to.centreVersion.value;
           return Padding(
             padding: EdgeInsets.only(top: DS.gv(24)),
             child: TaxiSearchCard(
-              fromLabel: _fromText(),
+              fromLabel: _ctrl.fromName,
               toLabel: t?.name,
               date: d,
               isToday: _ctrl.isToday,
@@ -208,15 +203,11 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
               onSwap: _ctrl.swap,
               onClearFrom: f == null ? null : _ctrl.useCentreAsFrom,
               onClearTo: t == null ? null : _ctrl.clearTo,
+              toError: err,
             ),
           );
         }),
-        Obx(() {
-          _ctrl.to.value;
-          _ctrl.from.value;
-          NearbyCentreController.to.centreVersion.value;
-          return SearchTaxisButton(onPressed: _ctrl.canSearch ? _ctrl.search : null);
-        }),
+        SearchTaxisButton(onPressed: _ctrl.submit),
       ],
     );
   }
@@ -260,9 +251,7 @@ class _TaxiListScreenV2State extends State<TaxiListScreenV2> {
 
   String _localTitle() {
     final far = _ctrl.header.value?.farAway ?? false;
-    final f = _ctrl.from.value;
-    final c = NearbyCentreController.to;
-    final place = f?.name ?? (c.hasPin ? c.pinLabel : null);
+    final place = _ctrl.from.value?.name ?? _ctrl.centreName;
     if (place != null) return far ? NearbyStrings.taxisNearestToPlace(place) : NearbyStrings.taxisNearPlace(place);
     return far ? NearbyStrings.taxisNearest : NearbyStrings.taxisNear;
   }

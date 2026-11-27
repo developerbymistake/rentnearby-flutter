@@ -456,7 +456,7 @@ void main() {
       expect(TaxiResultsArgs.fromMap({'fromLat': 1, 'fromLng': 2, 'toLat': 'x', 'toLng': 3}, today), isNull);
       final b = TaxiResultsArgs.fromMap({'fromLat': 1, 'fromLng': 2, 'toLat': 3, 'toLng': 4, 'date': 'soon', 'fromNearYou': true}, today)!;
       expect(b.date, today);
-      expect(b.from.name, 'Near you');
+      expect(b.from.name, 'Your location');
       expect(b.fromNearYou, isTrue);
       final far = TaxiResultsArgs.fromMap({'fromLat': 1, 'fromLng': 2, 'toLat': 3, 'toLng': 4, 'date': '2027-06-01'}, today)!;
       expect(far.date, TaxiJourneyDate.last(today));

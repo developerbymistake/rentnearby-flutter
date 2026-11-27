@@ -48,6 +48,7 @@ void main() {
   late RxInt tab;
   late DateTime now;
   String? pinLabel;
+  String? cityName;
   String? user;
   const pin = LatLng(29.2, 79.5);
 
@@ -69,6 +70,7 @@ void main() {
     tab = 3.obs;
     now = DateTime.utc(2026, 11, 26, 6);
     pinLabel = null;
+    cityName = null;
     user = null;
   });
 
@@ -80,6 +82,7 @@ void main() {
           repo: repo,
           centre: () => pin,
           pinLabel: () => pinLabel,
+          cityName: () => cityName,
           centreVersion: version,
           tabIndex: tab,
           clock: () => now,
@@ -88,6 +91,75 @@ void main() {
         ),
         tag: TaxiListControllerV2.tag,
       );
+
+  group('From name and Search (owner v3)', () {
+    test('From shows the current city name, never Near you; the list centre name follows it', () async {
+      cityName = 'Haldwani';
+      final c = make();
+      await settle();
+      expect(c.fromName, 'Haldwani');
+      expect(c.centreName, 'Haldwani');
+      expect(c.routeFrom.name, 'Haldwani');
+      expect(c.fromName, isNot('Near you'));
+      expect(c.fromMyLocation, isTrue);
+    });
+
+    test('a labelled pin wins over the city; a picked From wins over both', () async {
+      cityName = 'Haldwani';
+      pinLabel = 'Bhimtal Lake';
+      final c = make();
+      await settle();
+      expect(c.fromName, 'Bhimtal Lake');
+      c.setFrom(place('Nainital', 29.39));
+      expect(c.fromName, 'Nainital');
+    });
+
+    test('no local city: the server header city is used, then a neutral fallback', () async {
+      repo.localPage = (_) => NearbyPage(items: [fi('a')], header: const NearbyHeader(centreCityName: 'Kathgodam'));
+      final c = make();
+      await settle();
+      expect(c.fromName, 'Kathgodam');
+      c.header.value = null;
+      expect(c.fromName, 'Your location');
+      expect(c.fromName, isNot('Near you'));
+    });
+
+    test('Search with To empty shows the To error and opens nothing; picking a place clears it', () async {
+      cityName = 'Haldwani';
+      final c = make();
+      await settle();
+      await c.submit();
+      expect(c.toError.value, 'Choose where you are going');
+      expect(open.calls, isEmpty);
+      c.setTo(place('Nainital', 29.4));
+      expect(c.toError.value, isNull);
+      await c.submit();
+      expect(open.calls, hasLength(1));
+      expect(open.calls.single.from?.name, 'Haldwani');
+      expect(open.calls.single.to.name, 'Nainital');
+    });
+
+    test('Search with the same place shows the same-place error under To', () async {
+      final c = make();
+      await settle();
+      c.setFrom(place('Delhi', 28.6));
+      c.setTo(place('Delhi', 28.6));
+      await c.submit();
+      expect(c.toError.value, 'From and To must be different places');
+      expect(open.calls, isEmpty);
+      c.setFrom(place('Haldwani', 29.2));
+      expect(c.toError.value, isNull);
+    });
+
+    test('clearing To drops the error', () async {
+      final c = make();
+      await settle();
+      await c.submit();
+      expect(c.toError.value, isNotNull);
+      c.clearTo();
+      expect(c.toError.value, isNull);
+    });
+  });
 
   group('states A to D', () {
     test('A: To empty, Swap and Search off', () async {
