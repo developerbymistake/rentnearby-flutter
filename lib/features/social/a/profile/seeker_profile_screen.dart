@@ -76,7 +76,7 @@ class _ProfileBody extends StatelessWidget {
           title: SocialStringsA.obTitle,
           asset: ListingArt.memo,
           actionLabel: SocialStringsA.next,
-          onAction: () => Get.toNamed(AppRoutes.onboarding, arguments: const {'existing': true}),
+          onAction: () => Get.toNamed(AppRoutes.onboarding),
         );
       }
       return RefreshIndicator(

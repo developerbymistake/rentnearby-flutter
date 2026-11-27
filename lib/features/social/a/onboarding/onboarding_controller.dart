@@ -4,6 +4,7 @@ import '../../../../controllers/auth_controller.dart';
 import '../../../../controllers/location_controller.dart';
 import '../../../buddy/shared/buddy_result.dart';
 import '../../shared/data/social_me_api.dart';
+import '../../shared/social_error_types.dart';
 import '../../shared/social_me_controller.dart';
 import '../../shared/social_strings.dart';
 import '../social_strings_a.dart';
@@ -37,14 +38,12 @@ abstract final class ProfileRules {
 }
 
 class OnboardingController extends GetxController {
-  OnboardingController({required this.existing, this.phone, SocialMeApi api = const SocialMeApi(), DateTime Function()? clock})
+  OnboardingController({SocialMeApi api = const SocialMeApi(), DateTime Function()? clock})
       : _api = api,
         _clock = clock ?? DateTime.now;
 
   static const int stepCount = 3;
 
-  final bool existing;
-  final String? phone;
   final SocialMeApi _api;
   final DateTime Function() _clock;
 
@@ -84,7 +83,7 @@ class OnboardingController extends GetxController {
     super.onInit();
     if (Get.isRegistered<AuthController>()) {
       final n = Get.find<AuthController>().user.value?.name?.trim() ?? '';
-      if (existing && n.isNotEmpty) name.value = n;
+      if (n.isNotEmpty) name.value = n;
     }
     if (Get.isRegistered<LocationController>()) {
       final loc = Get.find<LocationController>();
@@ -186,30 +185,13 @@ class OnboardingController extends GetxController {
     submitting.value = true;
     error.value = null;
     try {
-      return existing ? await _finishExisting() : await _finishNew();
+      return await _save();
     } finally {
       submitting.value = false;
     }
   }
 
-  Future<bool> _finishNew() async {
-    final auth = Get.find<AuthController>();
-    return auth.createOnboardingAccount(
-      phone: phone ?? '',
-      name: trimmedName,
-      gender: gender.value,
-      birthMonth: birthMonth.value,
-      birthYear: birthYear.value,
-      interests: interests.toList(),
-      skills: skills.toList(),
-      places: places.toList(),
-      about: about.value.trim(),
-      homeCityName: homeCity,
-      homeStateName: homeState,
-    );
-  }
-
-  Future<bool> _finishExisting() async {
+  Future<bool> _save() async {
     final auth = Get.find<AuthController>();
     final current = auth.user.value?.name?.trim() ?? '';
     if (trimmedName != current) {
@@ -226,7 +208,12 @@ class OnboardingController extends GetxController {
         auth.markProfileCompleted(gender: value.gender.isEmpty ? (gender.value ?? '') : value.gender);
         SocialMeController.maybe?.refreshQuiet();
         return true;
-      case BuddyRefused(:final message):
+      case BuddyRefused(:final type, :final message):
+        // A retry after a lost answer: the profile was already saved.
+        if (type == SocialErrorTypes.identityLocked) {
+          await auth.refreshProfile();
+          if (auth.user.value?.profileCompleted ?? false) return true;
+        }
         error.value = message ?? SocialStrings.failed;
       case BuddyOffline():
         error.value = SocialStrings.offline;

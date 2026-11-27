@@ -5,9 +5,10 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
-// Drives the 3-step OnboardingScreen to the Finish button: name typed, the rest set on the screen's controller.
+// Drives the 3-step traveller OnboardingScreen (existing account) to the Finish button, and the new-user BasicDetailsScreen.
 abstract final class OnboardingWalk {
   static const Key nameKey = ValueKey('ob_name');
+  static const Key basicNameKey = ValueKey('bd_name');
 
   static OnboardingController controllerOf(WidgetTester t) => t.widget<OnboardingStepYou>(find.byType(OnboardingStepYou)).c;
 
@@ -39,4 +40,10 @@ abstract final class OnboardingWalk {
   }
 
   static Finder get finish => find.byKey(OnboardingBottom.buttonKey);
+
+  // BasicDetailsScreen: types the full name; Get Started is [finish] (shared bottom button key).
+  static Future<void> basicName(WidgetTester t, String name) async {
+    await t.enterText(find.byKey(basicNameKey), name);
+    await _pump(t);
+  }
 }

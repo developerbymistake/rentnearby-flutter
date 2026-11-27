@@ -77,7 +77,7 @@ Widget _app({List<String> extra = const [], bool toasts = false}) => GetMaterial
           : null,
       initialRoute: AppRoutes.main,
       getPages: [
-        for (final r in [AppRoutes.main, AppRoutes.login, AppRoutes.onboarding, AppRoutes.profilePhoto, AppRoutes.roleSelect, ...extra])
+        for (final r in [AppRoutes.main, AppRoutes.login, AppRoutes.basicDetails, AppRoutes.onboarding, AppRoutes.profilePhoto, AppRoutes.roleSelect, ...extra])
           GetPage(name: r, page: () => Scaffold(body: Text('page $r'))),
       ],
     );
@@ -152,7 +152,7 @@ void main() {
       expect(Get.currentRoute, AppRoutes.profilePhoto);
     });
 
-    for (final quiet in [AppRoutes.onboarding, AppRoutes.login, AppRoutes.profilePhoto]) {
+    for (final quiet in [AppRoutes.basicDetails, AppRoutes.onboarding, AppRoutes.login, AppRoutes.profilePhoto]) {
       testWidgets('stays silent on $quiet', (t) async {
         await StorageService.saveToken(_token(UserRoleKeys.seeker));
         final a = Get.put<AuthController>(AuthController());
@@ -199,7 +199,7 @@ void main() {
     testWidgets('ok: session saved, no navigation, true', (t) async {
       await t.pumpWidget(_app());
       await t.pumpAndSettle();
-      Get.offAllNamed(AppRoutes.onboarding);
+      Get.offAllNamed(AppRoutes.basicDetails);
       await t.pumpAndSettle();
       final a = Get.put<AuthController>(AuthController());
       a.signupUsername.value = 'Bakhli#48291736';
@@ -209,7 +209,7 @@ void main() {
       await t.pumpAndSettle();
       expect(adapter.paths, ['POST /auth/phone/complete-onboarding']);
       expect(adapter.sent.single, {'phoneNumber': '9876543210', 'name': 'Rahul', 'username': 'Bakhli#48291736'});
-      expect(Get.currentRoute, AppRoutes.onboarding);
+      expect(Get.currentRoute, AppRoutes.basicDetails);
       expect(StorageService.isLoggedIn, isTrue);
       expect(a.user.value!.needsProfilePhoto, isFalse, reason: 'the picture is optional at onboarding');
       expect(a.postLoginRoute, AppRoutes.roleSelect);
@@ -219,7 +219,7 @@ void main() {
     testWidgets('PhoneExists (account created, answer lost) sends the user to login with the server message', (t) async {
       await t.pumpWidget(_app(toasts: true));
       await t.pumpAndSettle();
-      Get.offAllNamed(AppRoutes.onboarding);
+      Get.offAllNamed(AppRoutes.basicDetails);
       await t.pumpAndSettle();
       final a = Get.put<AuthController>(_Quiet());
       ApiService.dio.httpClientAdapter = _Adapter(409, {
@@ -237,7 +237,7 @@ void main() {
     testWidgets('OtpRequired sends the user back to login', (t) async {
       await t.pumpWidget(_app());
       await t.pumpAndSettle();
-      Get.offAllNamed(AppRoutes.onboarding);
+      Get.offAllNamed(AppRoutes.basicDetails);
       await t.pumpAndSettle();
       final a = Get.put<AuthController>(_Quiet());
       ApiService.dio.httpClientAdapter = _Adapter(400, {
@@ -253,7 +253,7 @@ void main() {
     testWidgets('other errors stay on the page', (t) async {
       await t.pumpWidget(_app());
       await t.pumpAndSettle();
-      Get.offAllNamed(AppRoutes.onboarding);
+      Get.offAllNamed(AppRoutes.basicDetails);
       await t.pumpAndSettle();
       final a = Get.put<AuthController>(_Quiet());
       ApiService.dio.httpClientAdapter = _Adapter(400, {
@@ -261,7 +261,7 @@ void main() {
       });
       expect(await t.runAsync(() => a.createOnboardingAccount(phone: '9876543210', name: 'Rahul')), isFalse);
       await t.pumpAndSettle();
-      expect(Get.currentRoute, AppRoutes.onboarding);
+      expect(Get.currentRoute, AppRoutes.basicDetails);
       await t.pump(const Duration(seconds: 5));
     });
   });

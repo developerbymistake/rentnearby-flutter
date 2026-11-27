@@ -267,6 +267,7 @@ class AuthController extends GetxController {
   static const Set<String> _photoGateQuiet = {
     AppRoutes.splash,
     AppRoutes.login,
+    AppRoutes.basicDetails,
     AppRoutes.onboarding,
     AppRoutes.profilePhoto,
   };

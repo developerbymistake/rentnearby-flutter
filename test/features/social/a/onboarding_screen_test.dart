@@ -1,5 +1,7 @@
 import 'package:bakhli/config/app_routes.dart';
 import 'package:bakhli/config/profile_photo_strings.dart';
+import 'package:bakhli/design/extra/ext_auth.dart';
+import 'package:bakhli/design/extra/ext_buddy.dart';
 import 'package:bakhli/features/social/a/onboarding/onboarding_steps.dart';
 import 'package:bakhli/features/social/a/social_strings_a.dart';
 import 'package:bakhli/features/social/a/widgets/social_chips_a.dart';
@@ -58,26 +60,15 @@ void main() {
     }
   }
 
-  testWidgets('phone and user id sit side by side as two compact chips when they fit', (t) async {
+  testWidgets('step 1 has no phone or username row (Fill basic details showed them) and keeps the prefilled name', (t) async {
     installServer();
     await pumpSocial(t, const OnboardingScreen(), size: const Size(720, 1400), pages: _pages);
-    await t.ensureVisible(find.text('Bakhli#48291736'));
-    await t.pump();
-    final row = find.byKey(OnboardingIdentityChips.sideBySideKey);
-    expect(row, findsOneWidget);
-    expect(find.descendant(of: row, matching: find.text('Bakhli#48291736')), findsOneWidget);
-    expect(find.descendant(of: row, matching: find.text('Verified')), findsOneWidget);
-    expect(find.descendant(of: row, matching: find.textContaining('+91 ')), findsOneWidget);
-    await drain(t);
-    expect(t.takeException(), isNull);
-  });
-
-  testWidgets('a narrow phone at large text stacks the full phone and id rows instead of cutting them', (t) async {
-    installServer();
-    await pumpSocial(t, const OnboardingScreen(), size: const Size(320, 1400), textScale: 1.3, pages: _pages);
-    expect(find.byKey(OnboardingIdentityChips.sideBySideKey), findsNothing);
-    expect(find.text('Bakhli#48291736'), findsOneWidget);
-    expect(find.textContaining('+91 '), findsOneWidget);
+    expect(find.byType(AuthVerifiedRow), findsNothing);
+    expect(find.byType(UsernameLockedPill), findsNothing);
+    expect(find.text('Bakhli#48291736'), findsNothing);
+    expect(find.textContaining('+91 '), findsNothing);
+    expect((find.byKey(const ValueKey('ob_name')).evaluate().single.widget as TextField).controller!.text, 'Rahul Verma');
+    expect(find.byType(OnboardingPhotoRow), findsOneWidget);
     await drain(t);
     expect(t.takeException(), isNull);
   });
@@ -164,7 +155,7 @@ void main() {
         GetPage(name: AppRoutes.onboarding, page: () => const OnboardingScreen()),
       ],
     );
-    Get.toNamed(AppRoutes.onboarding, arguments: const {'existing': true});
+    Get.toNamed(AppRoutes.onboarding);
     await settle(t);
     expect(find.text(SocialStringsA.obStep1), findsOneWidget);
     expect(find.text(ProfilePhotoStrings.logOut), findsNothing);

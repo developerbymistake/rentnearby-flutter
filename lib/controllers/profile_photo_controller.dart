@@ -155,6 +155,13 @@ class ProfilePhotoController extends GetxController {
     }
   }
 
+  void discard() {
+    if (active) return;
+    _dropTemp(localPath.value);
+    localPath.value = null;
+    failed.value = false;
+  }
+
   // The file cannot be sent again (gone or refused by the server): back to the picker.
   void _forget(String message) {
     _dropTemp(localPath.value);

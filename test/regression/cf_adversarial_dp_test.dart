@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:bakhli/config/app_theme.dart';
+import 'package:bakhli/config/basic_details_strings.dart';
 import 'package:bakhli/config/profile_photo_strings.dart';
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/controllers/profile_photo_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
-import 'package:bakhli/features/social/a/social_strings_a.dart';
-import 'package:bakhli/screens/onboarding_screen.dart';
+import 'package:bakhli/screens/basic_details_screen.dart';
 import 'package:bakhli/utils/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -77,7 +77,7 @@ void main() {
     });
     tearDown(Get.reset);
 
-    testWidgets('two taps on Finish while the connectivity check runs create ONE account', (t) async {
+    testWidgets('two taps on Get Started while the connectivity check runs create ONE account', (t) async {
       Get.testMode = true;
       Get.put<TabConfigController>(FakeTabs());
       final auth = _Auth();
@@ -119,7 +119,7 @@ void main() {
         ],
       ));
       await t.pump();
-      Get.to<void>(() => const OnboardingScreen(), arguments: {'phone': '9876543210'}, transition: Transition.noTransition, duration: Duration.zero);
+      Get.to<void>(() => const BasicDetailsScreen(), arguments: {'phone': '9876543210'}, transition: Transition.noTransition, duration: Duration.zero);
       await t.pump();
       await t.pump(const Duration(milliseconds: 700));
       await settlePhone(t);
@@ -127,11 +127,11 @@ void main() {
       await t.tap(find.bySemanticsLabel(ProfilePhotoStrings.semProfilePhoto), warnIfMissed: false);
       await t.pump();
       await t.pump(const Duration(milliseconds: 300));
-      await OnboardingWalk.toFinish(t, name: 'Rahul Mehra');
+      await OnboardingWalk.basicName(t, 'Rahul Mehra');
 
-      await t.tap(find.text(SocialStringsA.finish), warnIfMissed: false);
+      await t.tap(find.text(BasicDetailsStrings.button), warnIfMissed: false);
       await t.pump();
-      await t.tap(find.text(SocialStringsA.finish), warnIfMissed: false);
+      await t.tap(find.text(BasicDetailsStrings.button), warnIfMissed: false);
       await t.pump();
       hold.complete(false);
       await t.pump();

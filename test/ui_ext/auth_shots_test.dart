@@ -1,17 +1,17 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:bakhli/config/basic_details_strings.dart';
 import 'package:bakhli/config/user_roles.dart';
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/controllers/location_controller.dart';
 import 'package:bakhli/controllers/profile_photo_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/design/design.dart';
-import 'package:bakhli/features/social/a/social_strings_a.dart';
 import 'package:bakhli/models/role_model.dart';
 import 'package:bakhli/models/user_model.dart';
+import 'package:bakhli/screens/basic_details_screen.dart';
 import 'package:bakhli/screens/login_screen.dart';
-import 'package:bakhli/screens/onboarding_screen.dart';
 import 'package:bakhli/screens/phone_verify_screen.dart';
 import 'package:bakhli/screens/role_change_screen.dart';
 import 'package:bakhli/screens/role_select_screen.dart';
@@ -260,33 +260,32 @@ void main() {
     });
   });
 
-  group('onboarding', () {
+  group('basic details', () {
     for (final (w, s) in _configs) {
       testWidgets('main ${_tag(w, s)}', (t) async {
         _base();
-        await _open(t, const OnboardingScreen(), w: w, s: s, args: {'phone': '9876543210'});
-        await t.enterText(find.byKey(OnboardingWalk.nameKey), 'Rahul Sharma');
-        await _snap(t, 'onb_${_tag(w, s)}');
+        await _open(t, const BasicDetailsScreen(), w: w, s: s, args: {'phone': '9876543210'});
+        await t.enterText(find.byKey(OnboardingWalk.basicNameKey), 'Rahul Sharma');
+        await _snap(t, 'bd_${_tag(w, s)}');
         await _done(t);
       });
     }
 
     testWidgets('states', (t) async {
       _base();
-      await _open(t, const OnboardingScreen(), args: {'phone': '9876543210'});
-      await _tapText(t, SocialStringsA.next);
-      expect(find.text(SocialStringsA.obStep1), findsOneWidget);
-      expect(find.byKey(const ValueKey('ob_hint')), findsOneWidget);
-      await _snap(t, 'onb_hint');
+      await _open(t, const BasicDetailsScreen(), args: {'phone': '9876543210'});
+      await _tapText(t, BasicDetailsStrings.button);
+      expect(find.text(BasicDetailsStrings.title), findsOneWidget);
+      await _snap(t, 'bd_empty');
       Get.find<ProfilePhotoController>().localPath.value = 'missing_photo.jpg';
-      await OnboardingWalk.toFinish(t, name: 'Rahul Sharma');
+      await OnboardingWalk.basicName(t, 'Rahul Sharma');
       FocusManager.instance.primaryFocus?.unfocus();
-      await _snap(t, 'onb_step3');
-      await _tapText(t, SocialStringsA.finish);
-      await _snap(t, 'onb_err');
+      await _snap(t, 'bd_filled');
+      await _tapText(t, BasicDetailsStrings.button);
+      await _snap(t, 'bd_err');
       await t.pump(const Duration(seconds: 5));
       _auth.isLoading.value = true;
-      await _snap(t, 'onb_load');
+      await _snap(t, 'bd_load');
       _auth.isLoading.value = false;
       await _done(t);
     });
@@ -543,10 +542,10 @@ void main() {
       'login_offline': (() => const LoginScreen(), null, () => AppToast.error('No internet connection. Please check your network.')),
       'login_session': (() => const LoginScreen(), null, () => AppToast.info('Session expired. Please log in again.')),
       'login_role': (() => const LoginScreen(), null, () => AppToast.info('Role updated. Please log in again.')),
-      'onb_long': (() => const OnboardingScreen(), {'phone': '9876543210'}, () => AppToast.error('Name cannot exceed 100 characters')),
+      'bd_long': (() => const BasicDetailsScreen(), {'phone': '9876543210'}, () => AppToast.error('Name cannot exceed 100 characters')),
       'pv_resend_max': (() => const PhoneVerifyScreen(), null, () => AppToast.warning('Maximum resends reached. Please try a different number.')),
       'rs_corr_err': (() => const RoleSelectScreen(), {'correction': true, 'hasDraft': true}, () => AppToast.error('Could not change role.')),
-      'onb_fail': (() => const OnboardingScreen(), {'phone': '9876543210'}, () => AppToast.error('Could not complete sign up. Please try again.')),
+      'bd_fail': (() => const BasicDetailsScreen(), {'phone': '9876543210'}, () => AppToast.error('Could not complete sign up. Please try again.')),
       'pv_taken': (() => const PhoneVerifyScreen(), null, () => AppToast.warning('This number is already verified by another account.')),
       'rs_unavail': (() => const RoleSelectScreen(), null, () => AppToast.warning('This role is not available right now.')),
       'rs_save_err': (() => const RoleSelectScreen(), null, () => AppToast.error('Could not save your role.')),

@@ -4,6 +4,7 @@ import '../controllers/tab_config_controller.dart' show AppTabKeys;
 import '../screens/splash_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/onboarding_screen.dart';
+import '../screens/basic_details_screen.dart';
 import '../screens/profile_photo_screen.dart';
 import '../screens/app_intro_screen.dart';
 import '../screens/phone_verify_screen.dart';
@@ -36,6 +37,7 @@ class AppRoutes {
   static const String login = '/login';
   static const String intro = '/intro';
   static const String onboarding = '/onboarding';
+  static const String basicDetails = '/basic-details';
   static const String profilePhoto = '/profile-photo';
   static const String phoneVerify = '/phone-verify';
   // keep /otp as alias for phone-verify (backward compat for any deep links)
@@ -330,6 +332,12 @@ class AppRoutes {
     GetPage(
       name: intro,
       page: () => const AppIntroScreen(),
+      customTransition: TemplateTransition(),
+      transitionDuration: templateTransitionDuration,
+    ),
+    GetPage(
+      name: basicDetails,
+      page: () => const BasicDetailsScreen(),
       customTransition: TemplateTransition(),
       transitionDuration: templateTransitionDuration,
     ),

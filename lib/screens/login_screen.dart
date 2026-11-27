@@ -121,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     if (result == null) return;
 
     if (result == 'onboarding') {
-      Get.toNamed(AppRoutes.onboarding, arguments: {'phone': _phone});
+      Get.toNamed(AppRoutes.basicDetails, arguments: {'phone': _phone});
       return;
     }
 

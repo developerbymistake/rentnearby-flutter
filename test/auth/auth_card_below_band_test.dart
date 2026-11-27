@@ -1,11 +1,11 @@
 import 'dart:io';
 
+import 'package:bakhli/config/basic_details_strings.dart';
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/design/extra/ext_auth.dart';
 import 'package:bakhli/features/social/a/onboarding/onboarding_steps.dart';
-import 'package:bakhli/features/social/a/social_strings_a.dart';
+import 'package:bakhli/screens/basic_details_screen.dart';
 import 'package:bakhli/screens/login_screen.dart';
-import 'package:bakhli/screens/onboarding_screen.dart';
 import 'package:bakhli/screens/phone_verify_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -169,12 +169,12 @@ void main() {
           });
         }
 
-        testWidgets('onboarding card below band $tag', (t) async {
-          await _open(t, const OnboardingScreen(), size, scale, args: {'phone': '9876543210'});
+        testWidgets('basic details card below band $tag', (t) async {
+          await _open(t, const BasicDetailsScreen(), size, scale, args: {'phone': '9876543210'});
           final base = _snap(t, card: OnboardingCard);
           t.view.viewInsets = FakeViewPadding(bottom: kb);
           await _settle(t);
-          await _expectStays(t, size, kb, base, 'onboarding', SocialStringsA.obTitle, SocialStringsA.obStep1, cardType: OnboardingCard);
+          await _expectStays(t, size, kb, base, 'basic details', BasicDetailsStrings.title, BasicDetailsStrings.subtitle, cardType: OnboardingCard);
         });
       }
     }

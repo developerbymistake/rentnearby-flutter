@@ -6,14 +6,10 @@ import '../controllers/auth_controller.dart';
 import '../controllers/profile_photo_controller.dart';
 import '../design/design.dart';
 import '../design/extra/ext_auth.dart';
-import '../design/extra/ext_buddy.dart';
-import '../features/buddy/buddy_strings.dart';
-import '../features/buddy/username_actions.dart';
 import '../features/owner_core/onboarding/onboarding_exit.dart';
 import '../features/social/a/onboarding/onboarding_controller.dart';
 import '../features/social/a/onboarding/onboarding_steps.dart';
 import '../features/social/a/social_strings_a.dart';
-import '../features/social/shared/social_formats.dart';
 import '../utils/app_toast.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -38,11 +34,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void initState() {
     super.initState();
-    final raw = Get.arguments;
-    final args = raw is Map ? raw : const {};
-    final phone = args['phone'];
-    final existing = args['existing'] == true || phone is! String;
-    _c = Get.put(OnboardingController(existing: existing, phone: phone is String ? phone : null), tag: _tag);
+    _c = Get.put(OnboardingController(), tag: _tag);
     _nameCtrl.text = _c.name.value;
     _aboutCtrl.text = _c.about.value;
     _aboutWorker = ever<String>(_c.about, (v) {
@@ -66,7 +58,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   // Opened from Profile (pushed over another page): step 1 Back leaves. As the login gate nothing is below.
-  bool get _canLeave => _c.existing && !_created && Navigator.of(context).canPop();
+  bool get _canLeave => !_created && Navigator.of(context).canPop();
 
   void _back() {
     FocusScope.of(context).unfocus();
@@ -131,23 +123,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  Widget _identity() => Obx(() {
-        final phone = _c.existing ? _auth.profilePhone.value : (_c.phone ?? '');
-        final username = _c.existing ? _auth.user.value?.username : _auth.signupUsername.value;
-        return OnboardingIdentityChips(
-          phone: phone.isEmpty ? null : '+91 ${SocialFormats.maskPhone(phone)}',
-          username: username,
-          idPill: (compact) => UsernameLockedPill(
-            username: username,
-            art: ListingArt.key,
-            compact: compact,
-            copyLabel: BuddyStrings.copyUsername,
-            loadingLabel: BuddyStrings.usernameLoading,
-            onCopy: () => UsernameActions.copy(username!),
-          ),
-        );
-      });
-
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -189,7 +164,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                   onPhoto: _pickPhoto,
                                   nameCtrl: _nameCtrl,
                                   nameFocus: _nameFocus,
-                                  phoneLine: _identity(),
+                                  photoUrl: _auth.user.value?.profilePhotoUrl,
                                 ),
                               1 => OnboardingStepStyle(c: _c),
                               _ => OnboardingStepAbout(c: _c, aboutCtrl: _aboutCtrl, photoUrl: _auth.user.value?.profilePhotoUrl),
