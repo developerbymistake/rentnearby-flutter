@@ -11,6 +11,7 @@ import '../../../../design/design.dart';
 import '../../../../screens/profile_screen.dart';
 import '../../../../widgets/profile_photo_circle.dart';
 import '../../../../widgets/tab_header.dart';
+import '../../../buddy/widgets/username_qr_sheet.dart';
 import '../../shared/social_me_controller.dart';
 import '../../shared/social_models.dart';
 import '../../shared/social_nav.dart';
@@ -23,6 +24,7 @@ class SeekerProfileScreen extends StatelessWidget {
 
   static const Key settingsKey = TabHeaderIcons.settingsKey;
   static const Key editKey = ValueKey('seeker_profile_edit');
+  static const Key myQrKey = ValueKey('seeker_profile_my_qr');
 
   @override
   Widget build(BuildContext context) {
@@ -93,6 +95,12 @@ class _ProfileContent extends StatelessWidget {
 
   final MyProfile profile;
 
+  VoidCallback? _openQr(BuildContext context) {
+    final username = profile.username;
+    if (username == null || username.isEmpty) return null;
+    return () => UsernameQrSheet.show(context, username: username, name: profile.name);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -111,11 +119,22 @@ class _ProfileContent extends StatelessWidget {
         ),
         Padding(
           padding: DS.gapInsets(l: 18, t: 22, r: 18),
-          child: GradientPillButton(
-            key: SeekerProfileScreen.editKey,
-            tone: ListingTone.indigo,
-            label: SocialStringsA.editProfileBtn,
-            onTap: SocialNav.openEditProfile,
+          child: PillButtonRow(
+            children: [
+              WhitePillButton(
+                key: SeekerProfileScreen.myQrKey,
+                tone: ListingTone.indigo,
+                icon: Icons.qr_code_2_rounded,
+                label: SocialStringsA.myQr,
+                onTap: _openQr(context),
+              ),
+              GradientPillButton(
+                key: SeekerProfileScreen.editKey,
+                tone: ListingTone.indigo,
+                label: SocialStringsA.editProfileBtn,
+                onTap: SocialNav.openEditProfile,
+              ),
+            ],
           ),
         ),
         ProfileChipsSection(interests: profile.interests, places: profile.places, skills: profile.skills),

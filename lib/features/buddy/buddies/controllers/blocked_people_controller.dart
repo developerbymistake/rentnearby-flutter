@@ -4,7 +4,7 @@ import '../../shared/buddy_result.dart';
 import '../buddy_feedback.dart';
 import '../data/buddies_api.dart';
 import '../models/buddy_models.dart';
-import 'buddies_controller.dart';
+import 'buddy_list_state.dart';
 import 'buddy_summary_controller.dart';
 
 class BlockedPeopleController extends GetxController {

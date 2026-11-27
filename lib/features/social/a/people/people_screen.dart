@@ -20,13 +20,16 @@ import '../widgets/social_chips_a.dart';
 import 'follow_requests_view.dart';
 import 'people_controller.dart';
 import 'people_widgets.dart';
+import 'scan_to_follow.dart';
 
 class PeopleScreen extends StatefulWidget {
-  const PeopleScreen({super.key, this.tab = 'followers'});
+  const PeopleScreen({super.key, this.tab = 'followers', this.scanToFollow = const ScanToFollow()});
 
   final String tab;
+  final ScanToFollow scanToFollow;
 
   static const Key requestsRowKey = ValueKey('people_requests_row');
+  static const Key scanQrKey = ValueKey('people_scan_qr');
   static const Key addFromFollowersKey = ValueKey('people_add_from_followers');
 
   @override
@@ -92,6 +95,14 @@ class _PeopleScreenState extends State<PeopleScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _requestsRow(),
+                  _actionRow(
+                    key: PeopleScreen.scanQrKey,
+                    icon: Icons.qr_code_scanner_rounded,
+                    title: SocialStringsA.scanQr,
+                    line: SocialStringsA.scanQrLine,
+                    top: 16,
+                    onTap: () => widget.scanToFollow.start(context),
+                  ),
                   SegmentTabs(
                     labels: SocialStringsA.peopleTabs,
                     selected: i,
@@ -235,15 +246,24 @@ class _PeopleScreenState extends State<PeopleScreen> {
         ]);
       });
 
-  Widget _addRow() => Padding(
-        padding: DS.gapInsets(l: 18, t: 24, r: 18),
+  Widget _addRow() => _actionRow(
+        key: PeopleScreen.addFromFollowersKey,
+        icon: Icons.add_rounded,
+        title: SocialStringsA.addFromFollowers,
+        line: SocialStringsA.onlyYouSee,
+        top: 24,
+        onTap: () async {
+          await SocialNav.openAddBuddies();
+          c.loadTab(2);
+        },
+      );
+
+  Widget _actionRow({required Key key, required IconData icon, required String title, required String line, required double top, required VoidCallback onTap}) => Padding(
+        padding: DS.gapInsets(l: 18, t: top, r: 18),
         child: Tap3D(
-          tapKey: PeopleScreen.addFromFollowersKey,
-          onTap: () async {
-            await SocialNav.openAddBuddies();
-            c.loadTab(2);
-          },
-          label: SocialStringsA.addFromFollowers,
+          tapKey: key,
+          onTap: onTap,
+          label: title,
           exclude: true,
           child: Container(
             padding: DS.sym(h: 16, v: 14),
@@ -255,15 +275,15 @@ class _PeopleScreenState extends State<PeopleScreen> {
                   height: DS.s(44),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(shape: BoxShape.circle, color: BuddyLook.snackAction.withValues(alpha: Alpha.v40)),
-                  child: Icon(Icons.add_rounded, size: DS.s(24), color: BuddyLook.amberText),
+                  child: Icon(icon, size: DS.s(24), color: BuddyLook.amberText),
                 ),
                 Gap.h(14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(SocialStringsA.addFromFollowers, style: Ink3D.text(15, FontWeight.w600, Ink3D.title, letterSpacing: 0)),
-                      Text(SocialStringsA.onlyYouSee, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
+                      Text(title, style: Ink3D.text(15, FontWeight.w600, Ink3D.title, letterSpacing: 0)),
+                      Text(line, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
                     ],
                   ),
                 ),

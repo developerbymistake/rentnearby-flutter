@@ -10,7 +10,7 @@ class BuddyStrings {
   static const String showQr = 'Show my QR';
   static const String copied = 'Username copied';
   static const String qrTitle = 'My QR';
-  static const String qrSubtitle = 'Show it to a friend. They scan it in Find a buddy.';
+  static const String qrSubtitle = 'Show it to a friend. They scan it in People to follow you.';
   static const String qrLabel = 'QR code of your username';
   static const String close = 'Close';
 

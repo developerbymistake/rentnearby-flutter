@@ -5,7 +5,10 @@ import '../../../../design/extra/ext_chat.dart';
 import '../../../buddy/shared/buddy_look.dart';
 import '../../../trip/data/trip_city_catalog.dart';
 import '../../../trip/models/trip_city_model.dart';
+import '../../../trip/widgets/hub/hub_art.dart';
 import '../../../trip/widgets/trip_city_art.dart';
+import '../../shared/social_models.dart';
+import '../social_strings_b.dart';
 
 abstract final class SocialLookB {
   static const Color seatsText = BuddyLook.tealEnd;
@@ -28,6 +31,15 @@ abstract final class SocialLookB {
   static ListingTone toneOf(int seed) => _tones[seed % _tones.length];
 
   static String artOf(int seed) => arts[seed % arts.length];
+
+  static const Map<String, String> _travelArt = {
+    TravelModes.public: ListingArt.bus,
+    TravelModes.bike: HubArt.motorcycle,
+    TravelModes.car: BuddyArt.automobile,
+    TravelModes.taxi: ListingArt.taxi,
+  };
+
+  static String? travelArtOf(String? code) => _travelArt[code];
 }
 
 abstract final class CityCoverLookup {
@@ -88,6 +100,33 @@ class InfoPill extends StatelessWidget {
         decoration: BoxDecoration(color: BuddyLook.note[teal ? NoteToneColor.teal : NoteToneColor.indigo]!.$1, borderRadius: DS.circular(12)),
         child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w600, teal ? SocialLookB.seatsText : BuddyLook.indigoText, letterSpacing: 0)),
       );
+}
+
+class TravelModeChip extends StatelessWidget {
+  const TravelModeChip({super.key, required this.code});
+
+  final String code;
+
+  static const double artSize = 16;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = SocialStringsB.travelLabel(code);
+    final art = SocialLookB.travelArtOf(code);
+    if (label == null || art == null) return const SizedBox.shrink();
+    return Container(
+      padding: DS.sym(h: 10, v: 4),
+      decoration: BoxDecoration(color: BuddyLook.note[NoteToneColor.indigo]!.$1, borderRadius: DS.circular(12)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ExcludeSemantics(child: Art3D(asset: art, size: artSize, shadowBlur: 1, shadowOffset: const Offset(0.5, 1))),
+          Gap.h(5),
+          Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12, FontWeight.w600, BuddyLook.indigoText, letterSpacing: 0))),
+        ],
+      ),
+    );
+  }
 }
 
 class SocialPickChip extends StatelessWidget {

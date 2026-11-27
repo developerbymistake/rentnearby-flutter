@@ -7,6 +7,7 @@ import '../../../../controllers/auth_controller.dart';
 import '../../../../design/design.dart';
 import '../../shared/buddy_look.dart';
 import '../controllers/scan_controller.dart';
+import '../scan_outcome.dart';
 import '../scan_strings.dart';
 import '../widgets/scan_frame.dart';
 import '../widgets/scan_result_card.dart';
@@ -21,7 +22,7 @@ class ScanQrScreen extends StatefulWidget {
   final String? Function()? ownUsername;
   final DateTime Function()? clock;
   final Future<void> Function()? haptic;
-  final void Function(String? result)? onPop;
+  final void Function(ScanOutcome? result)? onPop;
 
   @override
   State<ScanQrScreen> createState() => _ScanQrScreenState();
@@ -30,7 +31,7 @@ class ScanQrScreen extends StatefulWidget {
 class _ScanQrScreenState extends State<ScanQrScreen> with WidgetsBindingObserver {
   late final ScanController _ctrl = ScanController(
     ownUsername: widget.ownUsername ?? _ownUsername,
-    onFound: _pop,
+    onFound: (username) => _pop(ScanFound(username)),
     permission: widget.permission,
     clock: widget.clock,
     haptic: widget.haptic,
@@ -38,7 +39,7 @@ class _ScanQrScreenState extends State<ScanQrScreen> with WidgetsBindingObserver
 
   static String? _ownUsername() => Get.isRegistered<AuthController>() ? Get.find<AuthController>().user.value?.username : null;
 
-  void _pop(String? result) {
+  void _pop(ScanOutcome? result) {
     if (widget.onPop != null) {
       widget.onPop!(result);
     } else {
@@ -109,7 +110,7 @@ class _ScanQrScreenState extends State<ScanQrScreen> with WidgetsBindingObserver
             left: 0,
             right: 0,
             bottom: DS.s(70) + bottomInset,
-            child: Center(child: SizedBox(width: DS.s(220), child: ScanButton(label: ScanStrings.typeUsername, onTap: () => _pop(null), shadow: true))),
+            child: Center(child: SizedBox(width: DS.s(220), child: ScanButton(label: ScanStrings.typeUsername, onTap: () => _pop(const ScanTypeInstead()), shadow: true))),
           ),
         ];
       case ScanState.notBakhli:
@@ -123,7 +124,7 @@ class _ScanQrScreenState extends State<ScanQrScreen> with WidgetsBindingObserver
               body: ScanStrings.notBakhliBody,
               typeLabel: ScanStrings.typeUsername,
               actionLabel: ScanStrings.scanAgain,
-              onType: () => _pop(null),
+              onType: () => _pop(const ScanTypeInstead()),
               onAction: _ctrl.scanAgain,
             ),
           ),
@@ -139,7 +140,7 @@ class _ScanQrScreenState extends State<ScanQrScreen> with WidgetsBindingObserver
               body: ScanStrings.ownBody,
               typeLabel: ScanStrings.typeUsername,
               actionLabel: ScanStrings.scanAgain,
-              onType: () => _pop(null),
+              onType: () => _pop(const ScanTypeInstead()),
               onAction: _ctrl.scanAgain,
             ),
           ),
@@ -167,7 +168,7 @@ class _ScanQrScreenState extends State<ScanQrScreen> with WidgetsBindingObserver
                 body: ScanStrings.cameraOffBody,
                 typeLabel: ScanStrings.typeUsername,
                 actionLabel: _ctrl.settingsNeeded.value ? ScanStrings.openSettings : ScanStrings.allowCamera,
-                onType: () => _pop(null),
+                onType: () => _pop(const ScanTypeInstead()),
                 onAction: _ctrl.allow,
               ),
             ),

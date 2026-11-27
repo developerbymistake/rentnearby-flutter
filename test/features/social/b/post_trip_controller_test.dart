@@ -146,6 +146,20 @@ void main() {
     expect(body['seats'], 11);
     expect(body['text'], isNotEmpty);
     expect(body['clientTripId'], c.clientTripId);
+    expect(body['travelMode'], TravelModes.public, reason: 'owner 2026-11-27: Public transport is picked by default');
+  });
+
+  test('T2: the picked travel mode goes in the create body; unknown codes are ignored', () async {
+    final server = installServer();
+    server.on('POST', '/social/trips', publicTripJson(id: 'new-2', isMine: true, travelMode: 'bike'));
+    final c = await ready(PostTripController(persist: false));
+    c.toggleCity(manali);
+    c.setTravelMode('bike');
+    c.setTravelMode('plane');
+    expect(c.draft.value.travelMode, 'bike');
+    final r = await c.submit();
+    expect((r as BuddyOk<PublicTrip>).value.travelMode, 'bike');
+    expect((server.calls('POST', '/social/trips').single.data as Map)['travelMode'], 'bike');
   });
 
   test('from my trip: cities come from the trip, the wizard starts at When and publishes with PUT', () async {
@@ -167,6 +181,15 @@ void main() {
     expect(body.containsKey('cityKeys'), isFalse);
     expect(body['whenKind'], 'within');
     expect(body['withinMonths'], 2);
+    expect(body['travelMode'], TravelModes.public, reason: 'PUT replaces the stored value, so the current choice is always sent');
+  });
+
+  test('the stored draft keeps the travel mode; an old draft without it or with a bad value starts on Public transport', () {
+    final d = PostDraft.fromStore(const PostDraft(travelMode: 'taxi').toStore());
+    expect(d.travelMode, 'taxi');
+    final old = const PostDraft().toStore()..remove('travelMode');
+    expect(PostDraft.fromStore(old).travelMode, TravelModes.public);
+    expect(PostDraft.fromStore({...const PostDraft().toStore(), 'travelMode': 'plane'}).travelMode, TravelModes.public);
   });
 
   test('PostDraft.autoText follows the chosen join value, whatever the poster gender; unknown values read as anyone', () {

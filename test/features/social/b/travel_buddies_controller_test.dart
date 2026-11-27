@@ -1,5 +1,6 @@
 import 'package:bakhli/features/buddy/shared/buddy_result.dart';
 import 'package:bakhli/features/social/b/data/public_trips_api.dart';
+import 'package:bakhli/features/social/b/feed/feed_filter_sheet.dart';
 import 'package:bakhli/features/social/b/feed/travel_buddies_controller.dart';
 import 'package:bakhli/features/social/shared/social_live.dart';
 import 'package:bakhli/features/social/shared/social_models.dart';
@@ -11,10 +12,12 @@ import 'social_b_test_kit.dart';
 class _Api extends PublicTripsApi {
   final Map<String?, FeedPage> pages = {};
   final List<String?> cursors = [];
+  final List<String> travels = [];
 
   @override
-  Future<BuddyResult<FeedPage>> feed({String? cursor, String? q, String who = 'any', bool near = false, double? lat, double? lng}) async {
+  Future<BuddyResult<FeedPage>> feed({String? cursor, String? q, String who = 'any', String travel = 'any', bool near = false, double? lat, double? lng}) async {
     cursors.add(cursor);
+    travels.add(travel);
     return BuddyOk(pages[cursor] ?? const FeedPage());
   }
 }
@@ -60,5 +63,17 @@ void main() {
     await _settle();
     expect(c.mine.map((t) => t.tripId), ['m']);
     expect(c.hasMore, isFalse);
+  });
+  test('T3: the Travel by filter reaches every feed call, and Any sends no filter', () async {
+    final api = _Api()..pages[null] = FeedPage(items: [_trip('a')], nextCursor: 'p2');
+    final c = Get.put(TravelBuddiesController(api: api));
+    await _settle();
+    await c.applyFilter(c.filter.value.copyWith(travel: 'bike'));
+    await c.loadMore();
+    expect(api.travels, ['any', 'bike', 'bike']);
+    expect(c.filter.value.count, 1);
+    await c.applyFilter(c.filter.value.copyWith(travel: FeedFilter.any));
+    expect(api.travels.last, 'any');
+    expect(c.filter.value.count, 0);
   });
 }

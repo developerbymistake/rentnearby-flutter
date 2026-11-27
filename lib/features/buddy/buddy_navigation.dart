@@ -3,19 +3,18 @@ import 'package:get/get.dart';
 import '../../config/app_routes.dart';
 import '../social/shared/social_nav.dart';
 import '../trip/trip_navigation.dart';
+import 'scan/scan_outcome.dart';
 
 abstract final class BuddyNavigation {
   static Future<dynamic>? _go(String route, Map<String, dynamic> args, {bool replace = false}) =>
       replace ? Get.offNamed(route, arguments: args) : Get.toNamed(route, arguments: args);
 
-  static Future<dynamic>? openBuddies({String tab = 'find', String? query, String? source}) =>
+  static Future<dynamic>? openBuddies({String tab = 'find'}) =>
       SocialNav.openPeople(tab: tab == 'requests' ? 'requests' : 'buddies');
 
-  static Future<dynamic>? openBlocked() => Get.toNamed(AppRoutes.buddiesBlocked);
-
-  static Future<String?> openScan() async {
+  static Future<ScanOutcome?> openScan() async {
     final r = await Get.toNamed(AppRoutes.buddyScan);
-    return r is String ? r : null;
+    return r is ScanOutcome ? r : null;
   }
 
   static Future<dynamic>? openTripInvite(String memberId) => _go(AppRoutes.tripInvite, {'memberId': memberId});

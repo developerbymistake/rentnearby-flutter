@@ -40,24 +40,6 @@ void main() {
       expect(FoundPerson.fromJson({'relation': 'somethingNew'}).relation, BuddyRelation.none);
     });
 
-    test('B2 created and crossing', () {
-      final c = SendRequestResult.fromJson(_map('b2_request_created'));
-      expect(c.accepted, isFalse);
-      expect(c.requestId, '90000000-0000-4000-8000-000000000002');
-      final x = SendRequestResult.fromJson(_map('b2_request_accepted_crossing'));
-      expect(x.accepted, isTrue);
-      expect(x.buddy!.name, 'Neha');
-    });
-
-    test('B3 B4 pages', () {
-      final r = BuddyCursorPage.fromJson(_map('b3_requests_received'), ReceivedRequest.fromJson);
-      expect(r.items.single.person.name, 'Neha');
-      expect(r.hasMore, isFalse);
-      final s = BuddyCursorPage.fromJson(_map('b4_requests_sent'), SentRequest.fromJson);
-      expect(s.items.map((e) => e.waiting), [true, false]);
-      expect(s.items.map((e) => e.canCancel), [true, false]);
-    });
-
     test('B5 B8 B11 B14 B16 B17', () {
       expect(BuddyPerson.fromJson(BuddyJson.map(_map('b5_accept')['buddy'])).username, 'Bakhli#73019462');
       final b = BuddyList.fromJson(_map('b8_buddies'));

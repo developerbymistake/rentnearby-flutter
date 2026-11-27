@@ -13,6 +13,7 @@ import '../services/storage_service.dart';
 import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
 import '../config/tab_shell.dart';
+import '../config/role_strings.dart';
 import '../config/user_roles.dart';
 import 'tab_config_controller.dart';
 import 'home_controller.dart';
@@ -182,6 +183,7 @@ class AuthController extends GetxController {
   bool get isOwner => canListStays.value || canListTaxis.value;
 
   bool get canUseTravellerFeatures => RoleCapabilities.of(roleKey.value).canUseTravellerFeatures;
+  bool get canRequestRoleChange => RoleCapabilities.of(roleKey.value).canRequestRoleChange;
 
   TabConfigController get _tabs => TabConfigController.to;
 
@@ -754,6 +756,11 @@ class AuthController extends GetxController {
       if (_isRoleUnavailable(e)) {
         AppToast.warning('This role is not available right now.');
         return RoleActionResult.unavailable;
+      }
+      if (_errorType(e) == RoleRequestErrorTypes.notAllowed) {
+        AppToast.warning(RoleStrings.travellerCannotChange);
+        await refreshProfile();
+        return RoleActionResult.failed;
       }
       if (e is DioException && e.response?.statusCode == 409) {
         final type = e.response?.data?['error']?['type'];

@@ -64,6 +64,16 @@ abstract final class SocialStringsB {
   static const List<String> joinLabels = [anyone, men, women];
   static const int womenIndex = 2;
 
+  // Same order as TravelModes.codes.
+  static const List<String> travelLabels = ['Public transport', 'Bike', 'Own car', 'Taxi'];
+  static const String travelAny = 'Any';
+  static const String travelByCaps = 'TRAVEL BY';
+
+  static String? travelLabel(String? code) {
+    final i = code == null ? -1 : TravelModes.codes.indexOf(code);
+    return i < 0 ? null : travelLabels[i];
+  }
+
   // In place of Request to join when the trip is for the other gender (spec 22).
   static String onlyFor(String joinGender) => switch (joinGender) {
         'F' => 'This trip is for women only',
@@ -121,6 +131,7 @@ abstract final class SocialStringsB {
   static const String genderLockTitle = 'Women-only trips are a Plus feature.';
   static const String genderLockBody = 'Your post stays open to anyone for now.';
   static const String seePlus = 'See Plus';
+  static const String howTravel = 'How will you travel?';
   static const String seats = 'Seats';
   static const List<String> seatLabels = ['1', '2', '3', '4+'];
   static const List<int> seatValues = [1, 2, 3, SocialFormats.moreSeats];
@@ -182,6 +193,7 @@ abstract final class SocialStringsB {
   static const String factHowLong = 'How long';
   static const String factWho = 'Who can join';
   static const String factSeats = 'Seats';
+  static const String factTravelBy = 'Travel by';
   static String seatsFact(int left) => left <= 0 ? full : '$left left';
   static const String postGone = 'This trip is not available.';
   static const String reportTrip = 'Report this trip';

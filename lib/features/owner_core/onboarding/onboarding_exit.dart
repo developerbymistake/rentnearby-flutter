@@ -22,10 +22,11 @@ abstract final class OnboardingExit {
       context,
       anchor: anchor ?? Rect.fromLTWH(DS.s(18), top, PageHeader3D.buttonSize, PageHeader3D.buttonSize),
       items: [
-        MenuItem3D(
-          label: 'Change role',
-          onTap: () => isDraft && canCorrectRole ? openRoleCorrection(hasDraft: hasDraft) : Get.toNamed(AppRoutes.roleChange),
-        ),
+        if ((isDraft && canCorrectRole) || auth.canRequestRoleChange)
+          MenuItem3D(
+            label: 'Change role',
+            onTap: () => isDraft && canCorrectRole ? openRoleCorrection(hasDraft: hasDraft) : Get.toNamed(AppRoutes.roleChange),
+          ),
         MenuItem3D(label: 'Log out', danger: true, onTap: auth.logout),
       ],
     );

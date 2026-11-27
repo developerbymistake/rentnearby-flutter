@@ -1,5 +1,10 @@
 import 'package:bakhli/config/app_routes.dart';
+import 'package:bakhli/features/buddy/buddies/data/buddies_api.dart';
+import 'package:bakhli/features/buddy/buddies/models/buddy_models.dart';
+import 'package:bakhli/features/buddy/scan/scan_outcome.dart';
+import 'package:bakhli/features/buddy/shared/buddy_result.dart';
 import 'package:bakhli/features/social/a/people/people_screen.dart';
+import 'package:bakhli/features/social/a/people/scan_to_follow.dart';
 import 'package:bakhli/features/social/a/social_strings_a.dart';
 import 'package:bakhli/features/social/shared/social_strings.dart';
 import 'package:flutter/material.dart';
@@ -33,6 +38,16 @@ SocialFakeServer _server({bool requests = true}) {
     'nextCursor': null,
   });
   return s;
+}
+
+class _FindApi extends BuddiesApi {
+  final finds = <String>[];
+
+  @override
+  Future<BuddyResult<FindResult>> find(String query, {required String source}) async {
+    finds.add('$query:$source');
+    return const BuddyOk(FindResult(found: true, person: FoundPerson(userId: 'vikram', name: 'Vikram', username: 'Bakhli#29583047', initial: 'V', relation: BuddyRelation.none)));
+  }
 }
 
 void main() {
@@ -122,6 +137,30 @@ void main() {
     await settle(t);
     expect(s.calls('DELETE', '/buddies/rohan'), hasLength(1));
     expect(find.byKey(const ValueKey('buddy_rohan')), findsNothing);
+    await drain(t);
+  });
+  testWidgets('Q2: Scan QR sits on People and a scan opens the traveller profile to follow', (t) async {
+    _server();
+    final api = _FindApi();
+    final opened = <String>[];
+    var scans = 0;
+    final flow = ScanToFollow(
+      api: api,
+      scan: () async {
+        scans++;
+        return const ScanFound('Bakhli#29583047');
+      },
+      openTraveller: opened.add,
+    );
+    await pumpSocial(t, PeopleScreen(scanToFollow: flow), pages: _pages);
+    expect(find.byKey(PeopleScreen.scanQrKey), findsOneWidget);
+    expect(find.text(SocialStringsA.scanQr), findsOneWidget);
+    expect(find.text(SocialStringsA.scanQrLine), findsOneWidget);
+    await t.tap(find.byKey(PeopleScreen.scanQrKey));
+    await settle(t);
+    expect(scans, 1);
+    expect(api.finds, ['Bakhli#29583047:Qr']);
+    expect(opened, ['vikram']);
     await drain(t);
   });
 }

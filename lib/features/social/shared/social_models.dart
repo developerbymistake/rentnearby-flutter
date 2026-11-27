@@ -110,6 +110,16 @@ class TripWhen {
   }
 }
 
+abstract final class TravelModes {
+  static const String public = 'public';
+  static const String bike = 'bike';
+  static const String car = 'car';
+  static const String taxi = 'taxi';
+  static const List<String> codes = [public, bike, car, taxi];
+
+  static String? parse(Object? v) => v is String && codes.contains(v) ? v : null;
+}
+
 class PublicTrip {
   const PublicTrip({
     required this.tripId,
@@ -137,6 +147,7 @@ class PublicTrip {
     this.nearbyNotifiedAt,
     this.notified,
     this.unlocksAt,
+    this.travelMode,
   });
 
   final String tripId;
@@ -162,6 +173,7 @@ class PublicTrip {
   final bool requestsFull;
   final bool notifyNearby;
   final DateTime? nearbyNotifiedAt;
+  final String? travelMode;
 
   /// Own post only: false = this publish sent no notification (weekly limit used); null = the server did not say.
   final bool? notified;
@@ -212,6 +224,7 @@ class PublicTrip {
         nearbyNotifiedAt: nearbyNotifiedAt,
         notified: notified,
         unlocksAt: unlocksAt ?? this.unlocksAt,
+        travelMode: travelMode,
       );
 
   factory PublicTrip.fromJson(Map<String, dynamic> j) => PublicTrip(
@@ -240,6 +253,7 @@ class PublicTrip {
         nearbyNotifiedAt: BuddyJson.time(j['nearbyNotifiedAt']),
         notified: PostNotifyResult.of(j['notify'])?.notified,
         unlocksAt: BuddyJson.time(j['unlocksAt']),
+        travelMode: TravelModes.parse(j['travelMode']),
       );
 }
 

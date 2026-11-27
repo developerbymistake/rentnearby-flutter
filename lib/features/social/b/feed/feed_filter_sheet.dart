@@ -6,33 +6,37 @@ import '../../../buddy/shared/buddy_look.dart';
 import '../../../buddy/shared/widgets/segment_tabs.dart';
 import '../../c/social_strings_c.dart';
 import '../../shared/social_me_controller.dart';
+import '../../shared/social_models.dart';
 import '../../shared/social_nav.dart';
 import '../social_strings_b.dart';
 import '../widgets/social_widgets_b.dart';
 
 class FeedFilter {
-  const FeedFilter({this.q = '', this.who = any, this.near = false});
+  const FeedFilter({this.q = '', this.who = any, this.near = false, this.travel = any});
 
   static const String any = 'any';
   static const String women = 'women';
   static const String men = 'men';
   // Same order as the wizard control (Anyone | Men | Women, spec 23.8).
   static const List<String> whoValues = [any, men, women];
+  static const List<String> travelValues = [any, ...TravelModes.codes];
   static const FeedFilter none = FeedFilter();
 
   final String q;
   final String who;
   final bool near;
+  final String travel;
 
-  int get count => (q.trim().isEmpty ? 0 : 1) + (who == any ? 0 : 1) + (near ? 1 : 0);
+  int get count => (q.trim().isEmpty ? 0 : 1) + (who == any ? 0 : 1) + (near ? 1 : 0) + (travel == any ? 0 : 1);
 
-  FeedFilter copyWith({String? q, String? who, bool? near}) => FeedFilter(q: q ?? this.q, who: who ?? this.who, near: near ?? this.near);
+  FeedFilter copyWith({String? q, String? who, bool? near, String? travel}) =>
+      FeedFilter(q: q ?? this.q, who: who ?? this.who, near: near ?? this.near, travel: travel ?? this.travel);
 
   @override
-  bool operator ==(Object other) => other is FeedFilter && other.q == q && other.who == who && other.near == near;
+  bool operator ==(Object other) => other is FeedFilter && other.q == q && other.who == who && other.near == near && other.travel == travel;
 
   @override
-  int get hashCode => Object.hash(q, who, near);
+  int get hashCode => Object.hash(q, who, near, travel);
 }
 
 class FeedFilterSheet extends StatefulWidget {
@@ -45,11 +49,13 @@ class FeedFilterSheet extends StatefulWidget {
   static const Key nearSwitchKey = ValueKey('feed_filter_near');
   static const Key nearPlusKey = ValueKey('feed_filter_near_plus');
   static const Key whoKey = ValueKey('feed_filter_who');
+  static const Key travelKey = ValueKey('feed_filter_travel');
 
   static Future<FeedFilter?> show(BuildContext context, {required FeedFilter initial, required bool nearMe}) =>
       Sheet3D.show<FeedFilter>(context, builder: (_) => FeedFilterSheet(initial: initial, nearMe: nearMe));
 
   static const List<String> whoLabels = SocialStringsB.joinLabels;
+  static const List<String> travelLabels = [SocialStringsB.travelAny, ...SocialStringsB.travelLabels];
 
   @override
   State<FeedFilterSheet> createState() => _FeedFilterSheetState();
@@ -115,6 +121,7 @@ class _FeedFilterSheetState extends State<FeedFilterSheet> {
   Widget build(BuildContext context) {
     final whoIndex = FeedFilter.whoValues.indexOf(_f.who) < 0 ? 0 : FeedFilter.whoValues.indexOf(_f.who);
     final whoLabel = FeedFilterSheet.whoLabels[whoIndex];
+    final travelIndex = FeedFilter.travelValues.indexOf(_f.travel) < 0 ? 0 : FeedFilter.travelValues.indexOf(_f.travel);
     final tone = ListingTone.indigo;
     return Sheet3D(
       tone: tone,
@@ -161,6 +168,19 @@ class _FeedFilterSheetState extends State<FeedFilterSheet> {
               tone: tone,
               margin: EdgeInsets.zero,
               onTap: (i) => setState(() => _f = _f.copyWith(who: FeedFilter.whoValues[i])),
+            ),
+          ]),
+          _card(children: [
+            _head(SocialStringsB.travelByCaps, FeedFilterSheet.travelLabels[travelIndex]),
+            Gap.v(10),
+            SegmentTabs(
+              key: FeedFilterSheet.travelKey,
+              labels: FeedFilterSheet.travelLabels,
+              selected: travelIndex,
+              tone: tone,
+              compact: true,
+              margin: EdgeInsets.zero,
+              onTap: (i) => setState(() => _f = _f.copyWith(travel: FeedFilter.travelValues[i])),
             ),
           ]),
           _card(children: [

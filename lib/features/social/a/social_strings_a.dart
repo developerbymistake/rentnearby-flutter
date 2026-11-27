@@ -126,11 +126,6 @@ abstract final class SocialStringsA {
   static const String supportLabel = 'SUPPORT';
   static const String legalLabel = 'LEGAL';
   static const String notVerified = 'Not verified';
-  static const String changeRole = 'Change role';
-  static const String currentRole = 'Current role';
-  static const String requestPending = 'Request pending';
-  static const String requestRejected = 'Request rejected';
-  static const String paused = 'Paused';
   static const String plus = 'Bakhli Plus';
   static const String plusOn = 'Plus';
   static const String free = 'Free';
@@ -160,10 +155,6 @@ abstract final class SocialStringsA {
   static const String logout = 'Logout';
   static const String deleteAccount = 'Delete Account';
 
-  static String nowRole(String role) => 'Now: $role';
-
-  static String tryAgainAfter(String when) => 'Try again after $when';
-
   static String policyLabel(String policy) => switch (policy) {
         'Following' => peopleIFollow,
         'Buddies' => buddiesOnly,
@@ -171,6 +162,16 @@ abstract final class SocialStringsA {
       };
 
   static const String peopleTitle = 'People';
+  static const String myQr = 'My QR';
+  static const String scanQr = 'Scan QR';
+  static const String scanQrLine = "Scan a friend's QR to follow them";
+  static const String findByUsername = 'Find by username';
+  static const String findByUsernameLine = 'Ask your friend for their username';
+  static const String usernameHint = 'Bakhli#12345678';
+  static const String usernameBad = 'A username looks like Bakhli#12345678';
+  static const String find = 'Find';
+  static const String noTravellerFound = 'No traveller found with this username';
+  static const String scanTryLater = 'Too many tries. Try again in a few minutes.';
   static const String myBuddies = 'My Buddies';
   static const List<String> peopleTabs = [followers, followingTab, myBuddies];
   static const String requests = 'Requests';

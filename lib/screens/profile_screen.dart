@@ -536,6 +536,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _accountRoleTile() {
     return Obx(() {
       final roleKey = _auth.roleKey.value;
+      if (!_auth.canRequestRoleChange) return const SizedBox.shrink();
       final u = _auth.user.value;
       final locked = _auth.roleChangeLocked;
       final blockedUntil = u?.roleRequestBlockedUntil;

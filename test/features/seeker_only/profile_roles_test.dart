@@ -78,6 +78,15 @@ void main() {
     await _finish(t);
   });
 
+  testWidgets('R1: a seeker sees no Change role or Current role row (Seekers cannot change role)', (t) async {
+    _setUp(UserRoleKeys.seeker, ShellKind.seeker);
+    await _open(t);
+    expect(find.text('ACCOUNT'), findsOneWidget);
+    expect(find.text('Change role'), findsNothing);
+    expect(find.text('Current role'), findsNothing);
+    await _finish(t);
+  });
+
   for (final (name, role, shell) in [
     ('stay owner', UserRoleKeys.stayOwner, ShellKind.stayOwner),
     ('taxi driver', UserRoleKeys.taxiDriver, ShellKind.taxiDriver),
@@ -93,6 +102,7 @@ void main() {
       expect(find.text('ACCOUNT'), findsOneWidget);
       expect(find.text('My Reports'), findsOneWidget);
       expect(find.text('Logout'), findsOneWidget);
+      expect(find.text('Change role'), findsOneWidget, reason: 'R2: owners keep their Change role row');
       if (shell == ShellKind.taxiDriver) expect(find.text('My rating'), findsOneWidget);
       await _finish(t);
     });

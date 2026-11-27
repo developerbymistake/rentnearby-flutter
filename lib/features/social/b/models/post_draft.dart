@@ -3,6 +3,7 @@ import 'package:get_storage/get_storage.dart';
 import '../../../buddy/shared/buddy_json.dart';
 import '../../../trip/models/trip_city_model.dart';
 import '../../shared/social_formats.dart';
+import '../../shared/social_models.dart';
 import '../social_strings_b.dart';
 
 class PostDraft {
@@ -18,6 +19,7 @@ class PostDraft {
     this.chips = const [],
     this.textEdited = false,
     this.notifyNearby = false,
+    this.travelMode = TravelModes.public,
   });
 
   static const String within = 'within';
@@ -38,6 +40,7 @@ class PostDraft {
   final String text;
   final List<String> chips;
   final bool textEdited;
+  final String travelMode;
 
   /// Not stored with the draft: the switch starts OFF every time.
   final bool notifyNearby;
@@ -61,6 +64,7 @@ class PostDraft {
     List<String>? chips,
     bool? textEdited,
     bool? notifyNearby,
+    String? travelMode,
   }) =>
       PostDraft(
         cities: cities ?? this.cities,
@@ -74,6 +78,7 @@ class PostDraft {
         chips: chips ?? this.chips,
         textEdited: textEdited ?? this.textEdited,
         notifyNearby: notifyNearby ?? this.notifyNearby,
+        travelMode: travelMode ?? this.travelMode,
       );
 
   static String dateText(DateTime d) =>
@@ -89,6 +94,7 @@ class PostDraft {
         'seats': seats,
         'text': text.trim(),
         'notifyNearby': notifyNearby,
+        'travelMode': travelMode,
       };
 
   String autoText() {
@@ -113,6 +119,7 @@ class PostDraft {
         'text': text,
         'chips': chips,
         'textEdited': textEdited,
+        'travelMode': travelMode,
       };
 
   factory PostDraft.fromStore(Map<String, dynamic> j) {
@@ -139,8 +146,11 @@ class PostDraft {
       text: BuddyJson.str(j['text']),
       chips: BuddyJson.strings(j['chips']),
       textEdited: BuddyJson.boolean(j['textEdited']),
+      travelMode: _travel(j['travelMode']),
     );
   }
+
+  static String _travel(Object? v) => TravelModes.parse(v) ?? TravelModes.public;
 }
 
 abstract final class PostDraftStore {

@@ -23,7 +23,6 @@ final _pages = [
 ];
 
 const _rows = [
-  SocialStringsA.changeRole,
   SocialStringsA.plus,
   SocialStringsA.privateProfile,
   SocialStringsA.whoCanMessage,
@@ -89,6 +88,15 @@ void main() {
       });
     }
   }
+
+  testWidgets('R1: a traveller (Seeker) has no Change role or Current role row in Settings', (t) async {
+    await open(t);
+    expect(find.text('Change role'), findsNothing);
+    expect(find.text('Current role'), findsNothing);
+    expect(find.textContaining('Now: '), findsNothing);
+    await drain(t);
+    expect(t.takeException(), isNull);
+  });
 
   testWidgets('private profile switch sends PUT /social/me/privacy', (t) async {
     final server = await open(t);

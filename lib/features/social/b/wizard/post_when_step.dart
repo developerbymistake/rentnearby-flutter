@@ -6,6 +6,7 @@ import '../../../../design/extra/ext_chat.dart';
 import '../../../buddy/shared/buddy_look.dart';
 import '../../../buddy/shared/widgets/segment_tabs.dart';
 import '../../shared/social_formats.dart';
+import '../../shared/social_models.dart';
 import '../../shared/social_nav.dart';
 import '../models/post_draft.dart';
 import '../social_strings_b.dart';
@@ -23,6 +24,7 @@ class PostWhenStep extends StatelessWidget {
   static const Key calendarKey = ValueKey('post_pick_calendar');
   static const Key genderLockKey = ValueKey('post_gender_lock');
   static const Key whoKey = ValueKey('post_who');
+  static const Key travelKey = ValueKey('post_travel');
 
   static const List<String> _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -246,6 +248,7 @@ class PostWhenStep extends StatelessWidget {
       final whoIndex = SocialStringsB.joinCodes.indexOf(d.joinGender);
       final city = d.cities.isEmpty ? '' : d.cities.first.name;
       final seatIndex = SocialStringsB.seatValues.indexOf(d.seats);
+      final travelIndex = TravelModes.codes.indexOf(d.travelMode);
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -297,6 +300,16 @@ class PostWhenStep extends StatelessWidget {
             tone: ListingTone.indigo,
             margin: DS.insets(l: 18, r: 18),
             onTap: (i) => c.setSeats(SocialStringsB.seatValues[i]),
+          ),
+          _label(SocialStringsB.howTravel),
+          SegmentTabs(
+            key: travelKey,
+            labels: SocialStringsB.travelLabels,
+            selected: travelIndex < 0 ? 0 : travelIndex,
+            tone: ListingTone.indigo,
+            compact: true,
+            margin: DS.insets(l: 18, r: 18),
+            onTap: (i) => c.setTravelMode(TravelModes.codes[i]),
           ),
         ],
       );

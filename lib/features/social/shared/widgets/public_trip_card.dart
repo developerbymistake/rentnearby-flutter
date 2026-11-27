@@ -22,6 +22,7 @@ class PublicTripCard extends StatelessWidget {
 
   static const Key menuKey = ValueKey('public_trip_menu');
   static const Key fullKey = ValueKey('public_trip_full');
+  static const Key travelKey = ValueKey('public_trip_travel');
 
   int get _seed => SocialLookB.seedOf(trip.cityKey, trip.tripId);
 
@@ -32,7 +33,14 @@ class PublicTripCard extends StatelessWidget {
 
   String get _place => SocialFormats.cities(trip.cityNames);
 
-  String get _semantics => '$_place, ${SocialStringsB.whenDays(trip)}, ${SocialFormats.whoCanJoin(trip.joinGender)}, ${trip.requestsFull && !trip.isMine ? SocialStringsB.full : SocialStringsB.seatsOf(trip)}, ${trip.owner.name}';
+  String get _semantics => [
+        _place,
+        SocialStringsB.whenDays(trip),
+        SocialFormats.whoCanJoin(trip.joinGender),
+        _seatsText,
+        ?SocialStringsB.travelLabel(trip.travelMode),
+        trip.owner.name,
+      ].join(', ');
 
   @override
   Widget build(BuildContext context) => mode == PublicTripCardMode.feed ? _feed() : _compact();
@@ -70,6 +78,7 @@ class PublicTripCard extends StatelessWidget {
         children: [
           InfoPill(text: SocialFormats.whoCanJoin(trip.joinGender)),
           InfoPill(key: trip.requestsFull && !trip.isMine ? fullKey : null, text: _seatsText, teal: true),
+          if (trip.travelMode case final code?) TravelModeChip(key: travelKey, code: code),
         ],
       );
 

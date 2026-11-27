@@ -31,6 +31,7 @@ class TripPostScreen extends StatefulWidget {
   static const Key requestKey = ValueKey('trip_post_request');
   static const Key cancelKey = ValueKey('trip_post_cancel');
   static const Key menuKey = ValueKey('trip_post_menu');
+  static const Key travelKey = ValueKey('trip_post_travel');
   static const Key joinRequestsKey = ValueKey('trip_post_join_requests');
   static const Key openTripKey = ValueKey('trip_post_open_trip');
   static const Key onlyForKey = ValueKey('trip_post_only_for');
@@ -188,11 +189,13 @@ class _TripPostScreenState extends State<TripPostScreen> {
   }
 
   Widget _facts(PublicTrip t) {
-    final rows = [
-      (SocialStringsB.factWhen, SocialFormats.when(t.when)),
-      (SocialStringsB.factHowLong, SocialFormats.days(t.days)),
-      (SocialStringsB.factWho, SocialFormats.whoCanJoin(t.joinGender)),
-      (SocialStringsB.factSeats, t.requestsFull && !t.isMine ? SocialStringsB.full : SocialStringsB.seatsFact(t.seatsLeft)),
+    Widget value(String text) => Text(text, style: Ink3D.text(14.5, FontWeight.w600, Ink3D.title, letterSpacing: 0));
+    final rows = <(String, Widget)>[
+      (SocialStringsB.factWhen, value(SocialFormats.when(t.when))),
+      (SocialStringsB.factHowLong, value(SocialFormats.days(t.days))),
+      (SocialStringsB.factWho, value(SocialFormats.whoCanJoin(t.joinGender))),
+      (SocialStringsB.factSeats, value(t.requestsFull && !t.isMine ? SocialStringsB.full : SocialStringsB.seatsFact(t.seatsLeft))),
+      if (t.travelMode case final code?) (SocialStringsB.factTravelBy, TravelModeChip(key: TripPostScreen.travelKey, code: code)),
     ];
     return Container(
       margin: DS.gapInsets(l: 18, t: 18, r: 18),
@@ -207,7 +210,7 @@ class _TripPostScreenState extends State<TripPostScreen> {
               child: Row(
                 children: [
                   Expanded(child: Text(rows[i].$1, style: Ink3D.text(14.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0))),
-                  Text(rows[i].$2, style: Ink3D.text(14.5, FontWeight.w600, Ink3D.title, letterSpacing: 0)),
+                  rows[i].$2,
                 ],
               ),
             ),
