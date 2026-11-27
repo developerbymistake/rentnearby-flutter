@@ -113,15 +113,15 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel>
       final owner = _auth.effectiveIsOwner;
       final slides = <_Slide>[
         if (_auth.tripsEnabled) _Slide.trip,
-        if (_tabs.isStaysActive && (!owner || _auth.staysEnabled)) _Slide.stay,
-        if (_tabs.isTaxiActive && (!owner || _auth.taxisEnabled)) _Slide.taxi,
+        if (owner && _tabs.isStaysActive && _auth.staysEnabled) _Slide.stay,
+        if (owner && _tabs.isTaxiActive && _auth.taxisEnabled) _Slide.taxi,
       ];
       if (slides.length != _count) _onCountChanged(slides.length);
       if (slides.isEmpty) return const SizedBox.shrink();
       final n = slides.length;
       Widget page(int i) => Padding(
             padding: n == 1 ? EdgeInsets.only(bottom: HomeHeroCarousel.dotsBottom) : HomeHeroCarousel.pagePadding,
-            child: _HeroSlide(slide: slides[i % n], isOwner: owner),
+            child: _HeroSlide(slide: slides[i % n]),
           );
       final scaler = MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.15);
       return MediaQuery(
@@ -199,9 +199,8 @@ class _Dots extends StatelessWidget {
 
 class _HeroSlide extends StatelessWidget {
   final _Slide slide;
-  final bool isOwner;
 
-  const _HeroSlide({required this.slide, required this.isOwner});
+  const _HeroSlide({required this.slide});
 
   static ListingTone toneOf(_Slide slide) => switch (slide) {
     _Slide.trip => ListingTone.indigo,
@@ -220,36 +219,23 @@ class _HeroSlide extends StatelessWidget {
     _ => UserRoleKeys.taxiDriver,
   };
 
-  static (String, String, String) seekerCopyOf(_Slide slide) => switch (slide) {
-    _Slide.stay => ('Looking for a stay?', 'Find your stay', 'Browse stays near you'),
-    _ => ('Need a taxi?', 'Find a taxi', 'Local taxis near you'),
-  };
-
-  static String seekerActionOf(_Slide slide) => slide == _Slide.stay ? SeekerHomeStrings.browseStays : SeekerHomeStrings.seeTaxis;
-
   static String ownerTitleOf(_Slide slide) => slide == _Slide.stay ? 'List your stay' : 'List your taxi';
 
   static String ownerRouteOf(_Slide slide) => slide == _Slide.stay ? AppRoutes.myStays : AppRoutes.myTaxi;
 
-  static int tabOf(_Slide slide) => slide == _Slide.stay ? AppTabs.stays : AppTabs.taxi;
-
   @override
   Widget build(BuildContext context) {
     if (slide == _Slide.trip) return const SeekerTripSlide();
-    final (seekerBadge, seekerTitle, seekerSubtitle) = seekerCopyOf(slide);
     return WorkoutCard(
       tone: toneOf(slide),
       art: artOf(slide),
-      eyebrow: isOwner ? RoleVisuals.displayName(roleKeyOf(slide)) : seekerBadge,
-      title: isOwner ? ownerTitleOf(slide) : seekerTitle,
-      subtitle: isOwner ? 'Grow your reach' : seekerSubtitle,
+      eyebrow: RoleVisuals.displayName(roleKeyOf(slide)),
+      title: ownerTitleOf(slide),
+      subtitle: 'Grow your reach',
       trailing: WorkoutTrailing.arrow,
-      actionLabel: isOwner ? null : seekerActionOf(slide),
       minHeight: SeekerTripCardView.minHeight,
-      semanticsLabel: isOwner ? ownerTitleOf(slide) : seekerTitle,
-      onTap: isOwner
-          ? () => Get.toNamed(ownerRouteOf(slide))
-          : () => Get.find<AuthController>().openPlace(AppPlaces.ofTab(tabOf(slide))),
+      semanticsLabel: ownerTitleOf(slide),
+      onTap: () => Get.toNamed(ownerRouteOf(slide)),
     );
   }
 }

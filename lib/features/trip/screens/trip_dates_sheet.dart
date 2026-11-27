@@ -20,8 +20,8 @@ class TripDatesSheet {
   static const Key ctaKey = ValueKey('save-trip-cta');
   static const Key startFieldKey = ValueKey('trip-dates-start');
   static const Key saveNoteKey = ValueKey('save-trip-note');
-  static const int _maxAdults = 30;
-  static const int _maxKids = 20;
+  static const Key peopleCapKey = ValueKey('trip-people-cap');
+  static const int maxPeople = 12;
   static const int _daysAhead = 365;
 
   static Future<bool> ensure(BuildContext context, {required String heading, String? cta}) async {
@@ -92,8 +92,8 @@ class _DatesBodyState extends State<_DatesBody> {
     super.initState();
     final s = _c.settings;
     _start = widget.clearStart ? null : s.startDate;
-    _adults = s.adults ?? 2;
-    _kids = s.kids ?? 0;
+    _adults = (s.adults ?? 2).clamp(1, TripDatesSheet.maxPeople);
+    _kids = (s.kids ?? 0).clamp(0, TripDatesSheet.maxPeople - _adults);
   }
 
   @override
@@ -265,16 +265,24 @@ class _DatesBodyState extends State<_DatesBody> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _stepper(
-                    TripStringsV2Find.adults, _adults, 1, TripDatesSheet._maxAdults, (v) => setState(() => _adults = v)),
+                child: _stepper(TripStringsV2Find.adults, _adults, 1, TripDatesSheet.maxPeople - _kids,
+                    (v) => setState(() => _adults = v)),
               ),
               Gap.h(12),
               Expanded(
-                child: _stepper(
-                    TripStringsV2Find.children, _kids, 0, TripDatesSheet._maxKids, (v) => setState(() => _kids = v)),
+                child: _stepper(TripStringsV2Find.children, _kids, 0, TripDatesSheet.maxPeople - _adults,
+                    (v) => setState(() => _kids = v)),
               ),
             ],
           ),
+          if (_adults + _kids >= TripDatesSheet.maxPeople) ...[
+            Gap.v(6),
+            Text(
+              TripStringsV2Find.peopleCap,
+              key: TripDatesSheet.peopleCapKey,
+              style: Ink3D.text(12.5, FontWeight.w400, Ink3D.sub),
+            ),
+          ],
           Gap.v(8),
           if (save)
             Text(

@@ -12,9 +12,9 @@ import '../../shared/widgets/plus_widgets.dart';
 import '../social_strings_b.dart';
 import 'social_widgets_b.dart';
 
-// The one way into the Post your trip wizard from Home, My Trips and the feed: the public-trip and active-trip caps are checked first.
+// The one way into the Post your trip wizard from Home, My Trips and the feed: the live post cap and the publish rate are checked first.
 abstract final class PostTripEntry {
-  /// [tripId] = post an existing trip (trip overview menu): the active-trip cap does not apply, the trip already exists.
+  /// [tripId] = post an existing trip (trip overview menu).
   static Future<void> open(BuildContext context, {String? tripId}) async {
     final me = SocialMeController.maybe;
     if (me != null && me.me.value == null) await me.refreshQuiet();
@@ -22,10 +22,6 @@ abstract final class PostTripEntry {
     final limits = me?.me.value?.limits;
     if (limits != null && limits.publicTrips.reached) {
       await PlusSheets.limitReached(context, errorType: SocialErrorTypes.publicTripLimit, data: {'limit': limits.publicTrips.limit}, from: 'post');
-      return;
-    }
-    if (tripId == null && limits != null && limits.activeTrips.reached) {
-      await PlusSheets.limitReached(context, errorType: SocialErrorTypes.tripLimitReached, data: {'limit': limits.activeTrips.limit}, from: 'post');
       return;
     }
     if (limits != null && limits.publishes.reached) {

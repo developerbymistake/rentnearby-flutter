@@ -138,10 +138,7 @@ class TripModel {
   final DateTime? archivedAt;
   final TripArchiveSummary? archive;
 
-  /// Owner answers: the post cannot be removed (unpublished or the trip deleted) before this moment. Null = no lock or an older answer.
-  final DateTime? postUnlocksAt;
-
-  /// Owner answers: the trip was ever posted and is not over, so Delete needs every other traveller removed first.
+  /// Owner answers: Delete needs every other traveller removed first (any trip, ended or not).
   final bool deleteNeedsAlone;
 
   const TripModel({
@@ -176,7 +173,6 @@ class TripModel {
     this.sharing,
     this.inactiveByPlan = false,
     this.isPublic = false,
-    this.postUnlocksAt,
     this.deleteNeedsAlone = false,
     this.archived = false,
     this.archivedAt,
@@ -210,6 +206,7 @@ class TripModel {
   bool get isPlanned => status == TripStatuses.planned;
   bool get isCompleted => status == TripStatuses.completed;
   bool get isMuted => mutedAt != null;
+  bool get needsItinerary => dayCount <= 0 || spotCount <= 0;
 
   bool get stepsKnown {
     final p = raw?['plan'];
@@ -247,7 +244,6 @@ class TripModel {
     TripSharingBlock? sharing,
     bool? inactiveByPlan,
     bool? isPublic,
-    DateTime? postUnlocksAt,
     bool? deleteNeedsAlone,
   }) =>
       TripModel(
@@ -282,7 +278,6 @@ class TripModel {
         sharing: sharing ?? this.sharing,
         inactiveByPlan: inactiveByPlan ?? this.inactiveByPlan,
         isPublic: isPublic ?? this.isPublic,
-        postUnlocksAt: postUnlocksAt ?? this.postUnlocksAt,
         deleteNeedsAlone: deleteNeedsAlone ?? this.deleteNeedsAlone,
         archived: archived,
         archivedAt: archivedAt,
@@ -328,7 +323,6 @@ class TripModel {
         sharing: _sharingOf(json['sharing']),
         inactiveByPlan: json['inactiveByPlan'] == true,
         isPublic: json['isPublic'] == true,
-        postUnlocksAt: _instant(json['postUnlocksAt']),
         deleteNeedsAlone: json['deleteNeedsAlone'] == true,
         archived: json['archived'] == true,
         archivedAt: _instant(json['archivedAt']),
@@ -476,7 +470,6 @@ class TripSummaryModel {
   final List<String>? _legCities;
   final TripProgress progress;
   final bool inactiveByPlan;
-  final DateTime? postUnlocksAt;
   final bool deleteNeedsAlone;
   final bool archived;
   final DateTime? archivedAt;
@@ -502,7 +495,6 @@ class TripSummaryModel {
     List<String>? legCities,
     this.progress = const TripProgress(),
     this.inactiveByPlan = false,
-    this.postUnlocksAt,
     this.deleteNeedsAlone = false,
     this.archived = false,
     this.archivedAt,
@@ -564,7 +556,6 @@ class TripSummaryModel {
         legCities: _legCities,
         progress: progress,
         inactiveByPlan: inactiveByPlan,
-        postUnlocksAt: postUnlocksAt,
         deleteNeedsAlone: deleteNeedsAlone,
         archived: archived,
         archivedAt: archivedAt,
@@ -596,7 +587,6 @@ class TripSummaryModel {
         legCities: _legCitiesOf(json['legCities']),
         progress: TripProgress.tryParse(json['progress']) ?? const TripProgress(),
         inactiveByPlan: json['inactiveByPlan'] == true,
-        postUnlocksAt: _instant(json['postUnlocksAt']),
         deleteNeedsAlone: json['deleteNeedsAlone'] == true,
         archived: json['archived'] == true,
         archivedAt: _instant(json['archivedAt']),

@@ -17,6 +17,7 @@ class TripStringsV2Find {
   static const pickDate = 'Pick a date';
   static const adults = 'Adults';
   static const children = 'Children';
+  static const peopleCap = 'Up to 12 people';
   static const showWays = 'Show ways';
   static const saveDates = 'Save';
   static String showStaysIn(String city) => 'Show stays in $city';

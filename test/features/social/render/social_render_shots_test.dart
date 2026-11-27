@@ -23,7 +23,6 @@ import 'package:bakhli/features/social/b/post/trip_post_screen.dart';
 import 'package:bakhli/features/social/b/rail/trips_rail_controller.dart';
 import 'package:bakhli/features/social/b/rail/trips_to_join_rail.dart';
 import 'package:bakhli/features/social/b/social_strings_b.dart';
-import 'package:bakhli/features/social/shared/social_strings.dart';
 import 'package:bakhli/features/social/shared/widgets/public_trip_card.dart';
 import 'package:bakhli/features/social/b/widgets/find_buddies_post_card.dart';
 import 'package:bakhli/features/social/b/wizard/post_about_step.dart';
@@ -331,9 +330,9 @@ void main() {
     Future<void> fillStyle(WidgetTester t) async {
       final c = OnboardingWalk.controllerOf(t);
       await _tap(t, find.byKey(OnboardingBottom.buttonKey));
-      c.interests.assignAll(const ['Mountains', 'Treks', 'Food', 'Photography']);
+      c.interests.assignAll(const ['Mountains', 'Treks', 'Food']);
       c.skills.assignAll(const ['Photographer', 'Driver']);
-      c.places.assignAll(const ['Rishikesh', 'Nainital', 'Jaipur', 'Manali']);
+      c.places.assignAll(const ['Rishikesh', 'Nainital', 'Manali']);
       await settle(t);
     }
 
@@ -682,7 +681,7 @@ void main() {
       Get.put<SocialMeController>(pf.FakeSocialMeController(pf.freeLimits()));
       final api = cf.FakeChatApi()
         ..roomResult = BuddyOk(ChatRoomModel.fromJson({
-          ...cf.roomJson(status: 'Request', iStarted: true, lock: 'awaitingReply', canSend: false),
+          ...cf.roomJson(status: 'Request', iStarted: true, lock: 'plus', canSend: false),
           'peer': _person(cf.peerId, 'Kavya Sharma', gender: 'Female'),
           'subtitle': 'Rishikesh and Mussoorie',
         }))
@@ -731,7 +730,7 @@ void main() {
       await _end(t);
     });
 
-    testWidgets('N2 About with the weekly notifications used', (t) async {
+    testWidgets('N2 About: an older answer with the week used still shows a live switch (no weekly limit)', (t) async {
       putSeeker();
       seedCities();
       await _wizard(t, step: PostTripController.stepAbout);
@@ -742,6 +741,7 @@ void main() {
       await settle(t);
       await t.ensureVisible(find.byKey(PostAboutStep.notifyKey));
       await settle(t);
+      expect(find.text(SocialStringsB.notifyNearbyLine), findsOneWidget);
       await _snap(t, 'N2_wizard_notify_used');
       await _end(t);
     });
@@ -776,7 +776,7 @@ void main() {
       await _end(t);
     });
 
-    testWidgets('N5 Trip chat for a Free member: read only with the Plus panel', (t) async {
+    testWidgets('N5 Trip chat for a Free member: the composer shows before his first message', (t) async {
       Get.put<SocialMeController>(pf.FakeSocialMeController(SocialLimits.fromJson({...socialMeJson()['limits'] as Map<String, dynamic>, 'groupChat': false})));
       final api = cf.FakeChatApi()
         ..roomResult = BuddyOk(ChatRoomModel.fromJson(_tripRoom('r1', 't1', 'Manali')))
@@ -785,7 +785,7 @@ void main() {
           cf.msgOf(2, sender: 'u-rohan', senderName: 'Rohan M.', text: 'Booked the cab for 6 AM from Delhi.'),
         ], lastSeq: 2));
       await _open(t, DmRoomScreen(controller: _room(api)));
-      expect(find.byKey(const ValueKey('dm_lock_group_plus')), findsOneWidget);
+      expect(find.byKey(const ValueKey('dm_composer')), findsOneWidget);
       await _snap(t, 'N5_trip_chat_free_member');
       await _end(t);
     });
@@ -802,19 +802,14 @@ void main() {
       await _end(t);
     });
 
-    testWidgets('N7 Own post inside the 72-hour lock: Remove greyed with the unlock line, N8 the calm notice', (t) async {
+    testWidgets('N7 Own post: no menu (no Remove, no 72-hour lock); other posts keep their menu', (t) async {
       putSeeker();
       final server = installServer();
       putSocialMe(server, socialMeWith(gender: 'Male', publicUsed: 1));
-      final at = DateTime.now().toUtc().add(const Duration(hours: 40));
-      server.on('GET', '/social/trips/feed', _feedPage(mine: [{..._minePost(), 'unlocksAt': at.toIso8601String()}], items: [_kavyaPost()]));
+      server.on('GET', '/social/trips/feed', _feedPage(mine: [_minePost()], items: [_kavyaPost()]));
       await _open(t, const TravelBuddiesScreen());
-      await _tap(t, find.byKey(PublicTripCard.menuKey).first);
-      expect(find.text(SocialStrings.postLockedLine(at)), findsOneWidget);
-      await _snap(t, 'N7_post_menu_locked');
-      await _tap(t, find.text(SocialStringsB.removePost));
-      expect(find.text(SocialStrings.postLockedTitle), findsOneWidget);
-      await _snap(t, 'N8_post_lock_notice');
+      expect(find.byKey(PublicTripCard.menuKey), findsOneWidget);
+      await _snap(t, 'N7_own_post_no_menu');
       await _end(t);
     });
   });

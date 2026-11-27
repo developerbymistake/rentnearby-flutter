@@ -12,6 +12,7 @@ void main() {
       AppRoutes.buddiesBlocked: '/buddies-blocked',
       AppRoutes.buddyScan: '/buddy-scan',
       AppRoutes.tripInvite: '/trip-invite',
+      AppRoutes.tripInvitePeople: '/trip-invite-people',
       AppRoutes.tripTravellers: '/trip-travellers',
       AppRoutes.tripView: '/trip-view',
       AppRoutes.tripDayPlan: '/trip-day-plan',

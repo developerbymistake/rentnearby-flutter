@@ -25,8 +25,10 @@ void _fillStep2(OnboardingController c) {
     if (!c.interests.contains(i)) c.toggleInterest(i);
   }
   c.toggleSkill('Driver');
-  c.addPlace('Rishikesh');
+  c.toggleSkill('Cook');
 }
+
+void _fillPlaces(OnboardingController c) => c.addPlace('Rishikesh');
 
 void main() {
   setUpAll(initSocialTestStorage);
@@ -66,29 +68,59 @@ void main() {
     _fillStep1(c);
     expect(c.next(), isTrue);
     expect(c.step.value, 1);
-    expect(c.missingHint, 'Pick 3 more interests, 1 skill and 1 place');
+    expect(c.missingHint, 'Pick 2 more interests and 2 skills');
     c.toggleInterest('Mountains');
-    expect(c.missingHint, 'Pick 2 more interests, 1 skill and 1 place');
+    expect(c.missingHint, 'Pick 1 more interest and 2 skills');
     _fillStep2(c);
     expect(c.canNext, isTrue);
     expect(c.next(), isTrue);
+    expect(c.missingHint, 'Pick 1 place');
+    _fillPlaces(c);
     expect(c.missingHint, SocialStringsA.writeAbout);
-    c.useExample('Weekend trekker. Happy to share a cab.');
+    c.about.value = 'Weekend trekker. Happy to share a cab.';
     expect(c.canNext, isTrue);
     expect(c.back(), isTrue);
     expect(c.step.value, 1);
   });
 
-  test('interests cap at 5, places are unique', () {
+  test('I-10 interests, skills and places cap at 3; places are unique', () {
     final c = _make();
-    for (final i in ['Mountains', 'Treks', 'Food', 'Culture', 'Camping', 'Beaches']) {
+    for (final i in ['Mountains', 'Treks', 'Food', 'Culture']) {
       c.toggleInterest(i);
     }
-    expect(c.interests.length, 5);
-    expect(c.interests, isNot(contains('Beaches')));
+    expect(c.interests, ['Mountains', 'Treks', 'Food']);
+    for (final s in ['Driver', 'Cook', 'Tour guide', 'First aid']) {
+      c.toggleSkill(s);
+    }
+    expect(c.skills, ['Driver', 'Cook', 'Tour guide']);
     c.addPlace('Manali');
     c.addPlace('manali');
     expect(c.places, ['Manali']);
+    for (final p in ['Shimla', 'Kasol', 'Rishikesh']) {
+      c.addPlace(p);
+    }
+    expect(c.places, ['Manali', 'Shimla', 'Kasol']);
+  });
+
+  test('I-10 step 2 needs 2 interests and 2 skills, step 3 needs 1 place and About', () {
+    final c = _make();
+    _fillStep1(c);
+    c.next();
+    c.toggleInterest('Mountains');
+    c.toggleInterest('Treks');
+    c.toggleSkill('Driver');
+    expect(c.step2Ok, isFalse);
+    c.toggleSkill('Cook');
+    expect(c.step2Ok, isTrue);
+    expect(c.next(), isTrue);
+    c.about.value = 'Weekend trekker.';
+    expect(c.step3Ok, isFalse);
+    c.addPlace('Manali');
+    expect(c.step3Ok, isTrue);
+    expect(ProfileRules.interestsMin, 2);
+    expect(ProfileRules.skillsMin, 2);
+    expect(ProfileRules.placesMin, 1);
+    expect(SocialCatalogDefaults.interests, ['Mountains', 'Treks', 'Adventure', 'Food', 'Culture', 'Spiritual', 'Road trips', 'Camping']);
   });
 
   test('birth years run from the 18+ year down to 1940', () {
@@ -103,7 +135,8 @@ void main() {
     final c = _make();
     _fillStep1(c);
     _fillStep2(c);
-    c.useExample('Hills over beaches. Chai at every stop.');
+    _fillPlaces(c);
+    c.about.value = 'Hills over beaches. Chai at every stop.';
     c.homeCity = 'Dehradun';
     c.homeState = 'Uttarakhand';
     expect(c.profileBody(), {
@@ -111,7 +144,7 @@ void main() {
       'birthMonth': 8,
       'birthYear': 1998,
       'interests': ['Mountains', 'Treks', 'Food'],
-      'skills': ['Driver'],
+      'skills': ['Driver', 'Cook'],
       'places': ['Rishikesh'],
       'about': 'Hills over beaches. Chai at every stop.',
       'homeCityName': 'Dehradun',
@@ -126,7 +159,8 @@ void main() {
     expect(c.name.value, 'Rahul Verma');
     _fillStep1(c);
     _fillStep2(c);
-    c.useExample('Hills over beaches. Chai at every stop.');
+    _fillPlaces(c);
+    c.about.value = 'Hills over beaches. Chai at every stop.';
     final ok = await c.finish();
     expect(ok, isTrue);
     final call = server.calls('PUT', '/social/me/onboarding').single;
@@ -141,7 +175,8 @@ void main() {
     final c = _make();
     _fillStep1(c);
     _fillStep2(c);
-    c.useExample('Hills over beaches. Chai at every stop.');
+    _fillPlaces(c);
+    c.about.value = 'Hills over beaches. Chai at every stop.';
     expect(await c.finish(), isFalse);
     expect(c.error.value, 'Bakhli is for people who are 18 or over.');
   });
@@ -152,7 +187,8 @@ void main() {
     final c = _make();
     _fillStep1(c);
     _fillStep2(c);
-    c.useExample('Hills over beaches. Chai at every stop.');
+    _fillPlaces(c);
+    c.about.value = 'Hills over beaches. Chai at every stop.';
     expect(await c.finish(), isTrue);
     expect(server.calls('POST', '/auth/phone/complete-onboarding'), isEmpty);
     expect(server.calls('PUT', '/social/me/onboarding'), hasLength(1));

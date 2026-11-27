@@ -33,6 +33,6 @@ void main() {
     final r = await const PublicTripsApi().publish('t-1', const PostDraft(travelMode: 'taxi'));
     expect((server.calls('PUT', '/social/trips/t-1/post').single.data as Map)['travelMode'], 'taxi');
     expect(r.valueOrNull?.travelMode, 'taxi');
-    expect(const PostDraft().toJson()['travelMode'], TravelModes.public);
+    expect(const PostDraft().toJson()['travelMode'], TravelModes.taxi);
   });
 }

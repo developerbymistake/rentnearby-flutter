@@ -136,13 +136,50 @@ void main() {
     expect(c.canSend, isTrue);
   });
 
-  test('the receiver reply is free and activates the room', () async {
+  test('the receiver reply activates the room; a Free receiver then gets the Plus lock from the server', () async {
     api.roomResult = BuddyOk(roomOf(status: 'Request', iStarted: false));
     final c = await open();
+    api.roomResult = BuddyOk(roomOf(status: 'Active', iStarted: false, lock: RoomLock.plus, canSend: false));
     hub.hubReplies.add({'ok': true, 'message': messageJson(2, sender: myId, cid: 'cid0')});
     await c.send('Yes');
+    await settle();
     expect(c.room.value?.status, RoomStatus.active);
     expect(c.repliedFree.value, isTrue);
+    expect(c.plusLockShown, isTrue);
+    expect(c.canSend, isFalse);
+  });
+
+  test('I-9 a Free sender in an active chat: composer before his message, Plus lock after it', () async {
+    Get.put<SocialMeController>(FakeSocialMeController(freeLimits()));
+    final c = await open();
+    expect(c.canSend, isTrue);
+    expect(c.plusLockShown, isFalse);
+    api.roomResult = BuddyOk(roomOf(lock: RoomLock.plus, canSend: false));
+    hub.hubReplies.add({'ok': true, 'message': messageJson(1, sender: myId, cid: 'cid0')});
+    await c.send('Hello');
+    await settle();
+    expect(c.plusLockShown, isTrue);
+    expect(c.canSend, isFalse);
+  });
+
+  test('I-9 a Plus sender keeps chatting: no room re-read after his message', () async {
+    Get.put<SocialMeController>(FakeSocialMeController(plusLimits()));
+    final c = await open();
+    final before = api.roomCalls;
+    hub.hubReplies.add({'ok': true, 'message': messageJson(1, sender: myId, cid: 'cid0')});
+    await c.send('Hello');
+    await settle();
+    expect(api.roomCalls, before);
+    expect(c.canSend, isTrue);
+  });
+
+  test('I-9 a PlusRequired refusal in a direct chat gives the text back and shows the Plus lock', () async {
+    final c = await open();
+    hub.hubReplies.add({'ok': false, 'type': 'PlusRequired', 'message': 'Get Plus to keep chatting.'});
+    await c.send('Second');
+    expect(c.bounced.value, 'Second');
+    expect(c.plusLocked.value, isTrue);
+    expect(c.canSend, isFalse);
   });
 
   test('new chat limit from a preflight chat sets the limit lock', () async {

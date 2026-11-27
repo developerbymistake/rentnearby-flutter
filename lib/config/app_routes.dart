@@ -109,6 +109,7 @@ class AppRoutes {
   static const String buddiesBlocked = '/buddies-blocked';
   static const String buddyScan = '/buddy-scan';
   static const String tripInvite = '/trip-invite';
+  static const String tripInvitePeople = '/trip-invite-people';
   static const String tripTravellers = '/trip-travellers';
   static const String tripView = '/trip-view';
   static const String tripDayPlan = '/trip-day-plan';
@@ -207,6 +208,7 @@ class AppRoutes {
     buddiesBlocked,
     buddyScan,
     tripInvite,
+    tripInvitePeople,
     tripTravellers,
     tripView,
     tripDayPlan,

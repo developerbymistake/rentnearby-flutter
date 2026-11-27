@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../design/design.dart';
 import '../../../buddy/shared/widgets/buddy_avatar.dart';
+import '../../../trip/widgets/trip_city_art.dart';
 import '../../a/widgets/social_chips_a.dart';
 import '../../b/social_strings_b.dart';
 import '../../b/widgets/social_widgets_b.dart';
@@ -25,6 +26,7 @@ class PublicTripCard extends StatelessWidget {
   static const Key fullKey = ValueKey('public_trip_full');
   static const Key travelKey = ValueKey('public_trip_travel');
   static const Key levelKey = ValueKey('public_trip_owner_level');
+  static const Key photoKey = ValueKey('public_trip_city_photo');
 
   int get _seed => SocialLookB.seedOf(trip.cityKey, trip.tripId);
 
@@ -47,26 +49,54 @@ class PublicTripCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => mode == PublicTripCardMode.feed ? _feed() : _compact();
 
-  Widget _cover({required double height, required double art, BorderRadius? radius, double titleSize = 19}) {
+  Widget _cover({required double height, required double art, BorderRadius? radius, double titleSize = 19}) =>
+      CityCover(cityKey: trip.cityKey, builder: (photo) => _coverBox(photo, height: height, art: art, radius: radius, titleSize: titleSize));
+
+  Widget _coverBox(String? photo, {required double height, required double art, BorderRadius? radius, required double titleSize}) {
     final tone = SocialLookB.toneOf(_seed);
     final white = DesignColors.onPrimary;
+    final titles = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(_place, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(titleSize, FontWeight.w700, white, height: 1.2, letterSpacing: 0)),
+        Gap.v(2),
+        Text(SocialStringsB.whenDays(trip), maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, white.withValues(alpha: Alpha.v93), letterSpacing: 0)),
+      ],
+    );
+    final pad = DS.insets(l: 16, t: 14, r: 12, b: 10);
+    if (photo != null) {
+      return ClipRRect(
+        key: photoKey,
+        borderRadius: radius ?? BorderRadius.zero,
+        child: SizedBox(
+          height: DS.s(height),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              KitPhoto(url: photo, width: double.infinity, height: DS.s(height), tone: TripCityArt.toneOf(trip.cityKey), asset: TravelIcon.map, iconSize: 40),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.black.withValues(alpha: Alpha.v55), Colors.black.withValues(alpha: Alpha.v10)],
+                  ),
+                ),
+              ),
+              Padding(padding: pad, child: titles),
+            ],
+          ),
+        ),
+      );
+    }
     return Container(
       height: DS.s(height),
       decoration: BoxDecoration(gradient: tone.gradient, borderRadius: radius),
-      padding: DS.insets(l: 16, t: 14, r: 12, b: 10),
+      padding: pad,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(_place, maxLines: 2, overflow: TextOverflow.ellipsis, style: Ink3D.text(titleSize, FontWeight.w700, white, height: 1.2, letterSpacing: 0)),
-                Gap.v(2),
-                Text(SocialStringsB.whenDays(trip), maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(12.5, FontWeight.w400, white.withValues(alpha: Alpha.v93), letterSpacing: 0)),
-              ],
-            ),
-          ),
+          Expanded(child: titles),
           Gap.h(8),
           TripCoverArt(cityKey: trip.cityKey, seed: _seed, size: art),
         ],

@@ -8,9 +8,13 @@ import '../../../../controllers/auth_controller.dart';
 import '../../../../controllers/profile_photo_controller.dart';
 import '../../../../controllers/tab_config_controller.dart';
 import '../../../../design/design.dart';
+import '../../../../design/extra/ext_buddy.dart';
+import '../../../../screens/profile/profile_rows.dart';
 import '../../../../screens/profile_screen.dart';
 import '../../../../widgets/profile_photo_circle.dart';
 import '../../../../widgets/tab_header.dart';
+import '../../../buddy/buddy_strings.dart';
+import '../../../buddy/username_actions.dart';
 import '../../../buddy/widgets/username_qr_sheet.dart';
 import '../../shared/social_me_controller.dart';
 import '../../shared/social_models.dart';
@@ -18,6 +22,7 @@ import '../../shared/social_nav.dart';
 import '../../shared/social_strings.dart';
 import '../../shared/widgets/travel_level_widgets.dart';
 import '../social_strings_a.dart';
+import '../widgets/social_section_card.dart';
 import 'profile_sections.dart';
 
 class SeekerProfileScreen extends StatelessWidget {
@@ -26,6 +31,9 @@ class SeekerProfileScreen extends StatelessWidget {
   static const Key settingsKey = TabHeaderIcons.settingsKey;
   static const Key editKey = ValueKey('seeker_profile_edit');
   static const Key myQrKey = ValueKey('seeker_profile_my_qr');
+  static const Key copyKey = ValueKey('seeker_profile_copy_username');
+  static const Key usernameKey = ValueKey('seeker_profile_username');
+  static const Key activityKey = ValueKey('seeker_profile_activity');
 
   @override
   Widget build(BuildContext context) {
@@ -96,10 +104,56 @@ class _ProfileContent extends StatelessWidget {
 
   final MyProfile profile;
 
-  VoidCallback? _openQr(BuildContext context) {
-    final username = profile.username;
-    if (username == null || username.isEmpty) return null;
-    return () => UsernameQrSheet.show(context, username: username, name: profile.name);
+  Widget _accountRows(BuildContext context) {
+    final username = profile.username ?? '';
+    final has = username.isNotEmpty;
+    return LabeledRowsSection(children: [
+      IconRow3D(
+        key: SeekerProfileScreen.usernameKey,
+        art: ListingArt.key,
+        title: has ? username : BuddyStrings.usernameLoading,
+        subtitle: BuddyStrings.myUsername,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            BuddyRoundButton(
+              key: SeekerProfileScreen.myQrKey,
+              icon: Icons.qr_code_2_rounded,
+              label: BuddyStrings.showQr,
+              onTap: has ? () => UsernameQrSheet.show(context, username: username, name: profile.name) : null,
+            ),
+            Gap.h(6),
+            BuddyRoundButton(
+              key: SeekerProfileScreen.copyKey,
+              icon: Icons.copy_rounded,
+              label: BuddyStrings.copyUsername,
+              onTap: has ? () => UsernameActions.copy(username) : null,
+            ),
+          ],
+        ),
+      ),
+      IconRow3D(
+        key: SeekerProfileScreen.editKey,
+        art: ListingArt.memo,
+        title: SocialStringsA.editTitle,
+        divider: true,
+        trailing: Icon(Icons.chevron_right_rounded, size: DS.s(22), color: DesignColors.textDisabled),
+        onTap: SocialNav.openEditProfile,
+      ),
+    ]);
+  }
+
+  Widget _activity() {
+    final auth = Get.find<AuthController>();
+    final rows = <({String art, String title, String route})>[
+      if (auth.canOpenRoute(AppRoutes.myTrips)) (art: ListingArt.luggage, title: SocialStringsA.myTrips, route: AppRoutes.myTrips),
+      if (auth.jobsBrowseEnabled && ProfileRows.showsJobsFeed(auth.shellKind.value)) (art: ListingArt.briefcase, title: SocialStringsA.jobs, route: AppRoutes.jobs),
+      if (auth.canOpenRoute(AppRoutes.myJourneys)) (art: ListingArt.compass, title: SocialStringsA.myJourneys, route: AppRoutes.myJourneys),
+      (art: ListingArt.warning, title: SocialStringsA.myReports, route: AppRoutes.myFiledReports),
+    ];
+    return LabeledRowsSection(key: SeekerProfileScreen.activityKey, label: SocialStringsA.activityLabel, children: [
+      for (var r = 0; r < rows.length; r++) IconRow3D(art: rows[r].art, title: rows[r].title, divider: r > 0, onTap: () => Get.toNamed(rows[r].route)),
+    ]);
   }
 
   @override
@@ -119,27 +173,8 @@ class _ProfileContent extends StatelessWidget {
           onFollowers: () => SocialNav.openPeople(tab: 'followers'),
           onFollowing: () => SocialNav.openPeople(tab: 'following'),
         ),
-        Padding(
-          padding: DS.gapInsets(l: 18, t: 22, r: 18),
-          child: PillButtonRow(
-            children: [
-              WhitePillButton(
-                key: SeekerProfileScreen.myQrKey,
-                tone: ListingTone.indigo,
-                icon: Icons.qr_code_2_rounded,
-                label: SocialStringsA.myQr,
-                onTap: _openQr(context),
-              ),
-              GradientPillButton(
-                key: SeekerProfileScreen.editKey,
-                tone: ListingTone.indigo,
-                label: SocialStringsA.editProfileBtn,
-                onTap: SocialNav.openEditProfile,
-              ),
-            ],
-          ),
-        ),
-        ProfileChipsSection(interests: profile.interests, places: profile.places, skills: profile.skills),
+        _accountRows(context),
+        _activity(),
         ProfileTripsSection(title: SocialStringsA.myPublicTrips(profile.publicTrips.length), trips: profile.publicTrips),
         Gap.v(14),
       ],

@@ -18,6 +18,9 @@ abstract final class SocialStringsB {
   static const String notThisTime = 'Not this time';
   static const String full = 'Full';
   static const String openTrip = 'Open trip';
+  static const String planTrip = 'Plan this trip';
+  static const String planTripTitle = 'Plan this trip?';
+  static const String planTripBody = 'Add days and places to your trip. Then you can book stays and taxis.';
   static const String joinRequestsTitle = 'Join requests';
   static String liveTitle(String city) => 'Your $city trip is live';
   static const String liveBody = 'Travellers can see it and ask to join';
@@ -65,7 +68,7 @@ abstract final class SocialStringsB {
   static const int womenIndex = 2;
 
   // Same order as TravelModes.codes.
-  static const List<String> travelLabels = ['Public transport', 'Bike', 'Own car', 'Taxi'];
+  static const List<String> travelLabels = ['Taxi', 'Bike', 'Bus', 'Train'];
   static const String travelAny = 'Any';
   static const String travelByCaps = 'TRAVEL BY';
 
@@ -104,12 +107,10 @@ abstract final class SocialStringsB {
   static const String back = 'Back';
   static const String close = 'Close';
   static const String whereTitle = 'Where are you headed?';
-  static const String whereSub = 'Pick one city or more. We plan them as one trip.';
+  static const String whereSub = 'Pick one city. Add more places later in your trip.';
   static const String searchCity = 'Search a city';
-  static String inState(String state) => 'In $state';
-  static const String whereNote = 'Ready cities only. After the first city, only cities of the same state. The cover comes from the city.';
+  static const String whereNote = 'Ready cities only. The cover comes from the city.';
   static const String whereFromTrip = 'Cities come from your trip.';
-  static String maxCities(int n) => 'Up to $n cities';
   static const String noCities = 'No ready cities match your search.';
   static const String citiesFailed = 'Could not load cities.';
   static String whenTitle(String city) => 'When are you off to $city?';
@@ -126,7 +127,7 @@ abstract final class SocialStringsB {
   static const String pickFromCalendar = 'Pick from calendar';
   static const String startDate = 'Start date';
   static const String howLong = 'How long?';
-  static const String howLongSub = 'Up to 10 days, or 10+';
+  static const String howLongSub = 'Up to 4 days';
   static const String whoCanJoin = 'Who can join';
   static const String genderLockTitle = 'Women-only trips are a Plus feature.';
   static const String genderLockBody = 'Your post stays open to anyone for now.';
@@ -184,8 +185,6 @@ abstract final class SocialStringsB {
 
   static String chipLine(String chip) => chip.endsWith('.') ? chip : '$chip.';
 
-  static String daysOption(int d) => d >= SocialFormats.moreDays ? '10+' : '$d';
-
   // Trip post page
   static const String tripPost = 'Trip post';
   static String byOwner(String shortName) => 'By $shortName';
@@ -202,9 +201,6 @@ abstract final class SocialStringsB {
   static const String reported = 'Thanks. We will look at it.';
   static String blockPerson(String shortName) => 'Block $shortName';
   static const String blockLine = 'They are not told';
-  static const String removePost = 'Remove from Travel buddies';
-  static const String removePostLine = 'The trip stays in My Trips';
-  static const String postRemoved = 'Removed from Travel buddies';
   static const String requestCancelled = 'Request cancelled';
   static const String moreOptions = 'More options';
   static const String notificationsLabel = 'Notifications';
@@ -246,14 +242,9 @@ abstract final class SocialStringsB {
 
   // Notify travellers near me (post wizard)
   static const String notifyNearby = 'Notify travellers near me';
-  static String notifyNearbyLine(LimitUse u) => 'Sent at 7 am · ${u.left} of ${u.limit} left this week';
-  static String notifyUsedLine(LimitUse u) => 'Used ${u.limit} of ${u.limit} this week';
+  static const String notifyNearbyLine = 'Sent at 7 am to travellers near you';
   static const String notifyPrivateLine = 'Not available with a private profile';
   static const String notifyGenderLine = 'For trips open to anyone or to your own gender';
-  static const String notifyUsedUp = 'Notifications for this post are used up this week. Your trip is still posted.';
-  static String notifyBackOn(DateTime at) => 'They are back on ${BuddyFormat.weekdayDate(at)}.';
-  static String notifyUsedUpNote(DateTime? back) => back == null ? notifyUsedUp : '$notifyUsedUp ${notifyBackOn(back)}';
-  static const String notifyUsedUpPosted = 'Notifications for this post are used up this week. Your trip is still posted.';
   static const String nearbyTomorrow = 'Travellers near you hear about it at 7 am.';
   static String notifyTooFar(int days) => 'For trips starting in the next $days days';
   static String publishLimit(DateTime? next) =>
@@ -261,7 +252,7 @@ abstract final class SocialStringsB {
 
   // Post entries when the live post cap is reached
   static const String freeLimitHint = 'Free limit reached. Get Plus.';
-  static String liveLimitHint(int n) => n == 1 ? '1 live post. Remove it to post again.' : '$n live posts. Remove one to post again.';
+  static String liveLimitHint(int n) => n == 1 ? '1 live post. Delete that trip to post again.' : '$n live posts. Delete one of those trips to post again.';
   static String postEntryHint(SocialLimits? l) {
     if (l == null || !l.publicTrips.reached) return '';
     return l.postNeedsPlus ? freeLimitHint : liveLimitHint(l.publicTrips.limit);

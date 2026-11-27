@@ -22,7 +22,6 @@ class PostAboutStep extends StatefulWidget {
   static const Key tipsKey = ValueKey('post_write_tips');
   static const Key chipsKey = ValueKey('post_about_chips');
   static const Key notifyKey = ValueKey('post_notify_nearby');
-  static const Key notifyNoteKey = ValueKey('post_notify_note');
 
   @override
   State<PostAboutStep> createState() => _PostAboutStepState();
@@ -125,21 +124,17 @@ class _PostAboutStepState extends State<PostAboutStep> {
   }
 
   List<Widget> _notify(PostDraft d) {
-    final use = c.notifyUse;
     final live = c.canNotifyNearby;
     final String line;
-    if (c.notifyUsedUp) {
-      line = SocialStringsB.notifyUsedLine(use);
-    } else if (c.notifyPrivate) {
+    if (c.notifyPrivate) {
       line = SocialStringsB.notifyPrivateLine;
     } else if (c.notifyTooFar) {
       line = SocialStringsB.notifyTooFar(PostDraft.nearbyAheadDays);
     } else if (c.notifyGender) {
       line = SocialStringsB.notifyGenderLine;
     } else {
-      line = SocialStringsB.notifyNearbyLine(use);
+      line = SocialStringsB.notifyNearbyLine;
     }
-    final back = c.limits?.notifyResetsAt;
     return [
       Padding(
         padding: DS.gapInsets(t: 16),
@@ -158,11 +153,6 @@ class _PostAboutStepState extends State<PostAboutStep> {
           ),
         ),
       ),
-      if (c.notifyUsedUp)
-        KeyedSubtree(
-          key: PostAboutStep.notifyNoteKey,
-          child: WizardNote(text: SocialStringsB.notifyUsedUpNote(back?.toLocal())),
-        ),
     ];
   }
 

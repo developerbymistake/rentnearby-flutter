@@ -112,14 +112,15 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     _plan.openPages++;
     _wideZoom = _plan.isMultiCity;
     final args = Get.arguments;
-    final day = args is Map ? args['day'] as int? : null;
+    final asked = args is Map ? args['day'] as int? : null;
+    final day = asked != null && asked > 0 ? asked : null;
     final tripId = args is Map ? args['tripId'] as String? : null;
     _argTripId = tripId;
     final needsOpen = tripId != null && (_plan.trip.value?.id != tripId || _plan.plan.value == null) && !_archivedHere;
     _dayPicked = day != null;
     _awaitingDefaultDay = day == null && (needsOpen || _plan.plan.value == null);
     _plan.selectedMapLeg.value = 0;
-    _plan.selectedMapDay.value = day ?? (needsOpen || _plan.plan.value == null ? 1 : _plan.defaultMapDay);
+    _plan.selectedMapDay.value = day ?? 1;
     if (needsOpen) {
       _waitingTripId = tripId;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -153,7 +154,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
     _awaitingDefaultDay = false;
     if (!_dayPicked) {
       _plan.selectedMapLeg.value = 0;
-      _plan.selectedMapDay.value = _plan.defaultMapDay;
+      _plan.selectedMapDay.value = 1;
     }
   }
 
@@ -1128,6 +1129,8 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
 
   Widget _buildMapPlaceholder() => const SizedBox.expand(child: TemplatePlaceholder(height: double.infinity, radius: 0));
 
+  static const double _headerRowHeight = 54;
+
   Widget _buildTop(BuildContext context) {
     return Obx(() {
       _plan.result.value;
@@ -1149,9 +1152,21 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
               title: TripStringsV2Plan.map,
               subtitle: TripStringsDayplan.mapRouteSub,
               onBack: () => Get.back(),
-              trailing: [if (p != null && p.days.length > 1) ...[Gap.h(12), _dayMenu(p)]],
+              trailing: [SizedBox(height: DS.s(_headerRowHeight))],
             ),
           ),
+          if (p != null && p.days.length > 1)
+            Padding(
+              padding: EdgeInsets.only(top: DS.gv(10)),
+              child: TripDayChips(
+                key: const ValueKey('trip_map_day_chips'),
+                dayCount: p.days.length,
+                selected: selected,
+                onChanged: _select,
+                compact: true,
+                padding: DS.sym(h: 18),
+              ),
+            ),
           if (missing)
             Padding(
               padding: EdgeInsets.fromLTRB(DS.s(18), DS.gv(8), DS.s(18), 0),
@@ -1160,31 +1175,6 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
         ],
       );
     });
-  }
-
-  Widget _dayMenu(TripPlan p) {
-    return PopupMenuButton<int>(
-      padding: EdgeInsets.zero,
-      color: DesignColors.surface,
-      shape: RoundedRectangleBorder(borderRadius: DS.circular(20)),
-      offset: Offset(0, DS.s(48)),
-      onSelected: _select,
-      itemBuilder: (_) => [
-        PopupMenuItem(value: TripDayChips.all, child: Text(TripStringsV2Plan.allCities, style: Ink3D.text(15, FontWeight.w600, Ink3D.title, letterSpacing: 0))),
-        for (final d in p.days)
-          PopupMenuItem(
-            value: d.day,
-            child: Row(
-              children: [
-                Container(width: DS.s(12), height: DS.s(12), decoration: BoxDecoration(color: _routeColor(d.day), shape: BoxShape.circle)),
-                Gap.h(10),
-                Text(TripStringsDayplan.dayLabel(d.day), style: Ink3D.text(15, FontWeight.w600, Ink3D.title, letterSpacing: 0)),
-              ],
-            ),
-          ),
-      ],
-      child: TripMenuDots.box(),
-    );
   }
 
   Widget _routeMissingChip() {

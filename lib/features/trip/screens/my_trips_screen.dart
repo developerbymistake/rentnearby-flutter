@@ -25,9 +25,10 @@ import '../widgets/hub/hub_tokens.dart';
 import '../widgets/hub/hub_trip_card.dart';
 import '../widgets/trip_lifecycle_actions.dart';
 import '../../buddy/offline/widgets/lost_changes_banner.dart';
+import '../../buddy/shared/widgets/segment_tabs.dart';
+import '../../buddy/viewer/controllers/shared_trips_controller.dart';
 import '../../buddy/viewer/widgets/shared_with_me_section.dart';
 import '../../social/b/widgets/find_buddies_post_card.dart';
-import '../../social/shared/post_removal.dart';
 
 class MyTripsScreen extends StatefulWidget {
   final bool root;
@@ -39,6 +40,7 @@ class MyTripsScreen extends StatefulWidget {
 
 class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateMixin {
   late final MyTripsController _ctrl;
+  late final SharedTripsController _shared;
   final _scroll = ScrollController();
   Worker? _tabWorker;
   Worker? _loadWorker;
@@ -46,6 +48,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
   bool _played = false;
   bool _seen = false;
   bool _completing = false;
+  int _tab = 0;
 
   void _play() {
     if (KitMotion.reduce(context)) {
@@ -61,6 +64,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
     super.initState();
     _ctrl = MyTripsController.to;
     _ctrl.load();
+    _shared = SharedTripsController.to;
     _ctrl.pastOpen.value = true;
     if (_ctrl.past.isEmpty) _ctrl.loadPast();
     _scroll.addListener(_onScroll);
@@ -100,7 +104,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
 
   void _onScroll() {
     final p = _scroll.position;
-    if (p.maxScrollExtent > 0 && p.pixels >= p.maxScrollExtent - 300) _ctrl.loadMore();
+    if (_tab == 0 && p.maxScrollExtent > 0 && p.pixels >= p.maxScrollExtent - 300) _ctrl.loadMore();
   }
 
   void _openArchived(TripSummaryModel t) {
@@ -151,10 +155,6 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
   }
 
   Future<void> _delete(TripSummaryModel t) async {
-    if (PostRemovalRule.lockOnly(t.postUnlocksAt) case final block?) {
-      await PostRemovalNotice.show(context, t.id, block);
-      return;
-    }
     final rows = t.progress.rows;
     final stays = rows.where((r) => (r.state == TripRowState.confirmed || r.state == TripRowState.booked) && r.key.kind == TripEasyRowKind.stay).length;
     final taxis = rows.where((r) => (r.state == TripRowState.confirmed || r.state == TripRowState.booked) && r.key.kind == TripEasyRowKind.taxi).length;
@@ -170,6 +170,11 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
     if (ok) await _ctrl.delete(t.id);
   }
 
+  Future<void> _refresh() async {
+    if (_tab == 0) return _ctrl.load();
+    await Future.wait([_ctrl.load(), _shared.load()]);
+  }
+
   static const double _skeletonHeight = 250;
 
   @override
@@ -181,7 +186,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
         child: LayoutBuilder(
           builder: (context, box) => RefreshIndicator(
             color: HubTokens.accent,
-            onRefresh: _ctrl.load,
+            onRefresh: _refresh,
             child: SingleChildScrollView(
               controller: _scroll,
               physics: const AlwaysScrollableScrollPhysics(),
@@ -191,11 +196,23 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     HubHeader(title: TripStrings.myTrips, back: true, minHeight: 96, titleTop: 26, onBack: Get.back),
-                    _buildOfflineStrip(context),
-                    const LostChangesBanner(),
-                    FindBuddiesPostCard(place: FindBuddiesPostPlace.myTrips, margin: DS.gapInsets(l: 18, t: 14, r: 18)),
-                    const SharedWithMeSection(),
-                    _buildBody(context),
+                    SegmentTabs(
+                      key: const ValueKey('my_trips_tabs'),
+                      labels: TripStringsHubTrips.tabs,
+                      selected: _tab,
+                      tone: ListingTone.indigo,
+                      margin: DS.gapInsets(l: 18, t: 4, r: 18),
+                      onTap: (i) => setState(() => _tab = i),
+                    ),
+                    if (_tab == 0) ...[
+                      _buildOfflineStrip(context),
+                      const LostChangesBanner(),
+                      FindBuddiesPostCard(place: FindBuddiesPostPlace.myTrips, margin: DS.gapInsets(l: 18, t: 14, r: 18)),
+                      _buildBody(context),
+                    ] else ...[
+                      const SharedWithMeSection(),
+                      _joinedEmpty(),
+                    ],
                     _buildFooter(),
                   ],
                 ),
@@ -320,6 +337,17 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
     });
   }
+
+  Widget _joinedEmpty() => Obx(() {
+        if (!_shared.loaded.value || !_shared.isEmpty) return const SizedBox.shrink();
+        return const StateCard(
+          key: ValueKey('my_trips_joined_empty'),
+          title: TripStringsHubTrips.joinedEmptyTitle,
+          message: TripStringsHubTrips.joinedEmptyLine,
+          kit: KitTone.brand,
+          asset: ListingArt.luggage,
+        );
+      });
 
   Widget _buildOfflineStrip(BuildContext context) {
     return Obx(() {

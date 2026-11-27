@@ -9,6 +9,7 @@ import 'expenses/screens/trip_expenses_screen.dart';
 import 'ledger/screens/money_summary_screen.dart';
 import 'ledger/screens/settle_up_screen.dart';
 import 'scan/screens/scan_qr_screen.dart';
+import 'sharing/screens/invite_people_screen.dart';
 import 'travellers_route.dart';
 import 'viewer/screens/former_share_screen.dart';
 import 'viewer/screens/trip_invite_screen.dart';
@@ -48,6 +49,7 @@ final List<GetPage<dynamic>> buddyPages = [
   _page(AppRoutes.buddiesBlocked, () => const BlockedPeopleScreen()),
   _page(AppRoutes.buddyScan, () => const ScanQrScreen()),
   _page(AppRoutes.tripInvite, () => TripInviteScreen(memberId: BuddyArgs.text(BuddyArgs.current, 'memberId'))),
+  _page(AppRoutes.tripInvitePeople, () => InvitePeopleScreen(tripId: BuddyArgs.text(BuddyArgs.current, 'tripId'))),
   _page(AppRoutes.tripTravellers, () => TravellersRoute(tripId: BuddyArgs.text(BuddyArgs.current, 'tripId'))),
   _page(AppRoutes.tripView, () {
     final a = BuddyArgs.current;

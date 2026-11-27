@@ -29,9 +29,15 @@ void main() {
   });
   tearDown(Get.reset);
 
+  Map<String, dynamic> validProfile() => {
+        ...myProfileJson(),
+        'interests': ['Mountains', 'Treks', 'Food'],
+        'places': ['Rishikesh', 'Nainital', 'Jaipur'],
+      };
+
   Future<SocialFakeServer> open(WidgetTester t, {Size size = const Size(392, 2000), double scale = 1.0}) async {
     final server = installServer();
-    server.on('GET', '/social/me', socialMeJson(profile: myProfileJson()));
+    server.on('GET', '/social/me', socialMeJson(profile: validProfile()));
     Get.put(SocialMeController(), permanent: true);
     await pumpSocial(t, const EditProfileScreen(), size: size, textScale: scale);
     return server;
@@ -72,13 +78,31 @@ void main() {
     await drain(t);
   });
 
-  testWidgets('dropping interests under 3 keeps Save off', (t) async {
+  testWidgets('I-10 dropping interests under 2 keeps Save off', (t) async {
     await open(t);
     await t.tap(find.text('Mountains'));
     await t.tap(find.text('Treks'));
     await settle(t);
     expect(_save(t).enabled, isFalse);
-    expect(find.text(SocialStringsA.interestsHint(2)), findsOneWidget);
+    expect(find.text(SocialStringsA.interestsHint(1)), findsOneWidget);
+    await drain(t);
+  });
+
+  testWidgets('I-10 an older profile over the new limits (4 interests, 4 places) cannot save until trimmed to 3', (t) async {
+    final server = installServer();
+    server.on('GET', '/social/me', socialMeJson(profile: myProfileJson()));
+    Get.put(SocialMeController(), permanent: true);
+    await pumpSocial(t, const EditProfileScreen(), size: const Size(392, 2000));
+    await t.enterText(find.byKey(const ValueKey('edit_about')), 'Weekend trekker.');
+    await settle(t);
+    expect(_save(t).enabled, isFalse);
+    await t.ensureVisible(find.byKey(const ValueKey('edit_interest_Photography')));
+    await t.tap(find.byKey(const ValueKey('edit_interest_Photography')));
+    await settle(t);
+    await t.ensureVisible(find.text('Jaipur'));
+    await t.tap(find.text('Jaipur'));
+    await settle(t);
+    expect(_save(t).enabled, isTrue);
     await drain(t);
   });
 

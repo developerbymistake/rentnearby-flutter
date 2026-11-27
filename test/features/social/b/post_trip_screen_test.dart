@@ -10,6 +10,8 @@ import 'package:bakhli/features/social/b/wizard/post_when_step.dart';
 import 'package:bakhli/features/social/b/wizard/post_wizard_parts.dart';
 import 'package:bakhli/features/buddy/shared/widgets/segment_tabs.dart';
 import 'package:bakhli/features/social/shared/social_models.dart';
+import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
+import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -49,8 +51,7 @@ void main() {
         expect(_next(t).enabled, isFalse);
         await t.tap(find.byKey(const ValueKey('post_city_101')));
         await settle(t);
-        expect(find.text(SocialStringsB.inState('Himachal Pradesh').toUpperCase()), findsOneWidget);
-        expect(find.text('Rishikesh'), findsNothing);
+        expect(find.text('Rishikesh'), findsOneWidget, reason: 'I-6: one city, no state filter');
         expect(find.byKey(const ValueKey('post_draft_saved')), findsNothing);
         await t.tap(find.byKey(WizardBottomBar.nextKey));
         await settle(t);
@@ -96,7 +97,7 @@ void main() {
     await drain(t);
   });
 
-  testWidgets('When: How will you travel? is one tab row like Who can join, Public transport picked by default, Bike can be picked', (t) async {
+  testWidgets('I-1 When: How will you travel? is the equal tab row like Seats: Taxi | Bike | Bus | Train, Taxi by default, Bike can be picked', (t) async {
     final server = installServer();
     putSocialMe(server, socialMeWith());
     final c = PostTripController(persist: false);
@@ -109,17 +110,42 @@ void main() {
     await t.ensureVisible(travel);
     await settle(t);
     expect(find.text(SocialStringsB.howTravel), findsOneWidget);
+    expect(SocialStringsB.travelLabels, ['Taxi', 'Bike', 'Bus', 'Train']);
     for (final label in SocialStringsB.travelLabels) {
       expect(find.descendant(of: travel, matching: find.text(label)), findsOneWidget, reason: label);
     }
+    expect(t.widget<SegmentTabs>(travel).compact, isFalse);
     expect(t.widget<SegmentTabs>(travel).selected, 0);
-    expect(c.draft.value.travelMode, TravelModes.public);
+    expect(c.draft.value.travelMode, TravelModes.taxi);
     await t.tap(find.descendant(of: travel, matching: find.text('Bike')));
     await settle(t);
     expect(c.draft.value.travelMode, 'bike');
     expect(t.widget<SegmentTabs>(travel).selected, 1);
     await drain(t);
     expect(t.takeException(), isNull);
+  });
+
+  testWidgets('I-6 When: How long? offers 1 to 4 days only', (t) async {
+    final server = installServer();
+    putSocialMe(server, socialMeWith());
+    final c = PostTripController(persist: false);
+    await pumpSocial(t, PostTripScreen(controller: c), pages: _pages);
+    await t.tap(find.byKey(const ValueKey('post_city_101')));
+    await settle(t);
+    await t.tap(find.byKey(WizardBottomBar.nextKey));
+    await settle(t);
+    await t.tap(find.byKey(PostWhenStep.howLongKey));
+    await settle(t);
+    expect(find.text(SocialStringsB.howLongSub), findsWidgets);
+    for (var d = 1; d <= 4; d++) {
+      expect(find.byKey(ValueKey('post_days_$d')), findsOneWidget);
+    }
+    expect(find.byKey(const ValueKey('post_days_5')), findsNothing);
+    expect(find.byKey(const ValueKey('post_days_11')), findsNothing);
+    await t.tap(find.byKey(const ValueKey('post_days_2')));
+    await settle(t);
+    expect(c.draft.value.days, 2);
+    await drain(t);
   });
 
   testWidgets('When with Plus: no lock, Women is set', (t) async {
@@ -267,5 +293,25 @@ void main() {
     await settle(t);
     expect(find.byKey(const ValueKey('plus_limit_sheet')), findsOneWidget);
     await drain(t);
+  });
+
+  testWidgets('I-23: Where list shows the admin city photo, the icon only when a city has no photo', (t) async {
+    TripCityCatalog.to.seedForTest(const [
+      TripCityModel(cityKey: 101, name: 'Manali', stateName: 'Himachal Pradesh', latitude: 32.2, longitude: 77.2, spotCount: 22, coverUrl: 'https://example.com/manali.jpg'),
+      kasol,
+    ]);
+    final server = installServer();
+    putSocialMe(server, socialMeWith());
+    await pumpSocial(t, PostTripScreen(controller: PostTripController(persist: false)), pages: _pages);
+    final manaliRow = find.byKey(const ValueKey('post_city_101'));
+    final kasolRow = find.byKey(const ValueKey('post_city_102'));
+    expect(find.descendant(of: manaliRow, matching: find.byKey(const ValueKey('post_city_photo_101'))), findsOneWidget);
+    expect(find.descendant(of: manaliRow, matching: find.byType(Art3D)), findsNothing);
+    expect(find.descendant(of: kasolRow, matching: find.byType(KitPhoto)), findsNothing);
+    expect(find.descendant(of: kasolRow, matching: find.byType(Art3D)), findsOneWidget);
+    await drain(t);
+    expect(t.takeException(), isNull);
+    await t.pumpWidget(const SizedBox.shrink());
+    await t.pump(const Duration(minutes: 1));
   });
 }

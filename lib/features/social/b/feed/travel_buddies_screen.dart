@@ -9,7 +9,6 @@ import '../../../../controllers/notification_controller.dart';
 import '../../../../design/design.dart';
 import '../../../../utils/input_formatters.dart';
 import '../../../buddy/shared/buddy_look.dart';
-import '../../../buddy/shared/buddy_result.dart';
 import '../../../buddy/shared/widgets/buddy_page.dart';
 import '../../../buddy/shared/widgets/buddy_snack.dart';
 import '../../shared/social_me_controller.dart';
@@ -409,26 +408,6 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
     );
   }
 
-  // Mock D10g: the own post card keeps the ⋮ next to 'Your post', same Remove item as the Trip post page.
-  List<TripPostMenuItem> _ownMenu(PublicTrip t) => [
-        TripPostActions.removeItem(
-          context,
-          t,
-          remove: () => c.removeMyPost(t.tripId),
-          onRemoved: () => BuddySnack.show(context, SocialStringsB.postRemoved),
-          onFailed: (r) {
-            final text = switch (r) {
-              BuddyRefused(:final message) => message ?? SocialStrings.failed,
-              BuddyOffline() => SocialStrings.offline,
-              BuddyFailed(:final message) => message.isEmpty ? null : message,
-              _ => null,
-            };
-            if (text != null) BuddySnack.show(context, text, danger: true);
-          },
-          onBlocked: (b) => c.applyRemovalBlock(t.tripId, b),
-        ),
-      ];
-
   Widget _card(PublicTrip t) => Padding(
         padding: DS.gapInsets(l: 18, r: 18, b: 16),
         child: PublicTripCard(
@@ -436,7 +415,7 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
           trip: t,
           onTap: () => SocialNav.openTripPost(t.tripId),
           footer: _footer(t),
-          onMenu: () => TripPostActions.showMenu(context, trip: t, onBlocked: () => c.removeOwner(t.owner.userId), own: _ownMenu(t)),
+          onMenu: t.isMine ? null : () => TripPostActions.showMenu(context, trip: t, onBlocked: () => c.removeOwner(t.owner.userId)),
         ),
       );
 

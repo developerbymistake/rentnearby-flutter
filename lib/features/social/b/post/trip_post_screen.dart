@@ -6,6 +6,7 @@ import '../../../../design/design.dart';
 import '../../../buddy/shared/buddy_look.dart';
 import '../../../buddy/shared/buddy_result.dart';
 import '../../../buddy/shared/widgets/buddy_avatar.dart';
+import '../../../buddy/shared/widgets/buddy_confirm_box.dart';
 import '../../../buddy/shared/widgets/buddy_page.dart';
 import '../../../buddy/shared/widgets/buddy_snack.dart';
 import '../../../trip/trip_navigation.dart';
@@ -96,23 +97,19 @@ class _TripPostScreenState extends State<TripPostScreen> {
       onBlocked: () {
         if (mounted) Navigator.of(context).maybePop();
       },
-      own: [
-        TripPostActions.removeItem(
-          context,
-          t,
-          remove: c.unpublish,
-          onRemoved: () {
-            BuddySnack.show(context, SocialStringsB.postRemoved);
-            Navigator.of(context).maybePop();
-          },
-          onFailed: (r) {
-            if (r is BuddyFailed<void> && r.message.isEmpty) return;
-            _fail(r);
-          },
-          onBlocked: c.applyRemovalBlock,
-        ),
-      ],
     );
+  }
+
+  Future<void> _planTrip(PublicTrip t) async {
+    final ok = await BuddyConfirmBox.ask(
+      context,
+      art: ListingArt.worldMap,
+      title: SocialStringsB.planTripTitle,
+      body: SocialStringsB.planTripBody,
+      confirmLabel: SocialStringsB.planTrip,
+    );
+    if (!ok || !mounted) return;
+    await TripNavigation.continueTrip(t.tripId);
   }
 
   Widget _ownerCard(PublicTrip t) {
@@ -254,7 +251,7 @@ class _TripPostScreenState extends State<TripPostScreen> {
           ),
           Gap.h(12),
           Expanded(
-            child: WhitePillButton(key: TripPostScreen.openTripKey, tone: ListingTone.indigo, label: SocialStringsB.openTrip, onTap: () => TripNavigation.continueTrip(t.tripId)),
+            child: WhitePillButton(key: TripPostScreen.openTripKey, tone: ListingTone.indigo, label: SocialStringsB.planTrip, onTap: () => _planTrip(t)),
           ),
         ],
       );
@@ -328,7 +325,7 @@ class _TripPostScreenState extends State<TripPostScreen> {
         title: SocialStringsB.tripPost,
         subtitle: t == null ? null : SocialStringsB.byOwner(t.owner.shortName),
         trailing: [
-          if (t != null && !t.sample)
+          if (t != null && !t.sample && !t.isMine)
             Semantics(
               label: SocialStringsB.moreOptions,
               button: true,

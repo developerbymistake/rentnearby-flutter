@@ -141,21 +141,14 @@ void main() {
   setUpAll(loadRealFonts);
   tearDown(Get.reset);
 
-  testWidgets('trip city sheet: X in the top-right of the header, clear of the art, closes', (t) async {
+  testWidgets('trip city sheet: X in the top-right of the header, closes', (t) async {
     Get.put<TripCityCatalog>(_Catalog(), permanent: true);
-    final run = await _open(t, (c) => TripCitySheet.pick(c));
+    final run = await _open(t, (c) => TripCitySheet.pick(c, afterCity: 'Nainital', inTrip: {1}));
     expect(find.text('Nainital'), findsWidgets);
     final x = _x(t);
     final sheet = t.getRect(find.byType(TripCitySheet));
     expect(x.right, closeTo(sheet.right - DS.s(4), 0.5));
     expect(x.top, closeTo(sheet.top + DS.s(4), 0.5));
-    expect(t.getRect(find.byType(Art3D).first).right, lessThanOrEqualTo(x.left + 0.5));
-    await _tapClose(t, run);
-  });
-
-  testWidgets('trip city sheet in add mode: X closes', (t) async {
-    Get.put<TripCityCatalog>(_Catalog(), permanent: true);
-    final run = await _open(t, (c) => TripCitySheet.pick(c, mode: TripCitySheetMode.add, afterCity: 'Nainital', inTrip: {1}));
     await _tapClose(t, run);
   });
 

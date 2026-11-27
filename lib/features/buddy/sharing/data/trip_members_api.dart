@@ -14,6 +14,10 @@ class TripMembersApi {
       BuddyApiBase.run(() async => InviteResult.fromJson(
           BuddyApiBase.dataOf(await ApiService.post('/trips/$tripId/invites', {'userIds': userIds, 'clientRequestId': clientRequestId}))));
 
+  Future<BuddyResult<InviteCandidateList>> inviteCandidates(String tripId, {String? cursor, int limit = 50}) => BuddyApiBase.run(() async =>
+      InviteCandidateList.fromJson(BuddyApiBase.dataOf(await BuddyApiBase.read(
+          () => ApiService.get('/trips/$tripId/invite-candidates', params: BuddyApiBase.query({'cursor': cursor, 'limit': limit}))))));
+
   Future<BuddyResult<void>> cancelInvite(String tripId, String userId) =>
       BuddyApiBase.run(() async => ApiService.deleteJson('/trips/$tripId/invites/$userId'));
 

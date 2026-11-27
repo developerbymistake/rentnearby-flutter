@@ -5,9 +5,9 @@ import 'package:bakhli/features/buddy/shared/buddy_result.dart';
 import 'package:bakhli/features/buddy/sharing/controllers/owner_sharing_controller.dart';
 import 'package:bakhli/features/buddy/shared/models/person_models.dart';
 import 'package:bakhli/features/buddy/sharing/models/sharing_models.dart';
+import 'package:bakhli/features/buddy/sharing/screens/invite_people_screen.dart';
 import 'package:bakhli/features/buddy/sharing/screens/travellers_owner_screen.dart';
 import 'package:bakhli/features/buddy/sharing/sharing_strings.dart';
-import 'package:bakhli/features/buddy/sharing/widgets/invite_sheet.dart';
 import 'package:bakhli/features/buddy/sharing/widgets/overview_expenses_card.dart';
 import 'package:bakhli/features/buddy/sharing/widgets/trip_delete_flow.dart';
 import 'package:bakhli/features/trip/utils/trip_parts.dart';
@@ -85,14 +85,14 @@ void main() {
       expect(find.text('Your plan is saved'), findsOneWidget);
       expect(find.text('3 cities · 7 days · 1 traveller'), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp(r'^Plan progress, 100 percent\. All set\. Invite your friends\.')), findsOneWidget);
-      expect(find.text('Buddy invite'), findsOneWidget);
+      expect(find.text('Invite travellers'), findsOneWidget);
       expect(find.text('Invite your friends on this trip'), findsOneWidget);
       expect(find.text('Invite'), findsOneWidget);
       expect(find.text('Trip expenses'), findsOneWidget);
       expect(find.text('No expenses yet'), findsOneWidget);
       expect(find.text('Add expense'), findsOneWidget);
       expect(find.byKey(const ValueKey('overview_traveller_dots')), findsNothing);
-      expect(find.bySemanticsLabel('Buddy invite, Invite'), findsOneWidget);
+      expect(find.bySemanticsLabel('Invite travellers, Invite'), findsOneWidget);
       expect(find.bySemanticsLabel('Trip expenses, Add expense'), findsOneWidget);
     });
 
@@ -133,15 +133,11 @@ void main() {
       await _drain(t);
     });
 
-    testWidgets('Invite opens the invite sheet', (t) async {
-      registerFakes(
-        members: FakeMembersApi(membersResult: BuddyOk(membersSample())),
-        buddies: FakeBuddiesApi({null: BuddyOk(buddyList([buddy(aman, 'Aman', 'Bakhli#61408275')]))}),
-      );
+    testWidgets('Invite opens the invite page', (t) async {
       await _pump(t, overview(trip(sharing: aloneBlock()), aloneBlock()));
       await _tapText(t, 'Invite');
-      expect(find.text('Invite to this trip'), findsOneWidget);
-      expect(find.text('Aman'), findsOneWidget);
+      expect(opened.last.$1, AppRoutes.tripInvitePeople);
+      expect(opened.last.$2, {'tripId': tripId});
     });
 
     testWidgets('Add expense opens the expenses page without opening the sheet', (t) async {
@@ -151,9 +147,19 @@ void main() {
       expect(opened.last.$2, {'tripId': tripId});
     });
 
+    testWidgets('Expenses is off until the itinerary has places', (t) async {
+      await _pump(t, overview(trip(sharing: aloneBlock(), spotCount: 0), aloneBlock()));
+      opened.clear();
+      await t.tap(find.byKey(const ValueKey('overview_expenses_card')), warnIfMissed: false);
+      await _settle(t);
+      expect(opened, isEmpty);
+      final dim = t.widget<Opacity>(find.ancestor(of: find.byKey(const ValueKey('overview_expenses_card')), matching: find.byType(Opacity)).first);
+      expect(dim.opacity, 0.5);
+    });
+
     testWidgets('an old server without sharing keeps the screen as today', (t) async {
       await _pump(t, overview(trip(), null));
-      expect(find.text('Buddy invite'), findsNothing);
+      expect(find.text('Invite travellers'), findsNothing);
       expect(find.text('Trip expenses'), findsNothing);
       await _openMenu(t);
       expect(find.text('View plan'), findsOneWidget);
@@ -176,7 +182,7 @@ void main() {
       expect(find.text('3 cities · 7 days · 3 travellers'), findsOneWidget);
       expect(find.byKey(const ValueKey('overview_progress_card')), findsNothing);
       expect(find.byKey(const ValueKey('overview_trip_name')), findsOneWidget);
-      expect(find.text('Buddy invite'), findsOneWidget);
+      expect(find.text('Invite travellers'), findsOneWidget);
       expect(find.byKey(const ValueKey('overview_traveller_dots')), findsOneWidget);
       expect(find.text('3 joined · 1 invite waiting'), findsOneWidget);
       expect(find.text('Manage'), findsOneWidget);
@@ -230,10 +236,26 @@ void main() {
   });
 
   group('delete trip 3.11a / 3.11b', () {
+    final yesterday = DateTime.now().subtract(const Duration(days: 1));
+
+    testWidgets('I-3: a running trip with joined travellers cannot be deleted until they are removed or have left', (t) async {
+      final api = FakeMembersApi(membersResult: BuddyOk(membersSample()));
+      registerFakes(members: api);
+      final s = sharedBlock(pending: 0, expenses: _settled);
+      await _pump(t, overview(trip(sharing: s), s));
+      await _openMenu(t);
+      expect(find.text('Remove the other travellers first (2)'), findsOneWidget);
+      await _tapText(t, 'Delete trip');
+      expect(find.text('Delete this trip?'), findsNothing);
+      expect(find.text('Other travellers are on this trip'), findsOneWidget);
+      expect(find.text('Remove the travellers or wait until they leave, then delete.'), findsOneWidget);
+      expect(api.deletes, 0);
+    });
+
     testWidgets('open payments show Settle up first with every open line', (t) async {
       registerFakes(ledger: FakeLedgerApi(BuddyOk(balancesSample())), members: FakeMembersApi(membersResult: BuddyOk(membersSample())));
-      final s = sharedBlock(pending: 0);
-      await _pump(t, overview(trip(sharing: s), s));
+      final s = formerBlock();
+      await _pump(t, overview(trip(sharing: s, endDate: yesterday), s));
       await _openMenu(t);
       await _tapText(t, 'Delete trip');
       expect(find.text('Settle up first'), findsOneWidget);
@@ -247,8 +269,8 @@ void main() {
 
     testWidgets('Close closes the settle box', (t) async {
       registerFakes(ledger: FakeLedgerApi(BuddyOk(balancesSample())));
-      final s = sharedBlock(pending: 0);
-      await _pump(t, overview(trip(sharing: s), s));
+      final s = formerBlock();
+      await _pump(t, overview(trip(sharing: s, endDate: yesterday), s));
       await _openMenu(t);
       await _tapText(t, 'Delete trip');
       await _tapText(t, 'Close');
@@ -256,13 +278,13 @@ void main() {
       expect(opened, isEmpty);
     });
 
-    testWidgets('nothing open: confirm names the joined viewers, Delete deletes once', (t) async {
+    testWidgets('owner alone, nothing open: confirm names the travellers the server lists, Delete deletes once', (t) async {
       final api = FakeMembersApi(membersResult: BuddyOk(membersSample()));
       registerFakes(members: api);
       var tripsOpened = 0;
       TripDeleteFlow.debugOpenTrips = () => tripsOpened++;
-      final s = sharedBlock(pending: 0, expenses: _settled);
-      await _pump(t, overview(trip(sharing: s), s));
+      final s = formerBlock(expenses: _settled);
+      await _pump(t, overview(trip(sharing: s, endDate: yesterday), s));
       await _openMenu(t);
       await _tapText(t, 'Delete trip');
       expect(find.text('Delete this trip?'), findsOneWidget);
@@ -277,8 +299,8 @@ void main() {
     testWidgets('Cancel keeps the trip', (t) async {
       final api = FakeMembersApi(membersResult: BuddyOk(membersSample()));
       registerFakes(members: api);
-      final s = sharedBlock(pending: 0, expenses: _settled);
-      await _pump(t, overview(trip(sharing: s), s));
+      final s = formerBlock(expenses: _settled);
+      await _pump(t, overview(trip(sharing: s, endDate: yesterday), s));
       await _openMenu(t);
       await _tapText(t, 'Delete trip');
       await _tapText(t, 'Cancel');
@@ -298,8 +320,8 @@ void main() {
       final api = FakeMembersApi(membersResult: BuddyOk(membersSample()))
         ..deleteResult = BuddyRefused<void>(type: 'TripHasOpenBalances', statusCode: 409, data: {'openPayments': lines});
       registerFakes(members: api);
-      final s = sharedBlock(pending: 0, expenses: _settled);
-      await _pump(t, overview(trip(sharing: s), s));
+      final s = formerBlock(expenses: _settled);
+      await _pump(t, overview(trip(sharing: s, endDate: yesterday), s));
       await _openMenu(t);
       await _tapText(t, 'Delete trip');
       await _tapText(t, 'Delete');
@@ -312,8 +334,8 @@ void main() {
     testWidgets('offline delete shows the offline toast and keeps the box', (t) async {
       final api = FakeMembersApi(membersResult: BuddyOk(membersSample()))..deleteResult = const BuddyOffline<void>();
       registerFakes(members: api);
-      final s = sharedBlock(pending: 0, expenses: _settled);
-      await _pump(t, overview(trip(sharing: s), s));
+      final s = formerBlock(expenses: _settled);
+      await _pump(t, overview(trip(sharing: s, endDate: yesterday), s));
       await _openMenu(t);
       await _tapText(t, 'Delete trip');
       await _tapText(t, 'Delete');
@@ -332,8 +354,14 @@ void main() {
     });
   });
 
-  group('invite sheet 3.2 / 3.4 / 3.12b', () {
-    Widget host() => Scaffold(body: Builder(builder: (c) => Center(child: TextButton(onPressed: () => InviteSheet.show(c, tripId), child: const Text('open')))));
+  group('invite page 3.2 / 3.4 / 3.12b', () {
+    Widget host() => Scaffold(
+          body: Builder(
+            builder: (c) => Center(
+              child: TextButton(onPressed: () => Navigator.of(c).push(MaterialPageRoute<void>(builder: (_) => const InvitePeopleScreen(tripId: tripId))), child: const Text('open')),
+            ),
+          ),
+        );
 
     Future<void> open(WidgetTester t) async {
       await _pump(t, host());
@@ -341,169 +369,196 @@ void main() {
       await _settle(t);
     }
 
-    testWidgets('lists buddies, ticks, sends, closes with the snack', (t) async {
-      final api = FakeMembersApi(membersResult: BuddyOk(membersSample()));
-      registerFakes(
-        members: api,
-        buddies: FakeBuddiesApi({null: BuddyOk(buddyList([buddy(aman, 'Aman', 'Bakhli#61408275'), buddy(neha, 'Neha', 'Bakhli#73019462')]))}),
+    FakeMembersApi api(List<InviteCandidate> people, {TripMembers? members, String? next, List<InviteCandidate> more = const []}) {
+      final a = FakeMembersApi(
+        membersResult: BuddyOk(members ?? membersSample()),
+        candidatePages: {null: BuddyOk(candidates(people, next: next)), if (next != null) next: BuddyOk(candidates(more))},
       );
+      registerFakes(members: a);
+      return a;
+    }
+
+    testWidgets('lists people I follow, buddies with a star, ticks, sends, back to the plan with the toast', (t) async {
+      final a = api([follow(aman, 'Aman', 'Bakhli#61408275', isBuddy: true), follow(neha, 'Neha', 'Bakhli#73019462')]);
       await open(t);
       expect(find.text('Invite to this trip'), findsOneWidget);
       expect(find.text('They join as viewers after they accept.'), findsOneWidget);
       expect(find.text('Bakhli#61408275'), findsOneWidget);
-      expect(find.text('Only your buddies are listed here. To invite someone else, add them as a buddy first.'), findsOneWidget);
-      expect(find.text('Send invite'), findsOneWidget);
-      await t.tap(find.byKey(const ValueKey('invite_send')));
+      expect(find.byKey(const ValueKey('invite_star_$aman')), findsOneWidget);
+      expect(find.byKey(const ValueKey('invite_star_$neha')), findsNothing);
+      expect(find.text('People you follow are listed here. Buddies have a star.'), findsOneWidget);
+      expect(find.text('Send invites'), findsOneWidget);
+      expect(find.text('Back to plan'), findsOneWidget);
+      await t.tap(find.byKey(InvitePeopleScreen.sendKey));
       await _settle(t);
-      expect(api.invites, isEmpty);
-      await _tapText(t, 'Aman');
-      expect(find.text('Send invite (1)'), findsOneWidget);
-      await _tapText(t, 'Aman');
-      expect(find.text('Send invite'), findsOneWidget);
-      await _tapText(t, 'Aman');
-      await _tapText(t, 'Send invite (1)');
-      expect(api.invites.single, [aman]);
+      expect(a.invites, isEmpty);
+      await _tapText(t, 'Neha');
+      expect(find.text('Send invites (1)'), findsOneWidget);
+      await _tapText(t, 'Neha');
+      expect(find.text('Send invites'), findsOneWidget);
+      await _tapText(t, 'Neha');
+      await _tapText(t, 'Send invites (1)');
+      expect(a.invites.single, [neha]);
       expect(find.text('Invite to this trip'), findsNothing);
-      expect(find.text('Invite sent to Aman'), findsOneWidget);
+      expect(find.text('open'), findsOneWidget);
+      expect(find.text('Invite sent to Neha'), findsOneWidget);
       await _drain(t);
     });
 
-    testWidgets('two invites read Invites sent to 2 buddies', (t) async {
-      registerFakes(
-        members: FakeMembersApi(membersResult: BuddyOk(membersSample())),
-        buddies: FakeBuddiesApi({null: BuddyOk(buddyList([buddy(aman, 'Aman', 'Bakhli#61408275'), buddy(neha, 'Neha', 'Bakhli#73019462')]))}),
-      );
+    testWidgets('My buddies ticks every buddy at once and unticks them again', (t) async {
+      api([
+        follow(aman, 'Aman', 'Bakhli#61408275', isBuddy: true),
+        follow(priya, 'Priya', 'Bakhli#50267139', isBuddy: true, state: 'Joined'),
+        follow(vikram, 'Vikram', 'Bakhli#19053382', isBuddy: true),
+        follow(neha, 'Neha', 'Bakhli#73019462'),
+      ]);
+      await open(t);
+      expect(find.byKey(InvitePeopleScreen.myBuddiesKey), findsOneWidget);
+      await t.tap(find.byKey(InvitePeopleScreen.myBuddiesKey));
+      await _settle(t);
+      expect(find.text('Send invites (2)'), findsOneWidget);
+      await _tapText(t, 'Neha');
+      expect(find.text('Send invites (3)'), findsOneWidget);
+      await t.tap(find.byKey(InvitePeopleScreen.myBuddiesKey));
+      await _settle(t);
+      expect(find.text('Send invites (1)'), findsOneWidget);
+    });
+
+    testWidgets('no buddies in the list: no My buddies row', (t) async {
+      api([follow(neha, 'Neha', 'Bakhli#73019462')]);
+      await open(t);
+      expect(find.byKey(InvitePeopleScreen.myBuddiesKey), findsNothing);
+      expect(find.text('Neha'), findsOneWidget);
+    });
+
+    testWidgets('two invites read Invites sent to 2 people', (t) async {
+      api([follow(aman, 'Aman', 'Bakhli#61408275'), follow(neha, 'Neha', 'Bakhli#73019462')]);
       await open(t);
       await _tapText(t, 'Aman');
       await _tapText(t, 'Neha');
-      await _tapText(t, 'Send invite (2)');
-      expect(find.text('Invites sent to 2 buddies'), findsOneWidget);
+      await _tapText(t, 'Send invites (2)');
+      expect(find.text('Invites sent to 2 people'), findsOneWidget);
       await _drain(t);
     });
 
+    testWidgets('Back to plan leaves the page without sending', (t) async {
+      final a = api([follow(aman, 'Aman', 'Bakhli#61408275')]);
+      await open(t);
+      await _tapText(t, 'Aman');
+      await t.tap(find.byKey(InvitePeopleScreen.backKey));
+      await _settle(t);
+      expect(a.invites, isEmpty);
+      expect(find.text('Invite to this trip'), findsNothing);
+      expect(find.text('open'), findsOneWidget);
+    });
+
     testWidgets('invited and joined rows carry badges and cannot be ticked', (t) async {
-      registerFakes(
-        members: FakeMembersApi(membersResult: BuddyOk(membersSample())),
-        buddies: FakeBuddiesApi({
-          null: BuddyOk(buddyList([
-            buddy(aman, 'Aman', 'Bakhli#61408275', state: 'Joined'),
-            buddy(neha, 'Neha', 'Bakhli#73019462', state: 'Invited'),
-            buddy(vikram, 'Vikram', 'Bakhli#19053382'),
-          ])),
-        }),
-      );
+      api([
+        follow(aman, 'Aman', 'Bakhli#61408275', state: 'Joined'),
+        follow(neha, 'Neha', 'Bakhli#73019462', state: 'Invited'),
+        follow(vikram, 'Vikram', 'Bakhli#19053382'),
+      ]);
       await open(t);
       expect(find.text('On this trip'), findsOneWidget);
       expect(find.text('Invite sent'), findsOneWidget);
       await _tapText(t, 'Aman');
       await _tapText(t, 'Neha');
-      expect(find.text('Send invite'), findsOneWidget);
+      expect(find.text('Send invites'), findsOneWidget);
     });
 
-    testWidgets('NotBuddy outcome shows Could not invite and keeps the sheet', (t) async {
-      final api = FakeMembersApi(membersResult: BuddyOk(membersSample()))
+    testWidgets('a refused outcome shows Could not invite and keeps the page', (t) async {
+      final a = api([follow(aman, 'Aman', 'Bakhli#61408275')])
         ..inviteResult = const BuddyOk(InviteResult(results: [InviteOutcome(userId: aman, outcome: 'NotBuddy')], seatsLeft: 8));
-      registerFakes(members: api, buddies: FakeBuddiesApi({null: BuddyOk(buddyList([buddy(aman, 'Aman', 'Bakhli#61408275')]))}));
       await open(t);
       await _tapText(t, 'Aman');
-      await _tapText(t, 'Send invite (1)');
+      await _tapText(t, 'Send invites (1)');
+      expect(a.invites, hasLength(1));
       expect(find.text('Could not invite Aman.'), findsOneWidget);
       expect(find.text('Invite to this trip'), findsOneWidget);
       await _drain(t);
     });
 
     testWidgets('a new request id after a finished send, same id on a retry', (t) async {
-      final api = FakeMembersApi(membersResult: BuddyOk(membersSample()))..inviteResult = const BuddyOffline();
-      registerFakes(members: api, buddies: FakeBuddiesApi({null: BuddyOk(buddyList([buddy(aman, 'Aman', 'Bakhli#61408275')]))}));
+      final a = api([follow(aman, 'Aman', 'Bakhli#61408275')])..inviteResult = const BuddyOffline();
       await open(t);
       await _tapText(t, 'Aman');
-      await _tapText(t, 'Send invite (1)');
+      await _tapText(t, 'Send invites (1)');
       expect(find.text('You are offline. Try again when you are back online.'), findsOneWidget);
-      await _tapText(t, 'Send invite (1)');
-      expect(api.requestIds.toSet().length, 1);
+      await _tapText(t, 'Send invites (1)');
+      expect(a.requestIds.toSet().length, 1);
       await _drain(t);
     });
 
     testWidgets('409 TripFull shows the seats line, 0 seats reads This trip is full', (t) async {
-      final api = FakeMembersApi(membersResult: BuddyOk(membersSample()))
+      final a = api([follow(aman, 'Aman', 'Bakhli#61408275'), follow(neha, 'Neha', 'Bakhli#73019462')])
         ..inviteResult = const BuddyRefused(type: 'TripFull', statusCode: 409, data: {'seatsLeft': 1});
-      registerFakes(members: api, buddies: FakeBuddiesApi({null: BuddyOk(buddyList([buddy(aman, 'Aman', 'Bakhli#61408275'), buddy(neha, 'Neha', 'Bakhli#73019462')]))}));
       await open(t);
       await _tapText(t, 'Aman');
       await _tapText(t, 'Neha');
-      await _tapText(t, 'Send invite (2)');
+      await _tapText(t, 'Send invites (2)');
       expect(find.text('Only 1 seat left. A trip can have up to 12 travellers.'), findsOneWidget);
-      api.inviteResult = const BuddyRefused(type: 'TripFull', statusCode: 409, data: {'seatsLeft': 0});
-      await _tapText(t, 'Send invite (2)');
+      a.inviteResult = const BuddyRefused(type: 'TripFull', statusCode: 409, data: {'seatsLeft': 0});
+      await _tapText(t, 'Send invites (2)');
       expect(find.text('This trip is full'), findsOneWidget);
     });
 
     testWidgets('TripCompleted, NoPlaces and 429 toasts', (t) async {
-      final api = FakeMembersApi(membersResult: BuddyOk(membersSample()))..inviteResult = const BuddyRefused(type: 'TripCompleted', statusCode: 409);
-      registerFakes(members: api, buddies: FakeBuddiesApi({null: BuddyOk(buddyList([buddy(aman, 'Aman', 'Bakhli#61408275')]))}));
+      final a = api([follow(aman, 'Aman', 'Bakhli#61408275')])..inviteResult = const BuddyRefused(type: 'TripCompleted', statusCode: 409);
       await open(t);
       await _tapText(t, 'Aman');
-      await _tapText(t, 'Send invite (1)');
+      await _tapText(t, 'Send invites (1)');
       expect(find.text('This trip is complete. Plan changes are off.'), findsOneWidget);
-      api.inviteResult = const BuddyRefused(type: 'NoPlaces', statusCode: 400);
-      await _tapText(t, 'Send invite (1)');
+      a.inviteResult = const BuddyRefused(type: 'NoPlaces', statusCode: 400);
+      await _tapText(t, 'Send invites (1)');
       expect(find.text('Add places to the plan first.'), findsOneWidget);
-      api.inviteResult = const BuddyRefused(type: 'TooManyRequests', statusCode: 429);
-      await _tapText(t, 'Send invite (1)');
+      a.inviteResult = const BuddyRefused(type: 'TooManyRequests', statusCode: 429);
+      await _tapText(t, 'Send invites (1)');
       expect(find.text('Please try again in a few minutes'), findsOneWidget);
       await _drain(t);
     });
 
-    testWidgets('no buddies: empty state, Find a buddy opens People on My Buddies', (t) async {
-      registerFakes(members: FakeMembersApi(membersResult: BuddyOk(membersSample())), buddies: FakeBuddiesApi({}));
+    testWidgets('nobody followed: empty state, Find people opens People on Following', (t) async {
+      api(const []);
       await open(t);
-      expect(find.text('No buddies yet'), findsOneWidget);
-      expect(find.text('Add a buddy first, then invite them to your trip.'), findsOneWidget);
-      expect(find.byKey(const ValueKey('invite_send')), findsNothing);
-      await _tapText(t, 'Find a buddy');
-      expect(find.text('Invite to this trip'), findsNothing);
+      expect(find.text('No one to invite yet'), findsOneWidget);
+      expect(find.text('Follow people first, then invite them to your trip.'), findsOneWidget);
+      expect(find.byKey(InvitePeopleScreen.sendKey), findsNothing);
+      expect(find.byKey(InvitePeopleScreen.backKey), findsOneWidget);
+      await _tapText(t, 'Find people');
       expect(opened.last.$1, AppRoutes.people);
-      expect((opened.last.$2 as Map)['tab'], 'buddies');
+      expect((opened.last.$2 as Map)['tab'], 'following');
     });
 
-    testWidgets('few seats: seats line, a tick past the last seat is refused', (t) async {
-      registerFakes(
-        members: FakeMembersApi(membersResult: BuddyOk(tenMembers())),
-        buddies: FakeBuddiesApi({
-          null: BuddyOk(buddyList([buddy(neha, 'Neha', 'Bakhli#73019462'), buddy(vikram, 'Vikram', 'Bakhli#19053382'), buddy(karan, 'Divya', 'Bakhli#64417820')])),
-        }),
+    testWidgets('few seats: seats line, a tick past the last seat is refused, My buddies stops at the seats', (t) async {
+      api(
+        [
+          follow(neha, 'Neha', 'Bakhli#73019462', isBuddy: true),
+          follow(vikram, 'Vikram', 'Bakhli#19053382', isBuddy: true),
+          follow(karan, 'Divya', 'Bakhli#64417820', isBuddy: true),
+        ],
+        members: tenMembers(),
       );
       await open(t);
       expect(find.text('2 seats left'), findsOneWidget);
-      expect(find.text('They join as viewers after they accept.'), findsNothing);
       await _tapText(t, 'Neha');
       await _tapText(t, 'Vikram');
       await _tapText(t, 'Divya');
-      expect(find.text('Send invite (2)'), findsOneWidget);
+      expect(find.text('Send invites (2)'), findsOneWidget);
       expect(find.text('Only 2 seats left. A trip can have up to 12 travellers.'), findsOneWidget);
       await _tapText(t, 'Vikram');
-      await _tapText(t, 'Divya');
-      expect(find.text('Send invite (2)'), findsOneWidget);
-      expect(find.text('Only 2 seats left. A trip can have up to 12 travellers.'), findsNothing);
+      await _tapText(t, 'Neha');
+      expect(find.text('Send invites'), findsOneWidget);
+      await t.tap(find.byKey(InvitePeopleScreen.myBuddiesKey));
+      await _settle(t);
+      expect(find.text('Send invites (2)'), findsOneWidget);
+      expect(find.text('Only 2 seats left. A trip can have up to 12 travellers.'), findsOneWidget);
     });
 
     testWidgets('loads the next page at the end of the list', (t) async {
-      final buddies = FakeBuddiesApi({
-        null: BuddyOk(buddyList([buddy(aman, 'Aman', 'Bakhli#61408275')], next: 'c2')),
-        'c2': BuddyOk(buddyList([buddy(neha, 'Neha', 'Bakhli#73019462')])),
-      });
-      registerFakes(members: FakeMembersApi(membersResult: BuddyOk(membersSample())), buddies: buddies);
+      final a = api([follow(aman, 'Aman', 'Bakhli#61408275')], next: 'c2', more: [follow(neha, 'Neha', 'Bakhli#73019462')]);
       await open(t);
-      expect(buddies.cursors, [null, 'c2']);
+      expect(a.candidateCursors, [null, 'c2']);
       expect(find.text('Neha'), findsOneWidget);
-    });
-
-    testWidgets('close button closes', (t) async {
-      registerFakes(members: FakeMembersApi(membersResult: BuddyOk(membersSample())), buddies: FakeBuddiesApi({}));
-      await open(t);
-      await t.tap(find.bySemanticsLabel('Close').last);
-      await _settle(t);
-      expect(find.text('Invite to this trip'), findsNothing);
     });
   });
 
@@ -553,12 +608,13 @@ void main() {
       expect(find.text('Bakhli#30419736 · Joined 18 May'), findsOneWidget);
     });
 
-    testWidgets('Invite opens the sheet', (t) async {
-      registerFakes(members: FakeMembersApi(membersResult: BuddyOk(membersSample())), buddies: FakeBuddiesApi({}));
+    testWidgets('Invite opens the invite page', (t) async {
+      registerFakes(members: FakeMembersApi(membersResult: BuddyOk(membersSample())));
       await _pump(t, screen(membersSample()));
       await t.tap(find.byKey(const ValueKey('travellers_invite')));
       await _settle(t);
-      expect(find.text('Invite to this trip'), findsOneWidget);
+      expect(opened.last.$1, AppRoutes.tripInvitePeople);
+      expect(opened.last.$2, {'tripId': tripId});
     });
 
     testWidgets('Cancel invite removes the row and shows the snack', (t) async {

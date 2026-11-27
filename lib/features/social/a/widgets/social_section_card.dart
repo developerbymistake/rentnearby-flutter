@@ -59,3 +59,29 @@ class SocialSectionHeader extends StatelessWidget {
         ],
       );
 }
+
+/// Settings-style block: an optional small caps label over a white card of IconRow3D rows.
+class LabeledRowsSection extends StatelessWidget {
+  const LabeledRowsSection({super.key, this.label, required this.children});
+
+  final String? label;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = label;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (text != null)
+          Padding(
+            padding: EdgeInsets.fromLTRB(DS.s(22), DS.gv(22), DS.s(22), DS.gv(12)),
+            child: Text(text, style: Ink3D.text(12, FontWeight.w700, Ink3D.grey, letterSpacing: 0.8)),
+          )
+        else
+          Gap.v(22),
+        WhiteCard3D(child: Column(children: children)),
+      ],
+    );
+  }
+}

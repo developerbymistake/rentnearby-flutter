@@ -62,6 +62,15 @@ TripSharingBlock aloneBlock() => const TripSharingBlock(
       expenses: TripExpenseCard.none,
     );
 
+// Owner alone again (the others left or were removed) but the trip keeps their expenses: Delete is allowed and goes through the money checks.
+TripSharingBlock formerBlock({TripExpenseCard? expenses}) => TripSharingBlock(
+      travellerCount: 1,
+      viewerCount: 0,
+      pendingInvites: 0,
+      firstTravellers: const [TravellerDot(userId: rahul, initial: 'R', name: 'Rahul')],
+      expenses: expenses ?? const TripExpenseCard(hasExpenses: true, spent: 32300, myShare: 11618, dayToday: 4, openPayments: 2, settled: false),
+    );
+
 TripSharingBlock sharedBlock({int pending = 1, TripExpenseCard? expenses}) => TripSharingBlock(
       travellerCount: 3,
       viewerCount: 2,
@@ -164,10 +173,17 @@ BuddyItem buddy(String id, String name, String username, {String state = 'None'}
 
 BuddyList buddyList(List<BuddyItem> items, {String? next}) => BuddyList(items: items, count: items.length, nextCursor: next);
 
+InviteCandidate follow(String id, String name, String username, {String state = 'None', bool isBuddy = false}) =>
+    InviteCandidate(person: buddy(id, name, username, state: state), isBuddy: isBuddy);
+
+InviteCandidateList candidates(List<InviteCandidate> items, {String? next}) => InviteCandidateList(items: items, count: items.length, nextCursor: next);
+
 class FakeMembersApi extends TripMembersApi {
-  FakeMembersApi({required this.membersResult});
+  FakeMembersApi({required this.membersResult, this.candidatePages = const {}});
 
   BuddyResult<TripMembers> membersResult;
+  final Map<String?, BuddyResult<InviteCandidateList>> candidatePages;
+  final List<String?> candidateCursors = [];
   BuddyResult<InviteResult>? inviteResult;
   BuddyResult<void> cancelResult = const BuddyOk<void>(null);
   BuddyResult<RemoveResult> removeResult = const BuddyOk(RemoveResult(status: 'Removed', sharesExpenses: 6));
@@ -184,6 +200,12 @@ class FakeMembersApi extends TripMembersApi {
   Future<BuddyResult<TripMembers>> members(String tripId) async {
     memberCalls++;
     return membersResult;
+  }
+
+  @override
+  Future<BuddyResult<InviteCandidateList>> inviteCandidates(String tripId, {String? cursor, int limit = 50}) async {
+    candidateCursors.add(cursor);
+    return candidatePages[cursor] ?? BuddyOk(candidates(const []));
   }
 
   @override
@@ -253,7 +275,7 @@ Widget app(Widget home) => GetMaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
       getPages: [
-        for (final r in [AppRoutes.tripTravellers, AppRoutes.tripExpenses, AppRoutes.tripSettle, AppRoutes.tripMoneySummary, AppRoutes.buddies, AppRoutes.people, AppRoutes.myTrips])
+        for (final r in [AppRoutes.tripTravellers, AppRoutes.tripInvitePeople, AppRoutes.tripExpenses, AppRoutes.tripSettle, AppRoutes.tripMoneySummary, AppRoutes.buddies, AppRoutes.people, AppRoutes.myTrips])
           _stub(r),
       ],
       builder: (context, c) => Stack(fit: StackFit.expand, children: [Positioned.fill(child: c!), Overlay(key: AppToast.overlayKey)]),

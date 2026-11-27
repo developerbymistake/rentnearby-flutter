@@ -7,10 +7,11 @@ import '../models/sharing_models.dart';
 import '../sharing_strings.dart';
 
 class OverviewExpensesCard extends StatelessWidget {
-  const OverviewExpensesCard({super.key, required this.expenses, required this.tripEnded, required this.onAdd, required this.onView});
+  const OverviewExpensesCard({super.key, required this.expenses, required this.tripEnded, required this.onAdd, required this.onView, this.enabled = true});
 
   final TripExpenseCard expenses;
   final bool tripEnded;
+  final bool enabled;
   final VoidCallback onAdd;
   final VoidCallback onView;
 
@@ -34,16 +35,19 @@ class OverviewExpensesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final has = expenses.hasExpenses;
-    return TripHeroCard(
-      key: const ValueKey('overview_expenses_card'),
-      tone: BuddyLook.rose,
-      asset: BuddyArt.moneyBag,
-      title: SharingStrings.expensesTitle,
-      chip: chipOf(expenses, tripEnded: tripEnded),
-      line: lineOf(expenses, tripEnded: tripEnded),
-      button: has ? SharingStrings.view : SharingStrings.addExpense,
-      onTap: has ? onView : onAdd,
-      wholeCard: true,
+    return Opacity(
+      opacity: enabled ? 1 : 0.5,
+      child: TripHeroCard(
+        key: const ValueKey('overview_expenses_card'),
+        tone: BuddyLook.rose,
+        asset: BuddyArt.moneyBag,
+        title: SharingStrings.expensesTitle,
+        chip: chipOf(expenses, tripEnded: tripEnded),
+        line: lineOf(expenses, tripEnded: tripEnded),
+        button: has ? SharingStrings.view : SharingStrings.addExpense,
+        onTap: !enabled ? null : (has ? onView : onAdd),
+        wholeCard: true,
+      ),
     );
   }
 }

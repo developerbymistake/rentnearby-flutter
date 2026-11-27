@@ -3,6 +3,8 @@ import 'package:bakhli/features/buddy/buddies/data/buddies_api.dart';
 import 'package:bakhli/features/buddy/buddies/models/buddy_models.dart';
 import 'package:bakhli/features/buddy/scan/scan_outcome.dart';
 import 'package:bakhli/features/buddy/shared/buddy_result.dart';
+import 'package:bakhli/design/design.dart';
+import 'package:bakhli/features/social/a/people/people_find.dart';
 import 'package:bakhli/features/social/a/people/people_screen.dart';
 import 'package:bakhli/features/social/a/people/scan_to_follow.dart';
 import 'package:bakhli/features/social/a/social_strings_a.dart';
@@ -41,12 +43,18 @@ SocialFakeServer _server({bool requests = true}) {
 }
 
 class _FindApi extends BuddiesApi {
+  _FindApi({this.followState = 'none', this.found = true});
+
+  final String followState;
+  final bool found;
   final finds = <String>[];
 
   @override
   Future<BuddyResult<FindResult>> find(String query, {required String source}) async {
     finds.add('$query:$source');
-    return const BuddyOk(FindResult(found: true, person: FoundPerson(userId: 'vikram', name: 'Vikram', username: 'Bakhli#29583047', initial: 'V', relation: BuddyRelation.none)));
+    if (!found) return const BuddyOk(FindResult(found: false));
+    return BuddyOk(FindResult(
+        found: true, person: FoundPerson(userId: 'vikram', name: 'Vikram', username: 'Bakhli#29583047', initial: 'V', relation: BuddyRelation.none, followState: followState)));
   }
 }
 
@@ -154,13 +162,50 @@ void main() {
     );
     await pumpSocial(t, PeopleScreen(scanToFollow: flow), pages: _pages);
     expect(find.byKey(PeopleScreen.scanQrKey), findsOneWidget);
-    expect(find.text(SocialStringsA.scanQr), findsOneWidget);
-    expect(find.text(SocialStringsA.scanQrLine), findsOneWidget);
+    expect(find.text(SocialStringsA.scanQrLine), findsNothing, reason: 'I-12: no separate Scan QR card');
+    final field = t.getRect(find.byKey(PeopleFindSection.fieldKey));
+    final scan = t.getRect(find.byKey(PeopleScreen.scanQrKey));
+    expect(scan.center.dy, closeTo(field.center.dy, DS.s(16)), reason: 'I-12: search and scan in one row');
     await t.tap(find.byKey(PeopleScreen.scanQrKey));
     await settle(t);
     expect(scans, 1);
     expect(api.finds, ['Bakhli#29583047:Qr']);
     expect(opened, ['vikram']);
+    await drain(t);
+  });
+
+  for (final (state, label) in [('none', SocialStrings.follow), ('requested', SocialStrings.requested), ('following', SocialStrings.following)]) {
+    testWidgets('I-12 username search shows the person with $label', (t) async {
+      _server();
+      final api = _FindApi(followState: state);
+      await pumpSocial(t, PeopleScreen(scanToFollow: ScanToFollow(api: api)), pages: _pages);
+      await t.enterText(find.byKey(PeopleFindSection.fieldKey), 'bakhli#29583047');
+      await t.tap(find.byKey(PeopleFindSection.searchKey));
+      await settle(t);
+      expect(api.finds, ['Bakhli#29583047:Search']);
+      final result = find.byKey(PeopleFindSection.resultKey);
+      expect(result, findsOneWidget);
+      expect(find.descendant(of: result, matching: find.text('Vikram')), findsOneWidget);
+      expect(find.descendant(of: result, matching: find.text(label)), findsOneWidget);
+      await drain(t);
+    });
+  }
+
+  testWidgets('I-12 an unknown or badly typed username says no traveller found', (t) async {
+    _server();
+    final api = _FindApi(found: false);
+    await pumpSocial(t, PeopleScreen(scanToFollow: ScanToFollow(api: api)), pages: _pages);
+    await t.enterText(find.byKey(PeopleFindSection.fieldKey), 'hello');
+    await t.tap(find.byKey(PeopleFindSection.searchKey));
+    await settle(t);
+    expect(api.finds, isEmpty);
+    expect(find.text(SocialStringsA.noTravellerFound), findsOneWidget);
+    await t.enterText(find.byKey(PeopleFindSection.fieldKey), 'Bakhli#11112222');
+    await t.tap(find.byKey(PeopleFindSection.searchKey));
+    await settle(t);
+    expect(api.finds, ['Bakhli#11112222:Search']);
+    expect(find.text(SocialStringsA.noTravellerFound), findsOneWidget);
+    expect(find.byKey(PeopleFindSection.resultKey), findsNothing);
     await drain(t);
   });
 }

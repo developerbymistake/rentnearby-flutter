@@ -3,7 +3,7 @@ abstract final class SocialStringsA {
   static const String obMenu = 'More options';
   static const String obStep1 = 'Step 1 of 3 · You';
   static const String obStep2 = 'Step 2 of 3 · Your travel style';
-  static const String obStep3 = 'Step 3 of 3 · About you';
+  static const String obStep3 = 'Step 3 of 3 · Places and about you';
   static const String changePhoto = 'Change photo';
   static const String addPhoto = 'Add a photo';
   static const String addPhotoWhy = 'Optional. Faces help people trust your plan.';
@@ -21,14 +21,13 @@ abstract final class SocialStringsA {
   static const String verified = 'Verified';
   static const String next = 'Next';
   static const String finish = 'Finish';
-  static const String interestsLabel = 'Interests · pick 3 to 5';
-  static const String skillsLabel = 'Skills · pick at least 1';
-  static const String placesLabel = 'Places you have been · at least 1';
+  static const String interestsLabel = 'Interests · pick 2 to 3';
+  static const String skillsLabel = 'Skills · pick 2 to 3';
+  static const String placesLabel = 'Places you have been · 1 to 3';
   static const String addPlaceHint = 'Add a city or state';
   static const String aboutYou = 'About you';
   static const String aboutHint = 'A line about how you travel';
   static const String needed = 'Needed';
-  static const String tapToStart = 'Tap one to start';
   static const String howOthersSee = 'How others see you';
   static const String writeAbout = 'Write a line about you';
   static const String nameTooLong = 'Name cannot exceed 100 characters';
@@ -38,11 +37,11 @@ abstract final class SocialStringsA {
 
   static String removeTag(String text) => 'Remove $text';
 
-  static String ofFive(int n) => '$n of 5';
+  static String ofThree(int n) => '$n of 3';
 
-  static String picked(int n) => '$n picked';
+  static String picked(int n) => '$n of 3';
 
-  static String placesAdded(int n) => n == 0 ? 'Add 1' : '$n added';
+  static String placesAdded(int n) => n == 0 ? 'Add 1' : '$n of 3';
 
   static String step1Missing({required bool name, required bool gender, required bool birth}) {
     final parts = <String>[if (name) 'your name', if (gender) 'gender', if (birth) 'birth month and year'];
@@ -103,15 +102,16 @@ abstract final class SocialStringsA {
   static const String save = 'Save';
   static const String changeToSave = 'Change something to save';
   static const String saved = 'Profile updated';
-  static const String pickThreeToFive = 'pick 3 to 5';
-  static const String atLeastOne = 'at least 1';
+  static const String pickTwoToThree = 'pick 2 to 3';
   static const String addHomeCity = 'Add your home city';
 
   static String changes(int n) => n == 1 ? '1 change' : '$n changes';
 
-  static String placesCount(int n) => n == 1 ? '1 place' : '$n places';
+  static String placesCount(int n) => '$n of 3';
 
-  static String interestsHint(int n) => '${ofFive(n)} · $pickThreeToFive';
+  static String interestsHint(int n) => '${ofThree(n)} · $pickTwoToThree';
+
+  static String skillsHint(int n) => '${ofThree(n)} · $pickTwoToThree';
 
   static const String pickPlaceTitle = 'Add a place';
   static const String pickHomeTitle = 'Home city';
@@ -171,6 +171,9 @@ abstract final class SocialStringsA {
   static const String usernameBad = 'A username looks like Bakhli#12345678';
   static const String find = 'Find';
   static const String noTravellerFound = 'No traveller found with this username';
+  static const String typeUsername = 'Type a username';
+  static const String searchUsername = 'Search';
+  static const String ownUsername = 'This is your own username.';
   static const String scanTryLater = 'Too many tries. Try again in a few minutes.';
   static const String myBuddies = 'My Buddies';
   static const List<String> peopleTabs = [followers, followingTab, myBuddies];

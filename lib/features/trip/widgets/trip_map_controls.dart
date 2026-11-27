@@ -19,10 +19,10 @@ class TripMapControls extends StatelessWidget {
   final MapLibreMapController? Function()? map;
   final VoidCallback? onLocate;
 
-  static const double columnSize = 44;
+  static const double columnSize = 52;
   static const double rowSize = 56;
   static const double columnGap = 10;
-  static const double columnGlyph = 22;
+  static const double columnGlyph = 26;
   static const double rowGlyph = 28;
 
   TripMapControls.column({

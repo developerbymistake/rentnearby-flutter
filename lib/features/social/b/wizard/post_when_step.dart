@@ -57,8 +57,8 @@ class PostWhenStep extends StatelessWidget {
           spacing: DS.gh(10),
           runSpacing: DS.gv(10),
           children: [
-            for (var d = 1; d <= SocialFormats.moreDays; d++)
-              SocialPickChip(key: ValueKey('post_days_$d'), label: SocialStringsB.daysOption(d), selected: d == current, onTap: () => Navigator.of(s).pop(d)),
+            for (var d = 1; d <= PostDraft.maxDays; d++)
+              SocialPickChip(key: ValueKey('post_days_$d'), label: '$d', selected: d == current, onTap: () => Navigator.of(s).pop(d)),
           ],
         ),
       ),
@@ -307,7 +307,6 @@ class PostWhenStep extends StatelessWidget {
             labels: SocialStringsB.travelLabels,
             selected: travelIndex < 0 ? 0 : travelIndex,
             tone: ListingTone.indigo,
-            compact: true,
             margin: DS.insets(l: 18, r: 18),
             onTap: (i) => c.setTravelMode(TravelModes.codes[i]),
           ),

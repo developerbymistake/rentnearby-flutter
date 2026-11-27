@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import '../../../../config/app_routes.dart';
 import '../../../../controllers/auth_controller.dart';
 import '../../../../design/design.dart';
-import '../../../../screens/profile/profile_rows.dart';
 import '../../../../screens/profile_screen.dart';
 import '../../../buddy/buddies/controllers/buddy_summary_controller.dart';
 import '../../../buddy/shared/buddy_look.dart';
@@ -21,6 +20,7 @@ import '../../shared/social_strings.dart';
 import '../../shared/widgets/safety_guidelines_sheet.dart';
 import '../social_strings_a.dart';
 import '../widgets/social_chips_a.dart';
+import '../widgets/social_section_card.dart';
 import 'settings_controller.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -77,16 +77,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (picked != null && picked != current) await _set('messagePolicy', picked);
   }
 
-  Widget _section(String label, List<Widget> children) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(DS.s(22), DS.gv(22), DS.s(22), DS.gv(12)),
-            child: Text(label, style: Ink3D.text(12, FontWeight.w700, Ink3D.grey, letterSpacing: 0.8)),
-          ),
-          WhiteCard3D(child: Column(children: children)),
-        ],
-      );
+  Widget _section(String label, List<Widget> children) => LabeledRowsSection(label: label, children: children);
 
   Widget _switch(String key, bool value, {Key? switchKey}) => Obx(() => Switch3D(
         key: switchKey,
@@ -213,7 +204,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 IconRow3D(art: ListingArt.luggage, title: SocialStringsA.notifyTrips, divider: true, trailing: _switch('notifyFollowedTrips', p.notifyFollowedTrips)),
                 IconRow3D(art: ListingArt.roundPushpin, title: SocialStringsA.notifyNearbyTrips, divider: true, trailing: _switch('notifyNearbyTrips', p.notifyNearbyTrips, switchKey: SettingsScreen.nearbyKey)),
               ]),
-            _activity(),
             _section(SocialStringsA.supportLabel, [
               IconRow3D(art: ListingArt.speechBalloon, title: SocialStringsA.contactSupport, onTap: ProfileActions.contactSupport),
               IconRow3D(art: ListingArt.star, title: SocialStringsA.rateApp, divider: true, onTap: ProfileActions.rateApp),
@@ -247,18 +237,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       }),
     );
-  }
-
-  Widget _activity() {
-    final rows = <({String art, String title, String route})>[
-      if (_auth.canOpenRoute(AppRoutes.myTrips)) (art: ListingArt.luggage, title: SocialStringsA.myTrips, route: AppRoutes.myTrips),
-      if (_auth.jobsBrowseEnabled && ProfileRows.showsJobsFeed(_auth.shellKind.value)) (art: ListingArt.briefcase, title: SocialStringsA.jobs, route: AppRoutes.jobs),
-      if (_auth.canOpenRoute(AppRoutes.myJourneys)) (art: ListingArt.compass, title: SocialStringsA.myJourneys, route: AppRoutes.myJourneys),
-      (art: ListingArt.warning, title: SocialStringsA.myReports, route: AppRoutes.myFiledReports),
-    ];
-    return _section(SocialStringsA.activityLabel, [
-      for (var r = 0; r < rows.length; r++) IconRow3D(art: rows[r].art, title: rows[r].title, divider: r > 0, onTap: () => Get.toNamed(rows[r].route)),
-    ]);
   }
 }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../../../design/design.dart';
 import '../../../../design/extra/ext_chat.dart';
@@ -32,11 +33,13 @@ abstract final class SocialLookB {
 
   static String artOf(int seed) => arts[seed % arts.length];
 
+  static const String _trainArt = 'assets/images/design/travel3d/train.png';
+
   static const Map<String, String> _travelArt = {
-    TravelModes.public: ListingArt.bus,
-    TravelModes.bike: HubArt.motorcycle,
-    TravelModes.car: BuddyArt.automobile,
     TravelModes.taxi: ListingArt.taxi,
+    TravelModes.bike: HubArt.motorcycle,
+    TravelModes.bus: ListingArt.bus,
+    TravelModes.train: _trainArt,
   };
 
   static String? travelArtOf(String? code) => _travelArt[code];
@@ -59,6 +62,67 @@ abstract final class CityCoverLookup {
   }
 
   static String? cover(int cityKey) => city(cityKey)?.cover;
+
+  static final RxInt loaded = 0.obs;
+  static Future<void>? _pending;
+  static DateTime? _failedAt;
+  static Object? _seenKey;
+
+  // Cards can build before any trip screen loaded the city catalog; fetch it once and redraw the covers.
+  static void ensure() {
+    final catalog = TripCityCatalog.to..warmFromDisk();
+    final data = catalog.dataKey;
+    if (data != null) {
+      if (!identical(data, _seenKey)) {
+        _seenKey = data;
+        loaded.value++;
+      }
+      return;
+    }
+    if (_pending != null) return;
+    final failed = _failedAt;
+    if (failed != null && DateTime.now().difference(failed) < const Duration(seconds: 60)) return;
+    _pending = catalog.load().then<void>((_) {
+      _failedAt = null;
+      _seenKey = catalog.dataKey;
+      loaded.value++;
+    }, onError: (Object _) {
+      _failedAt = DateTime.now();
+    }).whenComplete(() => _pending = null);
+  }
+
+  @visibleForTesting
+  static void debugReset() {
+    _pending = null;
+    _failedAt = null;
+    _seenKey = null;
+    _key = null;
+    _byKey = const {};
+  }
+}
+
+class CityCover extends StatefulWidget {
+  const CityCover({super.key, required this.cityKey, required this.builder});
+
+  final int cityKey;
+  final Widget Function(String? cover) builder;
+
+  @override
+  State<CityCover> createState() => _CityCoverState();
+}
+
+class _CityCoverState extends State<CityCover> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.cityKey != 0) CityCoverLookup.ensure();
+  }
+
+  @override
+  Widget build(BuildContext context) => Obx(() {
+        CityCoverLookup.loaded.value;
+        return widget.builder(CityCoverLookup.cover(widget.cityKey));
+      });
 }
 
 class TripCoverArt extends StatelessWidget {
@@ -69,8 +133,9 @@ class TripCoverArt extends StatelessWidget {
   final double size;
 
   @override
-  Widget build(BuildContext context) {
-    final cover = CityCoverLookup.cover(cityKey);
+  Widget build(BuildContext context) => CityCover(cityKey: cityKey, builder: _art);
+
+  Widget _art(String? cover) {
     if (cover == null) {
       return ExcludeSemantics(child: Art3D(asset: SocialLookB.artOf(seed), size: size, shadowBlur: 5, shadowOffset: const Offset(3, 6)));
     }

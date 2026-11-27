@@ -165,8 +165,8 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
     _c.refusal.value = null;
     final type = r.type;
     if (type == SocialErrorTypes.awaitingReply || type == SocialErrorTypes.guidelinesNotAccepted) return;
-    if (type == SocialErrorTypes.plusRequired && _c.isTrip) {
-      PlusSheets.limitReached(context, errorType: type!, data: r.data, from: 'chat', title: SocialStringsC.groupChatPlusTitle, line: SocialStringsC.groupChatPlusLine);
+    if (type == SocialErrorTypes.plusRequired) {
+      PlusSheets.limitReached(context, errorType: type!, data: r.data, from: 'chat', title: SocialStringsC.freeMessageUsedTitle, line: SocialStringsC.freeMessageUsedLine);
       return;
     }
     if (PlusSheets.handles(type)) {
@@ -537,12 +537,10 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
     final p = _c.preflight.value;
     final notice = _noticeText;
     if (notice != null) return ChatNoticePanel3D(key: const ValueKey('dm_notice'), tone: _tone, text: notice);
-    if (_c.groupChatLocked) return _lockBar(SocialStringsC.groupChatPlusTitle, SocialStringsC.groupChatPlusLine, 'dm_lock_group_plus', button: SocialStringsC.seePlus);
+    if (_c.plusLockShown) return _lockBar(SocialStringsC.freeMessageUsedTitle, SocialStringsC.freeMessageUsedLine, 'dm_lock_plus');
     final lock = _c.lock;
     final newChats = _newChats();
-    if (lock == RoomLock.awaitingReply) {
-      return _lockBar(SocialStringsC.firstMessageTitle, SocialStringsC.freeCountLine(newChats, _peerFirst), 'dm_lock_awaiting');
-    }
+    if (lock == RoomLock.awaitingReply) return _lockBar(SocialStringsC.awaitingTitle, SocialStringsC.awaitingLine(_peerFirst), 'dm_lock_awaiting');
     if (lock == RoomLock.limit) {
       return _lockBar(SocialStringsC.limitTitle, SocialStringsC.limitLine(newChats), 'dm_lock_limit');
     }

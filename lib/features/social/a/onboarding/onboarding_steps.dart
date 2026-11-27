@@ -506,18 +506,13 @@ class OnboardingStepStyle extends StatelessWidget {
 
   final OnboardingController c;
 
-  Future<void> _addPlace(BuildContext context) async {
-    final p = await PlacePickerSheet.pick(context);
-    if (p != null) c.addPlace(p);
-  }
-
   @override
   Widget build(BuildContext context) {
     return OnboardingCard(
       children: [
         Obx(() => _CountLabel(
               text: SocialStringsA.interestsLabel,
-              count: SocialStringsA.ofFive(c.interests.length),
+              count: SocialStringsA.ofThree(c.interests.length),
               ok: c.interests.length >= ProfileRules.interestsMin,
               top: false,
             )),
@@ -538,37 +533,6 @@ class OnboardingStepStyle extends StatelessWidget {
                   ChoiceArtTile(key: ValueKey('ob_skill_$s'), label: s, art: SocialArtA.skill(s), selected: c.skills.contains(s), onTap: () => c.toggleSkill(s)),
               ],
             )),
-        Obx(() => _CountLabel(
-              text: SocialStringsA.placesLabel,
-              count: SocialStringsA.placesAdded(c.places.length),
-              ok: c.places.length >= ProfileRules.placesMin,
-            )),
-        Tap3D(
-          tapKey: const ValueKey('ob_add_place'),
-          onTap: () => _addPlace(context),
-          label: SocialStringsA.addPlaceHint,
-          exclude: true,
-          child: Container(
-            height: DS.s(62),
-            padding: DS.sym(h: 18),
-            decoration: BoxDecoration(color: Form3D.fill, borderRadius: DS.circular(31)),
-            child: Row(
-              children: [
-                ExcludeSemantics(child: Art3D(asset: ListingArt.search, size: 30, shadowBlur: 2, shadowOffset: const Offset(1, 2))),
-                Gap.h(12),
-                Expanded(child: Text(SocialStringsA.addPlaceHint, maxLines: 1, style: AuthPillInput.hintStyle)),
-              ],
-            ),
-          ),
-        ),
-        Obx(() => c.places.isEmpty
-            ? const SizedBox.shrink()
-            : Padding(
-                padding: EdgeInsets.only(top: DS.gv(10)),
-                child: ChoiceTileGrid(
-                  children: [for (final p in c.places) PlaceTile(key: ValueKey('ob_place_$p'), text: p, onRemove: () => c.removePlace(p))],
-                ),
-              )),
       ],
     );
   }
@@ -683,12 +647,49 @@ class OnboardingStepAbout extends StatelessWidget {
   final TextEditingController aboutCtrl;
   final String? photoUrl;
 
+  Future<void> _addPlace(BuildContext context) async {
+    final p = await PlacePickerSheet.pick(context);
+    if (p != null) c.addPlace(p);
+  }
+
   @override
   Widget build(BuildContext context) {
     return OnboardingCard(
       children: [
+        Obx(() => _CountLabel(
+              text: SocialStringsA.placesLabel,
+              count: SocialStringsA.placesAdded(c.places.length),
+              ok: c.places.length >= ProfileRules.placesMin,
+              top: false,
+            )),
+        Tap3D(
+          tapKey: const ValueKey('ob_add_place'),
+          onTap: () => _addPlace(context),
+          label: SocialStringsA.addPlaceHint,
+          exclude: true,
+          child: Container(
+            height: DS.s(62),
+            padding: DS.sym(h: 18),
+            decoration: BoxDecoration(color: Form3D.fill, borderRadius: DS.circular(31)),
+            child: Row(
+              children: [
+                ExcludeSemantics(child: Art3D(asset: ListingArt.search, size: 30, shadowBlur: 2, shadowOffset: const Offset(1, 2))),
+                Gap.h(12),
+                Expanded(child: Text(SocialStringsA.addPlaceHint, maxLines: 1, style: AuthPillInput.hintStyle)),
+              ],
+            ),
+          ),
+        ),
+        Obx(() => c.places.isEmpty
+            ? const SizedBox.shrink()
+            : Padding(
+                padding: EdgeInsets.only(top: DS.gv(10)),
+                child: ChoiceTileGrid(
+                  children: [for (final p in c.places) PlaceTile(key: ValueKey('ob_place_$p'), text: p, onRemove: () => c.removePlace(p))],
+                ),
+              )),
         Obx(() => Padding(
-              padding: EdgeInsets.fromLTRB(DS.s(4), 0, DS.s(4), DS.gv(10)),
+              padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(20), DS.s(4), DS.gv(10)),
               child: Row(
                 children: [
                   Expanded(child: Text(SocialStringsA.aboutYou, style: Ink3D.text(13, FontWeight.w600, Ink3D.sub))),
@@ -724,34 +725,6 @@ class OnboardingStepAbout extends StatelessWidget {
                 child: Text(SocialStringsA.needed, style: Ink3D.text(12, FontWeight.w500, AuthInk.warn, letterSpacing: 0)),
               )
             : const SizedBox.shrink()),
-        Padding(
-          padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(10), DS.s(4), 0),
-          child: Text(SocialStringsA.tapToStart, style: Ink3D.text(12.5, FontWeight.w600, Ink3D.sub, letterSpacing: 0)),
-        ),
-        for (final e in c.aboutExamples)
-          Padding(
-            padding: EdgeInsets.only(top: DS.gv(8)),
-            child: Obx(() => Tap3D(
-                  onTap: () {
-                    c.useExample(e);
-                    aboutCtrl.text = c.about.value;
-                    aboutCtrl.selection = TextSelection.collapsed(offset: aboutCtrl.text.length);
-                  },
-                  label: e,
-                  exclude: true,
-                  child: Container(
-                    padding: DS.sym(h: 12, v: 9),
-                    decoration: BoxDecoration(color: c.about.value == e ? TagChip.colorsOf(TagKind.interest).$1 : Form3D.fill, borderRadius: DS.circular(12)),
-                    child: Row(
-                      children: [
-                        Text('+', style: Ink3D.text(13.5, FontWeight.w700, ListingTone.indigo.g2, letterSpacing: 0)),
-                        Gap.h(10),
-                        Expanded(child: Text(e, style: Ink3D.text(13.5, FontWeight.w400, Ink3D.body, letterSpacing: 0))),
-                      ],
-                    ),
-                  ),
-                )),
-          ),
         Obx(() {
           if (c.about.value.trim().isEmpty) return const SizedBox.shrink();
           return Column(

@@ -22,7 +22,7 @@ class SeekerQuickAction {
 }
 
 abstract final class SeekerQuickActionTargets {
-  static void findBuddy() => SocialNav.openTravelBuddies();
+  static void findBuddy() => SocialNav.openPeople();
 }
 
 class SeekerQuickActions extends StatelessWidget {

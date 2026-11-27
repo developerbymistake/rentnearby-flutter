@@ -1,7 +1,6 @@
 import 'package:get/get.dart';
 
 import '../../../buddy/shared/buddy_result.dart';
-import '../../shared/post_removal.dart';
 import '../../shared/social_error_types.dart';
 import '../../shared/social_live.dart';
 import '../../shared/social_models.dart';
@@ -69,14 +68,6 @@ class TripPostController extends GetxController {
     if (type == SocialErrorTypes.cannotRejoin) trip.value = t.copyWith(myJoin: 'removed');
   }
 
-  /// A late PostLocked refusal (clock skew or an older read) greys the Remove item with the server's moment.
-  void applyRemovalBlock(PostRemovalBlock block) {
-    final t = trip.value;
-    if (t == null || block is! PostLockedBlock) return;
-    final at = block.unlocksAt;
-    if (at != null) trip.value = t.copyWith(unlocksAt: at);
-  }
-
   Future<BuddyResult<void>> cancelRequest() async {
     final t = trip.value;
     if (t == null || busy.value) return const BuddyFailed(message: '');
@@ -89,21 +80,6 @@ class TripPostController extends GetxController {
         SocialLive.joinRequests.value++;
       } else {
         trip.value = trip.value?.copyWith(myJoin: 'requested');
-      }
-      return r;
-    } finally {
-      busy.value = false;
-    }
-  }
-
-  Future<BuddyResult<void>> unpublish() async {
-    if (busy.value) return const BuddyFailed(message: '');
-    busy.value = true;
-    try {
-      final r = await _api.unpublish(tripId);
-      if (r.isOk) {
-        _gen++;
-        SocialLive.posts.value++;
       }
       return r;
     } finally {

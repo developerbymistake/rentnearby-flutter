@@ -53,6 +53,4 @@ class PublicTripsApi {
 
   Future<BuddyResult<PublicTrip>> publish(String tripId, PostDraft d) =>
       BuddyApiBase.run(() async => PublicTrip.fromJson(BuddyApiBase.dataOf(await ApiService.put('/social/trips/$tripId/post', d.toJson()))));
-
-  Future<BuddyResult<void>> unpublish(String tripId) => BuddyApiBase.run(() async => ApiService.deleteJson('/social/trips/$tripId/post'));
 }

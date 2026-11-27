@@ -59,19 +59,18 @@ void main() {
     Get.put<AuthController>(_Auth(stayOwner: stayOwner));
   }
 
-  testWidgets('Bug 10: seeker slides carry the action pill words', (t) async {
+  testWidgets('I-17: the traveller sees only the Trip slide, no dots and no auto-slide', (t) async {
     register();
     await pumpPhone(t, _carousel(), size: const Size(360, 800));
-    for (final (title, action) in [('Plan your trip', 'Plan a trip'), ('Find your stay', 'Browse stays'), ('Find a taxi', 'See taxis')]) {
-      final card = _cardOf(title);
-      expect(t.widget<WorkoutCard>(card).actionLabel, action, reason: title);
-      expect(t.widget<WorkoutCard>(card).minHeight, 156, reason: title);
-      expect(find.descendant(of: card, matching: find.text(action, skipOffstage: false)), findsOneWidget, reason: title);
-      expect(find.descendant(of: card, matching: find.byType(RoundGoButton, skipOffstage: false)), findsNothing, reason: title);
+    final card = _cardOf('Plan your trip');
+    expect(t.widget<WorkoutCard>(card).actionLabel, 'Plan a trip');
+    expect(t.widget<WorkoutCard>(card).minHeight, 156);
+    for (final s in ['Looking for a stay?', 'Find your stay', 'Need a taxi?', 'Find a taxi']) {
+      expect(find.text(s, skipOffstage: false), findsNothing, reason: s);
     }
-    for (final s in ['Looking for a stay?', 'Browse stays near you', 'Need a taxi?', 'Local taxis near you']) {
-      expect(find.text(s, skipOffstage: false), findsWidgets, reason: s);
-    }
+    expect(find.byType(PageView), findsNothing);
+    await t.pump(const Duration(seconds: 5));
+    expect(find.text('Plan your trip'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
   });
 
@@ -95,24 +94,17 @@ void main() {
         register();
         await pumpPhone(t, _carousel(), size: size, textScale: scale);
         expect(t.takeException(), isNull);
-        final pager = find.byType(PageView);
-        for (final title in ['Plan your trip', 'Find your stay', 'Find a taxi']) {
-          final card = find.descendant(of: pager, matching: find.ancestor(of: find.text(title), matching: find.byType(WorkoutCard)));
-          if (card.evaluate().isEmpty) {
-            await t.drag(pager, Offset(-size.width * 0.8, 0));
-            await t.pump(const Duration(seconds: 1));
-          }
-          final shown = find.descendant(of: pager, matching: find.ancestor(of: find.text(title), matching: find.byType(WorkoutCard))).first;
-          final box = t.getRect(find.descendant(of: shown, matching: find.byType(DecoratedBox)).first);
-          final pill = t.getRect(find.descendant(of: shown, matching: find.byType(WorkoutActionPill)));
-          expect(box.right - pill.right, moreOrLessEquals(DS.s(20), epsilon: 0.5), reason: title);
-          expect(box.bottom - pill.bottom, moreOrLessEquals(DS.s(20), epsilon: 0.5), reason: title);
-          expect(pill.left, greaterThanOrEqualTo(box.left), reason: title);
-          for (final text in find.descendant(of: shown, matching: find.byType(Text)).evaluate()) {
-            final w = text.widget as Text;
-            if (find.descendant(of: shown, matching: find.descendant(of: find.byType(WorkoutActionPill), matching: find.byWidget(w))).evaluate().isNotEmpty) continue;
-            expect(pill.overlaps(t.getRect(find.byWidget(w))), isFalse, reason: '$title: ${w.data}');
-          }
+        const title = 'Plan your trip';
+        final shown = find.ancestor(of: find.text(title), matching: find.byType(WorkoutCard)).first;
+        final box = t.getRect(find.descendant(of: shown, matching: find.byType(DecoratedBox)).first);
+        final pill = t.getRect(find.descendant(of: shown, matching: find.byType(WorkoutActionPill)));
+        expect(box.right - pill.right, moreOrLessEquals(DS.s(20), epsilon: 0.5), reason: title);
+        expect(box.bottom - pill.bottom, moreOrLessEquals(DS.s(20), epsilon: 0.5), reason: title);
+        expect(pill.left, greaterThanOrEqualTo(box.left), reason: title);
+        for (final text in find.descendant(of: shown, matching: find.byType(Text)).evaluate()) {
+          final w = text.widget as Text;
+          if (find.descendant(of: shown, matching: find.descendant(of: find.byType(WorkoutActionPill), matching: find.byWidget(w))).evaluate().isNotEmpty) continue;
+          expect(pill.overlaps(t.getRect(find.byWidget(w))), isFalse, reason: '$title: ${w.data}');
         }
         expect(t.takeException(), isNull);
         await t.pumpWidget(const SizedBox());

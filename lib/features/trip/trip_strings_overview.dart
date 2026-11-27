@@ -17,6 +17,7 @@ class TripStringsOverview {
   static const String skip = 'Skip, just keep my plan';
   static const String backToTrips = 'Back to my trips';
   static const String paused = 'Requests are paused right now';
+  static const String itineraryFirst = 'Make your itinerary first';
   static const String viewPlan = 'View plan';
   static const String moreOptions = 'More options';
   static const String back = 'Back';

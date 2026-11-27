@@ -23,17 +23,14 @@ final _pages = [
   GetPage(name: AppRoutes.travelBuddies, page: () => Scaffold(body: Text('FEED posted=${(Get.arguments as Map?)?['posted']}'))),
 ];
 
-Map<String, dynamic> _me({int used = 0, String? resetsAt, bool isPrivate = false}) {
+Map<String, dynamic> _me({bool isPrivate = false, Map<String, dynamic> limits = const {}}) {
   final me = socialMeWith();
   me['profile'] = {...(me['profile'] as Map<String, dynamic>), 'isPrivate': isPrivate};
-  final limits = Map<String, dynamic>.from(me['limits'] as Map);
-  limits['notifyPosts'] = {'limit': 2, 'used': used};
-  limits['notifyNextAt'] = resetsAt;
-  me['limits'] = limits;
+  me['limits'] = {...(me['limits'] as Map<String, dynamic>), ...limits};
   return me;
 }
 
-SocialLimits _limits({int used = 0}) => SocialLimits.fromJson({...socialMeJson()['limits'] as Map<String, dynamic>, 'notifyPosts': {'limit': 2, 'used': used}});
+SocialLimits _limits({Map<String, dynamic> extra = const {}}) => SocialLimits.fromJson({...socialMeJson()['limits'] as Map<String, dynamic>, ...extra});
 
 Future<PostTripController> _ready(PostTripController c) async {
   Get.put(c, tag: 'test-${identityHashCode(c)}');
@@ -97,32 +94,33 @@ void main() {
       expect((server.calls('PUT', '/social/trips/t-9/post').single.data as Map)['notifyNearby'], isTrue);
     });
 
-    test('UC3: weekly limit used: the switch cannot turn on and the post still goes with notifyNearby false', () async {
+    test('I-2: no weekly limit: even an older answer with notifyPosts 2 of 2 used keeps the switch on and sends true', () async {
       final server = installServer();
       server.on('POST', '/social/trips', publicTripJson(id: 'n1', isMine: true));
-      Get.put<SocialMeController>(FakeSocialMeController(_limits(used: 2)), permanent: true);
+      Get.put<SocialMeController>(FakeSocialMeController(_limits(extra: {'notifyPosts': {'limit': 2, 'used': 2}})), permanent: true);
       final c = await _ready(PostTripController(persist: false));
-      expect(c.notifyUsedUp, isTrue);
-      expect(c.canNotifyNearby, isFalse);
-      c.toggleCity(manali);
-      c.setNotifyNearby(true);
-      expect(c.draft.value.notifyNearby, isFalse);
-      final r = await c.submit();
-      expect(r, isA<BuddyOk<PublicTrip>>());
-      expect((server.calls('POST', '/social/trips').single.data as Map)['notifyNearby'], isFalse);
-    });
-
-    test('UC3: if the limit is used up after the switch went ON, the body still sends false (never blocks the post)', () async {
-      final server = installServer();
-      server.on('POST', '/social/trips', publicTripJson(id: 'n1', isMine: true));
-      final me = Get.put<SocialMeController>(FakeSocialMeController(_limits()), permanent: true);
-      final c = await _ready(PostTripController(persist: false));
+      expect(c.canNotifyNearby, isTrue);
       c.toggleCity(manali);
       c.setNotifyNearby(true);
       expect(c.draft.value.notifyNearby, isTrue);
-      me.me.value = SocialMe(limits: _limits(used: 2));
-      await c.submit();
-      expect((server.calls('POST', '/social/trips').single.data as Map)['notifyNearby'], isFalse);
+      final r = await c.submit();
+      expect(r, isA<BuddyOk<PublicTrip>>());
+      expect((server.calls('POST', '/social/trips').single.data as Map)['notifyNearby'], isTrue);
+    });
+
+    test('I-2: every new post the same week can notify again', () async {
+      final server = installServer();
+      server.on('POST', '/social/trips', publicTripJson(id: 'n1', isMine: true));
+      Get.put<SocialMeController>(FakeSocialMeController(_limits()), permanent: true);
+      for (var i = 0; i < 3; i++) {
+        final c = await _ready(PostTripController(persist: false));
+        c.toggleCity(manali);
+        c.setNotifyNearby(true);
+        await c.submit();
+      }
+      final calls = server.calls('POST', '/social/trips');
+      expect(calls, hasLength(3));
+      expect(calls.every((r) => (r.data as Map)['notifyNearby'] == true), isTrue);
     });
 
     test('UC8: a private profile cannot notify nearby travellers (followers only)', () async {
@@ -177,13 +175,15 @@ void main() {
   });
 
   group('screen', () {
-    testWidgets('About: Notify travellers near me row, OFF by default, shows what is left this week; ON is sent', (t) async {
+    testWidgets('About: Notify travellers near me row, OFF by default, says it is sent at 7 am to travellers near you; ON is sent', (t) async {
       final server = installServer();
       putSocialMe(server, _me());
       server.on('POST', '/social/trips', publicTripJson(id: 'n1', isMine: true, cities: ['Manali']));
       final c = await _toAbout(t);
       expect(find.text(SocialStringsB.notifyNearby), findsOneWidget);
-      expect(find.text('Sent at 7 am · 2 of 2 left this week'), findsOneWidget);
+      expect(SocialStringsB.notifyNearbyLine, 'Sent at 7 am to travellers near you');
+      expect(find.text(SocialStringsB.notifyNearbyLine), findsOneWidget);
+      expect(find.textContaining('this week'), findsNothing);
       expect(_switch(t).value, isFalse);
       expect(_switch(t).onChanged, isNotNull);
       await t.tap(find.byKey(PostAboutStep.notifyKey));
@@ -197,22 +197,14 @@ void main() {
       await drain(t);
     });
 
-    testWidgets('UC3: weekly limit used: calm disabled row, a short line with the day it comes back, the post still publishes', (t) async {
+    testWidgets('I-2: an older me answer with the week used still shows a live switch and no used-up line', (t) async {
       final server = installServer();
-      putSocialMe(server, _me(used: 2, resetsAt: '2026-12-02T04:00:00Z'));
-      server.on('POST', '/social/trips', {...publicTripJson(id: 'n1', isMine: true, cities: ['Manali']), 'notify': {'followers': 'weekLimit', 'nearby': 'off', 'used': 2, 'limit': 2}});
+      putSocialMe(server, _me(limits: {'notifyPosts': {'limit': 2, 'used': 2}, 'notifyNextAt': '2026-12-02T04:00:00Z'}));
       await _toAbout(t);
-      expect(find.text('Used 2 of 2 this week'), findsOneWidget);
-      expect(_switch(t).onChanged, isNull);
-      expect(_switch(t).value, isFalse);
-      expect(find.byKey(PostAboutStep.notifyNoteKey), findsOneWidget);
-      expect(find.textContaining(SocialStringsB.notifyUsedUp), findsOneWidget);
-      expect(find.textContaining('They are back on'), findsOneWidget);
-      await t.tap(find.byKey(WizardBottomBar.nextKey));
-      await settle(t);
-      expect(server.calls('POST', '/social/trips'), hasLength(1));
-      expect(find.text('FEED posted=true'), findsOneWidget);
-      expect(SocialNavB.postedNote, SocialStringsB.notifyUsedUpPosted);
+      expect(find.text(SocialStringsB.notifyNearbyLine), findsOneWidget);
+      expect(_switch(t).onChanged, isNotNull);
+      expect(find.textContaining('this week'), findsNothing);
+      expect(find.textContaining('used up'), findsNothing);
       await drain(t);
     });
 
@@ -228,7 +220,7 @@ void main() {
     testWidgets('UC2 poster feedback: the server keeps nearby ON, the live card line says 7 am', (t) async {
       final server = installServer();
       putSocialMe(server, _me());
-      server.on('POST', '/social/trips', {...publicTripJson(id: 'n1', isMine: true, cities: ['Manali']), 'notify': {'followers': 'sent', 'nearby': 'queued', 'used': 1, 'limit': 2}});
+      server.on('POST', '/social/trips', {...publicTripJson(id: 'n1', isMine: true, cities: ['Manali']), 'notify': {'followers': 'sent', 'nearby': 'queued'}});
       await _toAbout(t);
       await t.tap(find.byKey(PostAboutStep.notifyKey));
       await settle(t);
@@ -238,20 +230,16 @@ void main() {
       await drain(t);
     });
 
-    testWidgets('UC3 server side: switch ON but the week was used on another phone: the server answers weekLimit, one call, the post is still published', (t) async {
+    testWidgets('switch OFF: no 7 am note after posting', (t) async {
       final server = installServer();
       putSocialMe(server, _me());
-      server.on('POST', '/social/trips', {...publicTripJson(id: 'n1', isMine: true, cities: ['Manali']), 'notify': {'followers': 'weekLimit', 'nearby': 'weekLimit', 'used': 2, 'limit': 2}});
+      server.on('POST', '/social/trips', {...publicTripJson(id: 'n1', isMine: true, cities: ['Manali']), 'notify': {'followers': 'sent', 'nearby': 'off'}});
       await _toAbout(t);
-      await t.tap(find.byKey(PostAboutStep.notifyKey));
-      await settle(t);
       await t.tap(find.byKey(WizardBottomBar.nextKey));
       await settle(t);
-      final calls = server.calls('POST', '/social/trips');
-      expect(calls, hasLength(1));
-      expect((calls.single.data as Map)['notifyNearby'], isTrue);
+      expect(server.calls('POST', '/social/trips'), hasLength(1));
       expect(find.text('FEED posted=true'), findsOneWidget);
-      expect(SocialNavB.postedNote, SocialStringsB.notifyUsedUpPosted);
+      expect(SocialNavB.postedNote, isNull);
       await drain(t);
     });
 

@@ -178,7 +178,6 @@ class _FeedFilterSheetState extends State<FeedFilterSheet> {
               labels: FeedFilterSheet.travelLabels,
               selected: travelIndex,
               tone: tone,
-              compact: true,
               margin: EdgeInsets.zero,
               onTap: (i) => setState(() => _f = _f.copyWith(travel: FeedFilter.travelValues[i])),
             ),
