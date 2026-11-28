@@ -37,7 +37,7 @@ Future<void> _drain(WidgetTester t) async {
   }
 }
 
-Finder get _addBtn => find.widgetWithText(PrimaryButton, '+ Add trip');
+Finder get _addBtn => find.widgetWithText(PrimaryButton, '+ Add');
 
 Future<PrimaryButton> _add(WidgetTester t) async {
   await t.scrollUntilVisible(_addBtn, 200, scrollable: find.byType(Scrollable).first);
@@ -83,10 +83,12 @@ void main() {
     });
   }
 
-  testWidgets('L2 Free 4 of 4: tapping Add opens the Plus sheet, no form', (t) async {
+  testWidgets('L2 Free 4 of 4: Add, then Booked opens the Plus sheet, no form', (t) async {
     await _openTab(t, CalFake(months: {'2026-11': _month(plus: false, used: 4, limit: 4)}), OwnerPlans.free);
     await _add(t);
     await t.tap(_addBtn);
+    await _settle(t);
+    await t.tap(find.text('A trip you got by phone or WhatsApp'));
     await _settle(t);
     expect(find.byKey(GateKeys.sheet), findsOneWidget);
     expect(find.text('Save trip'), findsNothing);
@@ -103,10 +105,12 @@ void main() {
     await _drain(t);
   });
 
-  testWidgets('L1/L3 Add below the limit opens the trip form and sends no Plus sheet', (t) async {
+  testWidgets('L1/L3 Add below the limit, then Booked opens the trip form and sends no Plus sheet', (t) async {
     await _openTab(t, CalFake(months: {'2026-11': _month(plus: true, used: 4, limit: 50)}), _paid);
     await _add(t);
     await t.tap(_addBtn);
+    await _settle(t);
+    await t.tap(find.text('A trip you got by phone or WhatsApp'));
     await _settle(t);
     expect(find.byKey(GateKeys.sheet), findsNothing);
     expect(find.text('Save trip'), findsOneWidget);

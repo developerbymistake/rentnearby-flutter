@@ -106,6 +106,8 @@ class TaxiRoutesFormController extends ChangeNotifier {
 
   int get count => routes.length + (formOpen ? 1 : 0);
 
+  static String keyOf(Iterable<TaxiRouteModel> saved) => [for (final r in saved) draftOf(r).toJson()].toString();
+
   static TaxiRouteDraft draftOf(TaxiRouteModel r) => TaxiRouteDraft(
         id: r.id,
         from: TaxiRoutePlace(
@@ -132,6 +134,7 @@ class TaxiRoutesFormController extends ChangeNotifier {
     }
     formOpen = routes.length < max;
     clearForm();
+    openSingle();
     dirty = false;
     ring = null;
     _notify();
@@ -160,6 +163,20 @@ class TaxiRoutesFormController extends ChangeNotifier {
       if (SearchFold.fold(c.name) == name) return TaxiRoutePlace.fromCity(c);
     }
     return null;
+  }
+
+  // Onboarding keeps its one route in the open form, never as a list row.
+  void openSingle() {
+    if (!onboarding || routes.isEmpty) return;
+    final r = routes.removeAt(0);
+    editingIndex = 0;
+    _editingId = r.id;
+    from = r.from;
+    to = r.to;
+    fareCtrl.text = '${r.fare}';
+    tripType = r.tripType;
+    formOpen = true;
+    _notify();
   }
 
   void clearForm() {
@@ -281,7 +298,7 @@ class TaxiRoutesFormController extends ChangeNotifier {
   }
 
   bool validate() {
-    if (!commitForm()) return false;
+    if (!commitForm(skipBlank: !onboarding)) return false;
     if (routes.isEmpty) {
       AppToast.error('Add at least one route');
       formOpen = true;
@@ -420,10 +437,10 @@ class TaxiRouteFormCard extends StatelessWidget {
           final c = controller;
           if (!c.formOpen) return const SizedBox.shrink();
           final number = (c.editingIndex ?? c.routes.length) + 1;
-          final hint = c.editingIndex != null
-              ? TaxiSetupStrings.editRoute
-              : c.onboarding
-                  ? TaxiSetupStrings.addOneRoute
+          final hint = c.onboarding
+              ? TaxiSetupStrings.addOneRoute
+              : c.editingIndex != null
+                  ? TaxiSetupStrings.editRoute
                   : TaxiSetupStrings.newRoute;
           return FormSectionCard(
             key: c.formKey,
@@ -460,16 +477,4 @@ class TaxiRouteFormCard extends StatelessWidget {
           );
         },
       );
-}
-
-class TaxiRoutesForm extends StatelessWidget {
-  const TaxiRoutesForm({super.key, required this.controller, required this.tone});
-  final TaxiRoutesFormController controller;
-  final ListingTone tone;
-
-  @override
-  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        TaxiRouteSummaries(controller: controller, tone: tone),
-        TaxiRouteFormCard(controller: controller, tone: tone),
-      ]);
 }

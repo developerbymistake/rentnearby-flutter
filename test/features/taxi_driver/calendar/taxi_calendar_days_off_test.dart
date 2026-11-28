@@ -1,16 +1,15 @@
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/features/owner_core/calendar/calendar_api.dart';
 import 'package:bakhli/features/owner_core/calendar/models/calendar_models.dart';
 import 'package:bakhli/features/owner_core/data/owner_result.dart';
-import 'package:bakhli/features/owner_core/sheets/owner_states.dart';
 import 'package:bakhli/features/taxi_driver/availability/taxi_availability_api.dart';
 import 'package:bakhli/features/taxi_driver/availability/taxi_availability_models.dart';
 import 'package:bakhli/features/taxi_driver/availability/taxi_availability_store.dart';
 import 'package:bakhli/features/taxi_driver/calendar/taxi_bookings_tab.dart';
-import 'package:bakhli/features/taxi_driver/calendar/taxi_calendar_controller.dart';
 import 'package:bakhli/features/taxi_driver/calendar/taxi_month_grid.dart';
 import 'package:bakhli/features/taxi_driver/calendar/taxi_trip_sheet.dart';
+import 'package:bakhli/features/taxi_driver/strings/taxi_availability_strings.dart';
 import 'package:bakhli/features/taxi_driver/strings/taxi_calendar_strings.dart';
-import 'package:bakhli/features/taxi_driver/taxi_driver_deps.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart' hide Response;
@@ -31,24 +30,32 @@ Future<void> drain(WidgetTester t) async {
   }
 }
 
-Map<String, dynamic> _offJson(List<String> days) => {
+const String _daysOffPath = '/taxis/me/days-off';
+
+Map<String, dynamic> _offJson(List<String> days, {Map<String, String> reasons = const {}}) => {
       'today': '2026-11-21',
       'window': {'monthFrom': '2026-11-01', 'monthTo': '2026-11-30', 'locked': true},
       'monthsAhead': 0,
       'switchOn': true,
-      'daysOff': [for (final d in days) {'date': d, 'reason': null}],
+      'daysOff': [for (final d in days) {'date': d, 'reason': reasons[d]}],
       'bookedDays': const <String>[],
       'counts': {'month': '2026-11', 'bookings': 2, 'daysOff': days.length},
     };
 
-TaxiAvailabilityStore _offStore(List<String> days) {
+TaxiAvailabilityStore _offStore(List<String> days, {Map<String, String> reasons = const {}}) {
   final s = Get.put(TaxiAvailabilityStore(userId: () => 'user-a', clock: () => calToday));
-  s.apply(TaxiAvailability.fromJson(_offJson(days)));
-  TaxiDriverDeps.isDayOff = (d) => s.isOff(d);
+  s.apply(TaxiAvailability.fromJson(_offJson(days, reasons: reasons)));
   return s;
 }
 
 Finder _box(int day) => find.byWidgetPredicate((w) => w is TaxiDayBox && w.cell.inMonth && w.cell.date.day == day);
+
+Map<String, dynamic>? _lastBody(CalFake fake, String call) {
+  for (var i = fake.calls.length - 1; i >= 0; i--) {
+    if (fake.calls[i] == call) return fake.bodies[i];
+  }
+  return null;
+}
 
 Map<String, dynamic> _bucketBody(int seconds) => {
       'status': '429',
@@ -64,195 +71,251 @@ void main() {
     calTearDown();
   });
 
-  group('bookings tab', () {
-    testWidgets('an OFF day is grey with OFF; tap = toast and no sheet', (tester) async {
+  group('bookings calendar', () {
+    testWidgets('a day off is drawn in the same calendar with the legend and the rule line', (tester) async {
       final c = calSetUp(CalFake(months: {'2026-11': monthJson(entries: novEntries())}));
       _offStore(['2026-11-27', '2026-11-29']);
       await pumpPhone(tester, TaxiBookingsTab(root: true, controller: c));
       await settle(tester);
       expect(tester.widget<TaxiDayBox>(_box(27)).off, isTrue);
       expect(tester.widget<TaxiDayBox>(_box(26)).off, isFalse);
-      expect(find.descendant(of: _box(27), matching: find.text('OFF')), findsOneWidget);
+      expect(find.text('OFF'), findsNothing);
       final off = tester.widget<TaxiDayBox>(_box(27));
-      expect(TaxiDayBox.semanticsOf(off.cell, off: off.off), startsWith('27 November, Not available'));
-      await tester.tap(_box(27));
-      await settle(tester);
-      expect(find.text('This day is off. Change it on Home.'), findsOneWidget);
-      expect(find.text(TaxiCalendarStrings.daySheetTitle(DateTime(2026, 11, 27))), findsNothing);
-      expect(find.text(TaxiCalendarStrings.addTripOnDay), findsNothing);
+      expect(TaxiDayBox.semanticsOf(off.cell, off: off.off), startsWith('27 November, Day off'));
+      expect(find.text('Day off'), findsOneWidget, reason: 'legend');
+      expect(find.text('Booked and day-off days are hidden from travellers.'), findsOneWidget);
       await drain(tester);
     });
 
-    testWidgets('a past day stays tappable and opens the day sheet', (tester) async {
+    testWidgets('tapping a day off opens its sheet with Save, Change to Booked and Remove day off', (tester) async {
       final c = calSetUp(CalFake(months: {'2026-11': monthJson(entries: novEntries())}));
+      _offStore(['2026-11-27'], reasons: {'2026-11-27': 'Family function'});
+      await pumpPhone(tester, TaxiBookingsTab(root: true, controller: c));
+      await settle(tester);
+      await tester.tap(_box(27));
+      await settle(tester);
+      expect(find.text(TaxiAvailabilityStrings.sheetTitle(DateTime(2026, 11, 27))), findsOneWidget);
+      expect(find.text("Travellers won't see your taxi this day."), findsOneWidget);
+      expect(find.text('Family function'), findsOneWidget);
+      expect(find.text('Save'), findsOneWidget);
+      expect(find.text('Change to Booked'), findsOneWidget);
+      expect(find.text('Remove day off'), findsOneWidget);
+      expect(find.text('This day is off. Change it on Home.'), findsNothing);
+      await drain(tester);
+    });
+
+    testWidgets('Remove day off sends one clear key', (tester) async {
+      final fake = CalFake(months: {'2026-11': monthJson(entries: novEntries())});
+      final c = calSetUp(fake);
+      _offStore(['2026-11-27']);
+      await pumpPhone(tester, TaxiBookingsTab(root: true, controller: c), toastHost: true);
+      await settle(tester);
+      await tester.tap(_box(27));
+      await settle(tester);
+      await tester.tap(find.text('Remove day off'));
+      await settle(tester);
+      expect(fake.count('PUT $_daysOffPath'), 1);
+      expect(_lastBody(fake, 'PUT $_daysOffPath'), {'set': const <Map<String, dynamic>>[], 'clear': ['2026-11-27']});
+      await drain(tester);
+    });
+
+    testWidgets('a free future day asks Booked or Day off; Day off saves one set row with the reason', (tester) async {
+      final fake = CalFake(months: {'2026-11': monthJson(entries: novEntries())});
+      final c = calSetUp(fake);
+      _offStore(const []);
+      await pumpPhone(tester, TaxiBookingsTab(root: true, controller: c), toastHost: true);
+      await settle(tester);
+      await tester.tap(_box(24));
+      await settle(tester);
+      expect(find.text(TaxiCalendarStrings.daySheetTitle(DateTime(2026, 11, 24))), findsOneWidget);
+      expect(find.text('What is on this day?'), findsOneWidget);
+      expect(find.text('A trip you got by phone or WhatsApp'), findsOneWidget);
+      expect(find.text('You are not driving this day'), findsOneWidget);
+      await tester.tap(find.text('You are not driving this day'));
+      await settle(tester);
+      expect(find.text(TaxiAvailabilityStrings.sheetTitle(DateTime(2026, 11, 24))), findsOneWidget);
+      expect(find.text('Remove day off'), findsNothing);
+      expect(find.text('Change to Booked'), findsNothing);
+      await tester.enterText(find.byType(TextField).first, 'Wedding');
+      await tester.tap(find.text('Save'));
+      await settle(tester);
+      expect(_lastBody(fake, 'PUT $_daysOffPath'), {
+        'set': [
+          {'date': '2026-11-24', 'reason': 'Wedding'},
+        ],
+        'clear': const <String>[],
+      });
+      await drain(tester);
+    });
+
+    testWidgets('Booked opens Add trip on that day with the switch off; turned on, the trip is sent with keepVisible', (tester) async {
+      final fake = CalFake(months: {'2026-11': monthJson(entries: novEntries())});
+      final c = calSetUp(fake);
+      _offStore(const []);
+      await pumpPhone(tester, TaxiBookingsTab(root: true, controller: c));
+      await settle(tester);
+      await tester.tap(_box(24));
+      await settle(tester);
+      await tester.tap(find.text('A trip you got by phone or WhatsApp'));
+      await settle(tester);
+      expect(find.text('Save trip'), findsOneWidget);
+      expect(find.text(TaxiCalendarStrings.dateField(DateTime(2026, 11, 24))), findsOneWidget);
+      expect(find.text('Still take bookings this day'), findsOneWidget);
+      expect(find.text('Turn on for a short trip, like an airport drop'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).at(0), 'Airport drop');
+      await tester.ensureVisible(find.text('Still take bookings this day'));
+      await tester.tap(find.text('Still take bookings this day'));
+      await settle(tester);
+      await tester.tap(find.text('Save trip'));
+      await settle(tester);
+      final body = _lastBody(fake, 'POST /taxis/me/calendar/entries');
+      expect(body?['dateFrom'], '2026-11-24');
+      expect(body?['keepVisible'], isTrue);
+      await drain(tester);
+    });
+
+    testWidgets('Change to Booked opens Add trip for the day off and saves with no day-off refusal; the days off reload', (tester) async {
+      final fake = CalFake(months: {'2026-11': monthJson(entries: novEntries())});
+      final c = calSetUp(fake);
       _offStore(['2026-11-27']);
       await pumpPhone(tester, TaxiBookingsTab(root: true, controller: c));
       await settle(tester);
-      expect(tester.widget<TaxiDayBox>(_box(19)).off, isFalse);
-      await tester.tap(_box(19));
+      await tester.tap(_box(27));
       await settle(tester);
-      expect(find.text('This day is off. Change it on Home.'), findsNothing);
-      expect(find.text(TaxiCalendarStrings.daySheetTitle(DateTime(2026, 11, 19))), findsOneWidget);
-      expect(find.text(TaxiCalendarStrings.tripsOnDay(1)), findsOneWidget);
-      expect(find.text(TaxiCalendarStrings.addTripOnDay), findsOneWidget);
-      await drain(tester);
-    });
-
-    testWidgets('an off day with an app booking or an older own trip is drawn booked and opens its trips', (tester) async {
-      final c = calSetUp(CalFake(months: {'2026-11': monthJson(entries: novEntries())}));
-      _offStore(['2026-11-23', '2026-11-25', '2026-11-27']);
-      await pumpPhone(tester, TaxiBookingsTab(root: true, controller: c));
+      await tester.tap(find.text('Change to Booked'));
       await settle(tester);
-      final auto = tester.widget<TaxiDayBox>(_box(23));
-      expect(auto.off, isFalse);
-      expect(auto.cell.appCount, 1);
-      expect(find.descendant(of: _box(23), matching: find.text('OFF')), findsNothing);
-      expect(tester.widget<TaxiDayBox>(_box(25)).off, isFalse);
-      expect(tester.widget<TaxiDayBox>(_box(27)).off, isTrue);
-      await tester.tap(_box(23));
-      await settle(tester);
-      expect(find.text('This day is off. Change it on Home.'), findsNothing);
-      expect(find.text(TaxiCalendarStrings.daySheetTitle(DateTime(2026, 11, 23))), findsOneWidget);
-      expect(find.text(TaxiCalendarStrings.tripsOnDay(1)), findsOneWidget);
-      expect(find.text(TaxiCalendarStrings.addTripOnDay), findsNothing, reason: 'adding on an off day stays blocked');
-      Navigator.of(tester.element(find.text(TaxiCalendarStrings.tripsOnDay(1)))).pop();
-      await settle(tester);
-      await tester.tap(_box(25));
-      await settle(tester);
-      expect(find.text(TaxiCalendarStrings.daySheetTitle(DateTime(2026, 11, 25))), findsOneWidget);
-      expect(find.text(TaxiCalendarStrings.addTripOnDay), findsNothing);
-      await drain(tester);
-    });
-
-    testWidgets('a store today behind the calendar today: the past off day is not OFF and its tap opens the day sheet', (tester) async {
-      final c = calSetUp(CalFake(months: {'2026-11': monthJson(entries: novEntries())}));
-      final s = Get.put(TaxiAvailabilityStore(userId: () => 'user-a', clock: () => DateTime(2026, 11, 20)));
-      s.apply(TaxiAvailability.fromJson({..._offJson(['2026-11-20', '2026-11-27']), 'today': '2026-11-20'}));
-      TaxiDriverDeps.isDayOff = (d) => s.isOff(d);
-      expect(s.isOff(DateTime(2026, 11, 20)), isTrue);
-      await pumpPhone(tester, TaxiBookingsTab(root: true, controller: c));
-      await settle(tester);
-      expect(tester.widget<TaxiDayBox>(_box(20)).off, isFalse);
-      await tester.tap(_box(20));
-      await settle(tester);
-      expect(find.text('This day is off. Change it on Home.'), findsNothing);
-      expect(find.text(TaxiCalendarStrings.daySheetTitle(DateTime(2026, 11, 20))), findsOneWidget);
-      expect(find.text(TaxiCalendarStrings.nothingOnDay), findsOneWidget);
-      await drain(tester);
-    });
-
-    testWidgets('no store = no OFF day', (tester) async {
-      final c = calSetUp(CalFake(months: {'2026-11': monthJson(entries: novEntries())}));
-      await pumpPhone(tester, TaxiBookingsTab(root: true, controller: c));
-      await settle(tester);
-      expect(find.text('OFF'), findsNothing);
-    });
-  });
-
-  group('trip sheet', () {
-    Future<TaxiCalendarController> openSheet(WidgetTester tester, CalFake fake, {DateTime? date, CalendarEntry? editing}) async {
-      final c = calSetUp(fake);
-      await c.open(DateTime(2026, 11));
-      _offStore(['2026-11-21', '2026-11-22', '2026-11-27']);
-      await pumpPhone(
-        tester,
-        Scaffold(body: Builder(builder: (ctx) => TextButton(onPressed: () => TaxiTripSheet.show(ctx, controller: c, date: date, editing: editing), child: const Text('open')))),
-      );
-      await tester.tap(find.text('open'));
-      await settle(tester);
-      return c;
-    }
-
-    test('Add trip with today off starts on the next free day', () {
-      TaxiDriverDeps.isDayOff = (d) => d.day == 21 || d.day == 22;
-      expect(TaxiTripForm.firstFreeDay(DateTime(2026, 11, 21)), DateTime(2026, 11, 23));
-      expect(TaxiTripForm.firstFreeDay(DateTime(2026, 11, 24)), DateTime(2026, 11, 24));
-      TaxiDriverDeps.debugReset();
-    });
-
-    testWidgets('the form opens on the first day that is not off', (tester) async {
-      await openSheet(tester, CalFake(months: {'2026-11': monthJson(entries: novEntries())}));
-      expect(find.textContaining('23 Nov'), findsWidgets);
-    });
-
-    testWidgets('picking an off day shows the Date error at once and Save sends nothing', (tester) async {
-      final fake = CalFake(months: {'2026-11': monthJson(entries: novEntries())});
-      await openSheet(tester, fake);
-      expect(find.text('This day is off. Change it on Home.'), findsNothing);
-      await tester.tap(find.text(TaxiCalendarStrings.dateField(DateTime(2026, 11, 23))));
-      await settle(tester);
-      await tester.tap(find.descendant(of: find.byType(TemplateCalendarPopup), matching: find.text('27')).last);
-      await tester.pump();
-      await tester.tap(find.text('Apply'));
-      await settle(tester);
-      expect(find.byType(TemplateCalendarPopup), findsNothing);
       expect(find.text(TaxiCalendarStrings.dateField(DateTime(2026, 11, 27))), findsOneWidget);
-      expect(find.text('This day is off. Change it on Home.'), findsOneWidget);
-      await tester.enterText(find.byType(TextField).at(0), 'Airport drop');
-      await tester.tap(find.text('Save trip'));
-      await settle(tester);
-      expect(find.text('This day is off. Change it on Home.'), findsOneWidget);
-      expect(find.text('Save trip'), findsOneWidget);
-      expect(fake.count('POST'), 0);
-      await tester.tap(find.text(TaxiCalendarStrings.dateField(DateTime(2026, 11, 27))));
-      await settle(tester);
-      await tester.tap(find.descendant(of: find.byType(TemplateCalendarPopup), matching: find.text('24')).last);
-      await tester.pump();
-      await tester.tap(find.text('Apply'));
-      await settle(tester);
-      expect(find.text('This day is off. Change it on Home.'), findsNothing);
-    });
-
-    testWidgets('server DayIsOff maps to the Date error', (tester) async {
-      final fake = CalFake(months: {'2026-11': monthJson(entries: novEntries())});
-      final c = await openSheet(tester, fake);
-      final form = TaxiTripForm(controller: c, date: DateTime(2026, 11, 24));
-      form.applyRefusal(const OwnerRefused<void>(type: 'DayIsOff', statusCode: 409, data: {'date': '2026-11-24'}));
-      expect(form.errors[TaxiTripField.date], 'This day is off. Change it on Home.');
-      form.dispose();
-    });
-
-    testWidgets('a server DayIsOff on Save shows the Date error and reloads the days off', (tester) async {
-      final fake = CalFake(
-        months: {'2026-11': monthJson(entries: novEntries())},
-        writeRefusal: {
-          'status': 409,
-          'body': {
-            'data': {'date': '2026-11-23'},
-            'error': {'type': 'DayIsOff', 'message': 'This day is off.'},
-          },
-        },
-      );
-      await openSheet(tester, fake);
-      final store = Get.find<TaxiAvailabilityStore>();
-      var refreshed = 0;
-      final sub = store.load.listen((l) {
-        if (l is OwnerLoadData<TaxiAvailability> && l.stale) refreshed++;
-      });
-      await tester.enterText(find.byType(TextField).at(0), 'Airport drop');
+      await tester.enterText(find.byType(TextField).at(0), 'Mehra family');
+      final reads = fake.count('GET $_daysOffPath');
       await tester.tap(find.text('Save trip'));
       await settle(tester);
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
       await settle(tester);
-      expect(fake.count('POST'), 1);
-      expect(find.text('This day is off. Change it on Home.'), findsOneWidget);
-      expect(find.text('Save trip'), findsOneWidget);
-      expect(refreshed, 1, reason: 'the store refreshed once (the fake has no days-off read, so it keeps the value and marks it stale)');
-      await sub.cancel();
+      expect(fake.count('POST /taxis/me/calendar/entries'), 1);
+      expect(find.text('Save trip'), findsNothing, reason: 'saved and closed');
+      expect(_lastBody(fake, 'POST /taxis/me/calendar/entries')?['keepVisible'], isFalse);
+      expect(fake.count('GET $_daysOffPath'), greaterThan(reads), reason: 'the server cleared the day off, so the app reads the days off again');
       await drain(tester);
     });
 
-    testWidgets('an old entry on an off day can still save amounts (date not moved)', (tester) async {
+    testWidgets('a past day opens the day sheet', (tester) async {
+      final c = calSetUp(CalFake(months: {'2026-11': monthJson(entries: novEntries())}));
+      _offStore(['2026-11-27']);
+      await pumpPhone(tester, TaxiBookingsTab(root: true, controller: c));
+      await settle(tester);
+      await tester.tap(_box(19));
+      await settle(tester);
+      expect(find.text(TaxiCalendarStrings.daySheetTitle(DateTime(2026, 11, 19))), findsOneWidget);
+      expect(find.text(TaxiCalendarStrings.tripsOnDay(1)), findsOneWidget);
+      expect(find.text('What is on this day?'), findsNothing);
+      expect(find.widgetWithText(SecondaryButton, 'Day off'), findsNothing);
+      await drain(tester);
+    });
+
+    testWidgets('a future day with a trip can still be set as a day off from its day sheet', (tester) async {
       final fake = CalFake(months: {'2026-11': monthJson(entries: novEntries())});
-      final c = await openSheet(tester, fake);
-      final old = CalendarEntry.fromJson(tripJson('m27', from: '2026-11-27', label: 'Old trip', finalAmount: 900));
-      final form = TaxiTripForm(controller: c, editing: old);
-      expect(form.date, DateTime(2026, 11, 27));
+      final c = calSetUp(fake);
+      _offStore(const []);
+      await pumpPhone(tester, TaxiBookingsTab(root: true, controller: c), toastHost: true);
+      await settle(tester);
+      await tester.tap(_box(25));
+      await settle(tester);
+      expect(find.text(TaxiCalendarStrings.tripsOnDay(1)), findsOneWidget);
+      expect(find.text(TaxiCalendarStrings.addTripOnDay), findsOneWidget);
+      await tester.tap(find.widgetWithText(SecondaryButton, 'Day off'));
+      await settle(tester);
+      expect(find.text(TaxiAvailabilityStrings.sheetTitle(DateTime(2026, 11, 25))), findsOneWidget);
+      expect(find.text('Remove day off'), findsNothing);
+      await tester.tap(find.text('Save'));
+      await settle(tester);
+      expect(_lastBody(fake, 'PUT $_daysOffPath'), {
+        'set': [
+          {'date': '2026-11-25', 'reason': null},
+        ],
+        'clear': const <String>[],
+      });
+      await drain(tester);
+    });
+
+    testWidgets('a day past the trip window but inside the days-off window still offers Day off', (tester) async {
+      final month = monthJson(entries: novEntries());
+      month['window'] = {...month['window'] as Map<String, dynamic>, 'manualTo': '2026-11-26'};
+      final c = calSetUp(CalFake(months: {'2026-11': month}));
+      _offStore(const []);
+      await pumpPhone(tester, TaxiBookingsTab(root: true, controller: c));
+      await settle(tester);
+      expect(c.canAddOn(DateTime(2026, 11, 27)), isFalse);
+      await tester.tap(_box(27));
+      await settle(tester);
+      expect(find.text('What is on this day?'), findsOneWidget);
+      expect(find.text('You are not driving this day'), findsOneWidget);
+      await drain(tester);
+    });
+
+    testWidgets('a day off that also has a trip opens its trips with Add trip and a Day off button', (tester) async {
+      final c = calSetUp(CalFake(months: {'2026-11': monthJson(entries: novEntries())}));
+      _offStore(['2026-11-25']);
+      await pumpPhone(tester, TaxiBookingsTab(root: true, controller: c));
+      await settle(tester);
+      expect(tester.widget<TaxiDayBox>(_box(25)).off, isTrue);
+      await tester.tap(_box(25));
+      await settle(tester);
+      expect(find.text(TaxiCalendarStrings.tripsOnDay(1)), findsOneWidget);
+      expect(find.text(TaxiCalendarStrings.addTripOnDay), findsOneWidget);
+      await tester.tap(find.widgetWithText(SecondaryButton, 'Day off'));
+      await settle(tester);
+      expect(find.text(TaxiAvailabilityStrings.sheetTitle(DateTime(2026, 11, 25))), findsOneWidget);
+      expect(find.text('Remove day off'), findsOneWidget);
+      await drain(tester);
+    });
+
+    testWidgets('no store = no day off', (tester) async {
+      final c = calSetUp(CalFake(months: {'2026-11': monthJson(entries: novEntries())}));
+      await pumpPhone(tester, TaxiBookingsTab(root: true, controller: c));
+      await settle(tester);
+      expect(tester.widget<TaxiDayBox>(_box(27)).off, isFalse);
+    });
+  });
+
+  group('trip sheet', () {
+    test('the form starts on the given day even when it is off', () async {
+      final c = calSetUp(CalFake(months: {'2026-11': monthJson(entries: novEntries())}));
+      await c.open(DateTime(2026, 11));
+      _offStore(['2026-11-21', '2026-11-22']);
+      final form = TaxiTripForm(controller: c, date: DateTime(2026, 11, 21));
+      expect(form.date, DateTime(2026, 11, 21));
+      form.label.text = 'Airport drop';
       expect(form.validate(), isTrue);
       form.setDate(DateTime(2026, 11, 22));
-      expect(form.validate(), isFalse);
+      expect(form.errors[TaxiTripField.date], isNull);
       form.dispose();
     });
+
+    test('keepVisible: off by default, the switch sends true, an edit keeps the saved value', () async {
+      final c = calSetUp(CalFake(months: {'2026-11': monthJson(entries: novEntries())}));
+      await c.open(DateTime(2026, 11));
+      final form = TaxiTripForm(controller: c, date: DateTime(2026, 11, 24))..label.text = 'Airport drop';
+      expect(form.keepVisible, isFalse);
+      expect(form.draft().toJson()['keepVisible'], isFalse);
+      form.setKeepVisible(true);
+      expect(form.dirty, isTrue);
+      expect(form.draft().toJson()['keepVisible'], isTrue);
+      form.dispose();
+      final saved = CalendarEntry.fromJson({...tripJson('m24', from: '2026-11-24', label: 'Short drop'), 'keepVisible': true});
+      expect(saved.keepVisible, isTrue);
+      final edit = TaxiTripForm(controller: c, editing: saved);
+      expect(edit.keepVisible, isTrue);
+      expect(edit.dirty, isFalse);
+      expect(edit.draft().toJson()['keepVisible'], isTrue);
+      edit.dispose();
+      expect(CalendarEntry.fromJson(tripJson('m25', from: '2026-11-25')).keepVisible, isFalse);
+    });
+  });
+
+  test('stays are unchanged: a draft without keepVisible sends no key and an entry without it reads false', () {
+    final draft = CalendarEntryDraft(id: 's1', label: 'Guest', dateFrom: DateTime(2026, 11, 24), dateTo: DateTime(2026, 11, 25));
+    expect(draft.toJson().containsKey('keepVisible'), isFalse);
+    expect(CalendarEntry.fromJson(tripJson('s1', from: '2026-11-24')).keepVisible, isFalse);
   });
 
   group('bucket B (bookings) 429', () {

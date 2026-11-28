@@ -6,7 +6,6 @@ import 'package:bakhli/features/owner_core/data/owner_api.dart';
 import 'package:bakhli/features/owner_core/data/owner_cache.dart';
 import 'package:bakhli/features/owner_core/plan/plan_gate.dart';
 import 'package:bakhli/features/taxi_driver/availability/taxi_availability_api.dart';
-import 'package:bakhli/features/taxi_driver/availability/taxi_availability_controller.dart';
 import 'package:bakhli/features/taxi_driver/availability/taxi_availability_store.dart';
 import 'package:bakhli/features/taxi_driver/taxi_driver_deps.dart';
 import 'package:bakhli/models/my_plan_model.dart';
@@ -106,11 +105,10 @@ class AvailFake {
 }
 
 class AvailHarness {
-  AvailHarness(this.fake, this.store, this.controller);
+  AvailHarness(this.fake, this.store);
 
   final AvailFake fake;
   final TaxiAvailabilityStore store;
-  final TaxiAvailabilityController controller;
 }
 
 TaxiAvailabilityStore availStore(AvailFake fake, {MyPlanModel plan = OwnerPlans.free, String user = 'user-a'}) {
@@ -135,8 +133,7 @@ Future<AvailHarness> availSetUp(AvailFake fake, {MyPlanModel plan = OwnerPlans.f
   availBase();
   final store = availStore(fake, plan: plan);
   if (load) await store.refresh();
-  final c = Get.put(TaxiAvailabilityController(store: store, clock: () => availToday), tag: TaxiAvailabilityController.tag);
-  return AvailHarness(fake, store, c);
+  return AvailHarness(fake, store);
 }
 
 void availTearDown() {

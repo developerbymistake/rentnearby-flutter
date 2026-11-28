@@ -16,6 +16,7 @@ import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/plan_keys.dart';
 import '../../owner_core/sheets/owner_states.dart';
 import '../availability/taxi_availability_api.dart';
+import '../availability/taxi_availability_store.dart';
 import '../taxi_driver_deps.dart';
 import 'models/taxi_calendar_models.dart';
 
@@ -274,6 +275,7 @@ class TaxiCalendarController extends CalendarCoreController with WidgetsBindingO
     if (isClosed) return;
     OwnerCache.remove(userId, OwnerCacheKeys.summary(OwnerDates.monthKey(month.value)));
     if (!summaryLocked) loadSummary().ignore();
+    TaxiAvailabilityStore.maybe?.refresh(force: true).ignore();
     TaxiDriverDeps.refreshHome().ignore();
   }
 

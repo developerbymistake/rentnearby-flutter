@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import '../../config/app_routes.dart';
 import '../../design/design.dart';
 import '../owner_core/data/owner_args.dart';
-import 'availability/taxi_availability_screen.dart';
 import 'calendar/taxi_balance_due_screen.dart';
 import 'calendar/taxi_calendar_entry_screen.dart';
 import 'calendar/taxi_money_summary_screen.dart';
@@ -29,5 +28,4 @@ final List<GetPage<dynamic>> taxiDriverPages = [
   // A8 pages
   _page(AppRoutes.taxiPlanVisible, () => const TaxiPlanVisibleScreen()),
   // end A8
-  _page(AppRoutes.taxiAvailability, () => const TaxiAvailabilityScreen()),
 ];

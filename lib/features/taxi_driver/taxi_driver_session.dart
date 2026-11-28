@@ -65,7 +65,6 @@ abstract final class TaxiDriverSession {
     // end A7
     // A8 session
     // end A8
-    TaxiDriverDeps.isDayOff = (day) => TaxiAvailabilityStore.maybe?.isOff(day) ?? false;
     OwnerSessionHooks.register('${name}_availability', (_, _) => TaxiHourlyLimit.reset());
     OwnerPushSync.register('${name}_availability', (type, args) {
       if (reloadsCalendar(type)) TaxiAvailabilityStore.maybe?.refresh(force: true);

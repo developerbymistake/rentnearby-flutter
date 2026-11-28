@@ -13,15 +13,14 @@ import '../strings/taxi_calendar_strings.dart';
 import 'taxi_calendar_widgets.dart';
 
 class TaxiMonthGrid extends StatelessWidget {
-  const TaxiMonthGrid({super.key, required this.cells, this.selected, this.onTap, this.cellBuilder, this.offDays = const {}});
+  const TaxiMonthGrid({super.key, required this.cells, this.selected, this.onTap, this.offDays = const {}});
 
   final List<DayCell> cells;
   final DateTime? selected;
   final ValueChanged<DayCell>? onTap;
-  final Widget Function(DayCell cell)? cellBuilder;
   final Set<String> offDays;
 
-  bool _off(DayCell c) => c.inMonth && !c.isPast && !c.hasEntries && offDays.contains(OwnerDates.dayText(c.date));
+  bool _off(DayCell c) => c.inMonth && !c.isPast && !c.outsideWindow && offDays.contains(OwnerDates.dayText(c.date));
 
   @override
   Widget build(BuildContext context) {
@@ -36,9 +35,7 @@ class TaxiMonthGrid extends StatelessWidget {
             for (var i = 0; i < 7; i++) ...[
               if (i > 0) SizedBox(width: DS.gh(6)),
               Expanded(
-                child: cellBuilder != null
-                    ? cellBuilder!(week[i])
-                    : TaxiDayBox(cell: week[i], selected: _isSelected(week[i]), onTap: onTap, off: _off(week[i])),
+                child: TaxiDayBox(cell: week[i], selected: _isSelected(week[i]), onTap: onTap, off: _off(week[i])),
               ),
             ],
           ],
@@ -87,16 +84,16 @@ class TaxiDayBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!cell.inMonth) return SizedBox(height: DS.s(42));
-    final muted = cell.isPast || cell.outsideWindow || off;
+    final muted = cell.isPast || cell.outsideWindow;
     final bar = !off && cell.bar != BarPart.none && cell.appCount > 0;
-    final fill = selected && !off
+    final fill = off || selected
         ? TaxiCal.tileFill
         : bar
             ? Color.alphaBlend(TaxiCal.greenFill, DesignColors.surface)
             : muted
                 ? OwnerLook.pastDay
                 : DesignColors.surface;
-    final textColor = muted && !bar ? OwnerLook.pastText : (bar ? TaxiCal.greenText : Ink3D.title);
+    final textColor = off ? TaxiCal.accent : (muted && !bar ? OwnerLook.pastText : (bar ? TaxiCal.greenText : Ink3D.title));
     final radius = DS.circular(10);
     final ring = cell.isToday || selected;
     Widget box = Container(
@@ -104,7 +101,7 @@ class TaxiDayBox extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: radius,
         color: fill,
-        border: ring ? Border.all(color: TaxiCal.ownDot, width: DS.s(2)) : null,
+        border: ring ? Border.all(color: TaxiCal.ownDot, width: DS.s(2)) : (off ? Border.all(color: TaxiCal.ownDot, width: DS.s(1.5)) : null),
       ),
       child: Stack(
         children: [
@@ -122,16 +119,7 @@ class TaxiDayBox extends StatelessWidget {
                 Text('${cell.date.day}',
                     maxLines: 1, style: Ink3D.text(12.5, cell.isToday ? FontWeight.w700 : FontWeight.w600, cell.isToday ? TaxiCal.accent : textColor, letterSpacing: 0)),
                 SizedBox(height: DS.s(2)),
-                if (off)
-                  SizedBox(
-                    height: DS.s(11),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(TaxiAvailabilityStrings.offTag, maxLines: 1, style: Ink3D.text(9, FontWeight.w700, TaxiCal.accent, letterSpacing: 0.5)),
-                    ),
-                  )
-                else
-                  _Dots(cell: cell, bar: bar),
+                _Dots(cell: cell, bar: bar),
               ],
             ),
           ),
@@ -189,6 +177,18 @@ class TaxiLegend extends StatelessWidget {
       children: [
         item(dot(TaxiCal.appDot), TaxiCalendarStrings.legendFromApp),
         item(dot(TaxiCal.ownDot), TaxiCalendarStrings.legendAddedByYou),
+        item(
+          Container(
+            width: DS.s(11),
+            height: DS.s(11),
+            decoration: BoxDecoration(
+              color: TaxiCal.tileFill,
+              borderRadius: DS.circular(4),
+              border: Border.all(color: TaxiCal.ownDot, width: DS.s(1.5)),
+            ),
+          ),
+          TaxiAvailabilityStrings.legendOff,
+        ),
         item(Container(width: DS.s(12), height: DS.s(2), color: TaxiCal.festival), TaxiCalendarStrings.legendFestival),
       ],
     );

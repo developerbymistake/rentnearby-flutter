@@ -4,8 +4,6 @@ import '../../owner_core/json/owner_json.dart';
 import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/plan_keys.dart';
 
-enum TaxiAvailDay { past, booked, off, free }
-
 abstract final class TaxiReasonText {
   static const int max = 200;
 

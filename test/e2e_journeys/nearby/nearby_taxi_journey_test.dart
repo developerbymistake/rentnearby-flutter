@@ -349,11 +349,13 @@ void main() {
         expect(form.toLowerCase().contains(word), isFalse, reason: word);
       }
       final wizard = File('lib/features/taxi/setup/taxi_vehicle_screen.dart').readAsStringSync();
-      final submit = wizard.substring(wizard.indexOf('Future<void> _submit()'));
-      final check = submit.indexOf('_rate.check()');
+      final persist = wizard.substring(wizard.indexOf('Future<bool> _persistRate()'));
+      final check = persist.indexOf('_rate.check()');
       expect(check, isNonNegative);
-      expect(check, lessThan(submit.indexOf('saveLocalRate')));
-      expect(submit.substring(check, submit.indexOf('saveLocalRate')).contains('return;'), isTrue);
+      expect(check, lessThan(persist.indexOf('saveLocalRate')));
+      expect(persist.substring(check, persist.indexOf('saveLocalRate')).contains('return false;'), isTrue);
+      final submit = wizard.substring(wizard.indexOf('Future<void> _submit()'));
+      expect(submit.contains('_persistRate()'), isTrue);
       expect(wizard.contains('(optional)'), isFalse);
       expect(wizard.toLowerCase().contains('ask for a price'), isFalse);
     });
