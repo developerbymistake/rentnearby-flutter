@@ -426,7 +426,7 @@ void main() {
     testWidgets('C8 People: Followers', (t) async {
       putSeeker();
       _peopleServer();
-      await _open(t, const PeopleScreen());
+      await _open(t, const PeopleScreen(tab: 'followers'));
       await _snap(t, 'C8_people_followers');
       await _end(t);
     });

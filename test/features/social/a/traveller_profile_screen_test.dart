@@ -1,9 +1,14 @@
 import 'package:bakhli/config/app_routes.dart';
+import 'package:bakhli/features/social/a/people/discover/discover_card.dart';
+import 'package:bakhli/features/social/a/people/discover/discover_rail.dart';
 import 'package:bakhli/features/social/a/profile/profile_sections.dart';
 import 'package:bakhli/features/social/a/profile/traveller_profile_screen.dart';
 import 'package:bakhli/features/social/a/social_strings_a.dart';
 import 'package:bakhli/features/social/a/widgets/social_section_card.dart';
+import 'package:bakhli/features/social/shared/social_live.dart';
 import 'package:bakhli/features/social/shared/social_strings.dart';
+import 'package:bakhli/features/social/shared/widgets/follow_button.dart';
+import 'package:bakhli/features/social/shared/widgets/follow_limit_sheet.dart';
 import 'package:bakhli/features/trip/widgets/trip_plan_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,9 +17,23 @@ import 'package:get/get.dart';
 import '../../../support/buddy_render.dart';
 import '../shared/social_test_support.dart';
 
-final _pages = [GetPage(name: AppRoutes.dmRoom, page: () => Scaffold(body: Text('DM ${(Get.arguments as Map)['userId']}')))];
+final _pages = [
+  GetPage(name: AppRoutes.dmRoom, page: () => Scaffold(body: Text('DM ${(Get.arguments as Map)['userId']}'))),
+  GetPage(name: AppRoutes.people, page: () => Scaffold(body: Text('PEOPLE ${(Get.arguments as Map)['tab']}'))),
+];
 
 const _path = '/social/travellers/kavya';
+const _similar = '/social/discover/similar/kavya';
+
+Map<String, dynamic> _suggest(String id, String name, Map<String, dynamic> reason) =>
+    {...personJson(id, name), 'followsMe': false, 'iFollow': false, 'followRequested': false, 'isPrivate': false, 'reason': reason};
+
+Map<String, dynamic> _similarItems() => {
+      'items': [
+        _suggest('mehak', 'Mehak Rao', {'kind': 'sameTrip', 'cityName': 'Manali'}),
+        _suggest('priya', 'Priya Nair', {'kind': 'mutual', 'mutualCount': 1}),
+      ],
+    };
 
 void main() {
   useBuddyRenderScale();
@@ -146,5 +165,119 @@ void main() {
     expect(find.byKey(ProfileHeroCard.aboutKey), findsNothing);
     expect(find.byType(SocialSectionCard), findsNothing);
     await drain(t);
+  });
+  group('B2 Similar travellers', () {
+    testWidgets('an accepted follow opens the strip under the buttons, loaded once with limit 5', (t) async {
+      final server = installServer();
+      server.on('GET', _path, travellerJson(mutualCount: 0));
+      server.on('PUT', '$_path/follow', {'state': 'following'});
+      server.on('GET', _similar, _similarItems());
+      await pumpSocial(t, const TravellerProfileScreen(userId: 'kavya'), size: const Size(392, 2400), pages: _pages);
+      expect(find.byKey(TravellerProfileScreen.similarKey), findsNothing);
+      await t.tap(find.text(SocialStrings.follow));
+      await settle(t);
+      final strip = find.byKey(TravellerProfileScreen.similarKey);
+      expect(strip, findsOneWidget);
+      expect(find.text(SocialStringsA.youFollowLine('Kavya', 'Female')), findsOneWidget);
+      expect(find.text(SocialStringsA.similarTravellers), findsOneWidget);
+      expect(find.text('Also Manali'), findsOneWidget);
+      expect(find.text('Kavya follows'), findsOneWidget);
+      // The keyed Column starts at the buttons' bottom; its first visible box sits below its top margin.
+      final line = find.text(SocialStringsA.youFollowLine('Kavya', 'Female'));
+      expect(t.getTopLeft(line).dy, greaterThan(t.getRect(find.byKey(TravellerProfileScreen.messageKey)).bottom));
+      final calls = server.calls('GET', _similar);
+      expect(calls, hasLength(1));
+      expect(calls.single.queryParameters['limit'], 5);
+      await t.tap(find.byKey(DiscoverRail.seeAllKey));
+      await settle(t);
+      expect(find.text('PEOPLE discover'), findsOneWidget);
+      await drain(t);
+    });
+
+    testWidgets('unfollow closes the strip', (t) async {
+      final server = installServer();
+      server.on('GET', _path, travellerJson(mutualCount: 0));
+      server.on('PUT', '$_path/follow', {'state': 'following'});
+      server.on('DELETE', '$_path/follow', {});
+      server.on('GET', _similar, _similarItems());
+      await pumpSocial(t, const TravellerProfileScreen(userId: 'kavya'), size: const Size(392, 2400), pages: _pages);
+      await t.tap(find.text(SocialStrings.follow));
+      await settle(t);
+      expect(find.byKey(TravellerProfileScreen.similarKey), findsOneWidget);
+      await t.tap(find.byType(FollowButton).first);
+      await settle(t);
+      expect(server.calls('DELETE', '$_path/follow'), hasLength(1));
+      expect(find.byKey(TravellerProfileScreen.similarKey), findsNothing);
+      await drain(t);
+    });
+
+    testWidgets('hidden on Requested: no similar call for a private profile', (t) async {
+      final server = installServer();
+      server.on('GET', _path, travellerJson(privateLocked: true, mutualCount: 0));
+      server.on('PUT', '$_path/follow', {'state': 'requested'});
+      server.on('GET', _similar, _similarItems());
+      await pumpSocial(t, const TravellerProfileScreen(userId: 'kavya'), pages: _pages);
+      await t.tap(find.text(SocialStrings.follow));
+      await settle(t);
+      expect(find.text(SocialStrings.requested), findsOneWidget);
+      expect(find.byKey(TravellerProfileScreen.similarKey), findsNothing);
+      expect(server.calls('GET', _similar), isEmpty);
+      await drain(t);
+    });
+
+    testWidgets('hidden when the similar list is empty', (t) async {
+      final server = installServer();
+      server.on('GET', _path, travellerJson(mutualCount: 0));
+      server.on('PUT', '$_path/follow', {'state': 'following'});
+      server.on('GET', _similar, {'items': []});
+      await pumpSocial(t, const TravellerProfileScreen(userId: 'kavya'), pages: _pages);
+      await t.tap(find.text(SocialStrings.follow));
+      await settle(t);
+      expect(find.byKey(TravellerProfileScreen.similarKey), findsNothing);
+      await drain(t);
+    });
+
+    testWidgets('a refused follow (limit or block) makes no similar call and shows no strip', (t) async {
+      final server = installServer();
+      server.on('GET', _path, travellerJson(mutualCount: 0));
+      server.refuse('PUT', '$_path/follow', status: 429, type: 'TryLater');
+      server.on('GET', _similar, _similarItems());
+      await pumpSocial(t, const TravellerProfileScreen(userId: 'kavya'), size: const Size(392, 2400), pages: _pages);
+      await t.tap(find.text(SocialStrings.follow));
+      await settle(t);
+      expect(server.calls('PUT', '$_path/follow'), hasLength(1));
+      expect(server.calls('GET', _similar), isEmpty);
+      expect(find.byKey(TravellerProfileScreen.similarKey), findsNothing);
+      expect(find.text(SocialStrings.follow), findsOneWidget);
+      await t.tap(find.byKey(FollowLimitSheet.okKey));
+      await settle(t);
+      await drain(t);
+    });
+
+    testWidgets('a follow made on another screen flips the card in the strip', (t) async {
+      final server = installServer();
+      server.on('GET', _path, travellerJson(mutualCount: 0));
+      server.on('PUT', '$_path/follow', {'state': 'following'});
+      server.on('GET', _similar, _similarItems());
+      await pumpSocial(t, const TravellerProfileScreen(userId: 'kavya'), size: const Size(392, 2400), pages: _pages);
+      await t.tap(find.text(SocialStrings.follow));
+      await settle(t);
+      final mehak = find.byKey(DiscoverCard.keyOf('mehak'));
+      expect(find.descendant(of: mehak, matching: find.text(SocialStrings.follow)), findsOneWidget);
+      SocialLive.followChange.trigger(('mehak', true, false));
+      await settle(t);
+      expect(find.descendant(of: mehak, matching: find.text(SocialStrings.following)), findsOneWidget);
+      await drain(t);
+    });
+
+    testWidgets('no strip and no call when the profile opens already followed', (t) async {
+      final server = installServer();
+      server.on('GET', _path, travellerJson(iFollow: true, mutualCount: 0));
+      server.on('GET', _similar, _similarItems());
+      await pumpSocial(t, const TravellerProfileScreen(userId: 'kavya'), pages: _pages);
+      expect(find.byKey(TravellerProfileScreen.similarKey), findsNothing);
+      expect(server.calls('GET', _similar), isEmpty);
+      await drain(t);
+    });
   });
 }

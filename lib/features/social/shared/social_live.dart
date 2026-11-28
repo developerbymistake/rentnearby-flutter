@@ -11,6 +11,9 @@ abstract final class SocialLive {
   static final RxInt joinRequests = 0.obs;
   static final RxInt posts = 0.obs;
 
+  /// Last follow change made from any FollowButton: (userId, iFollow, requested). Use trigger() so a repeat still fires.
+  static final followChange = Rxn<(String, bool, bool)>();
+
   static void onHubEvent(List<Object?>? args) {
     final first = args == null || args.isEmpty ? null : args.first;
     final scope = first is Map ? first['scope'] : null;
@@ -39,5 +42,6 @@ abstract final class SocialLive {
     followRequests.value = 0;
     joinRequests.value = 0;
     posts.value = 0;
+    followChange.value = null;
   }
 }

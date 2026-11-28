@@ -55,4 +55,18 @@ class FollowApi {
   Future<BuddyResult<void>> addBuddy(String userId) => BuddyApiBase.run(() async => ApiService.put('/social/buddies/$userId', const {}));
 
   Future<BuddyResult<void>> removeBuddy(String userId) => BuddyApiBase.run(() async => ApiService.deleteJson('/buddies/$userId'));
+
+  /// Discover suggestions. chip = DiscoverChips value; refresh only on pull-to-refresh (server allows one per 30 s).
+  Future<BuddyResult<DiscoverPage>> discover({String chip = DiscoverChips.forYou, String? cursor, int? limit, bool refresh = false}) =>
+      BuddyApiBase.run(() async => DiscoverPage.fromJson(BuddyApiBase.dataOf(await BuddyApiBase.read(() => ApiService.get('/social/discover',
+          params: BuddyApiBase.query({'chip': chip, 'cursor': cursor, 'limit': limit, 'refresh': refresh ? 1 : null}))))));
+
+  /// X on a card: hides that traveller from Discover for 30 days.
+  Future<BuddyResult<void>> hide(String userId) =>
+      BuddyApiBase.run(() async => ApiService.post('/social/discover/hidden/$userId', const {}));
+
+  /// Similar travellers under a profile after an accepted follow (items only, no paging).
+  Future<BuddyResult<List<DiscoverPerson>>> similar(String userId, {int? limit}) => BuddyApiBase.run(() async =>
+      DiscoverPage.fromJson(BuddyApiBase.dataOf(await BuddyApiBase.read(() =>
+          ApiService.get('/social/discover/similar/$userId', params: BuddyApiBase.query({'limit': limit}))))).items);
 }

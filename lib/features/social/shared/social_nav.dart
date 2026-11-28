@@ -21,7 +21,7 @@ abstract final class SocialNav {
     return _go(AppRoutes.traveller, {'userId': userId});
   }
 
-  static Future<dynamic>? openPeople({String tab = 'followers'}) => _go(AppRoutes.people, {'tab': tab});
+  static Future<dynamic>? openPeople({String tab = 'discover'}) => _go(AppRoutes.people, {'tab': tab});
 
   static Future<dynamic>? openAddBuddies() => _go(AppRoutes.addBuddies);
 

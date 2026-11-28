@@ -17,6 +17,7 @@ import '../../shared/widgets/follow_button.dart';
 import '../../shared/widgets/person_actions.dart';
 import '../social_strings_a.dart';
 import '../widgets/social_chips_a.dart';
+import 'discover/discover_view.dart';
 import 'follow_requests_view.dart';
 import 'people_controller.dart';
 import 'people_find.dart';
@@ -24,7 +25,7 @@ import 'people_widgets.dart';
 import 'scan_to_follow.dart';
 
 class PeopleScreen extends StatefulWidget {
-  const PeopleScreen({super.key, this.tab = 'followers', this.scanToFollow = const ScanToFollow()});
+  const PeopleScreen({super.key, this.tab = PeopleController.tabDiscover, this.scanToFollow = const ScanToFollow()});
 
   final String tab;
   final ScanToFollow scanToFollow;
@@ -32,6 +33,7 @@ class PeopleScreen extends StatefulWidget {
   static const Key requestsRowKey = ValueKey('people_requests_row');
   static const Key scanQrKey = PeopleFindSection.scanKey;
   static const Key addFromFollowersKey = ValueKey('people_add_from_followers');
+  static const List<String> tabLabels = [SocialStringsA.discoverTab, ...SocialStringsA.peopleTabs];
 
   @override
   State<PeopleScreen> createState() => _PeopleScreenState();
@@ -48,6 +50,7 @@ class _PeopleScreenState extends State<PeopleScreen> {
   }
 
   bool _onScroll(ScrollNotification n) {
+    if (n.depth != 0) return false;
     if (n.metrics.pixels >= n.metrics.maxScrollExtent - DS.s(300)) {
       if (c.requestsOnly) {
         c.loadRequests(more: true);
@@ -84,34 +87,29 @@ class _PeopleScreenState extends State<PeopleScreen> {
       body: NotificationListener<ScrollNotification>(
         onNotification: _onScroll,
         child: RefreshIndicator(
-          onRefresh: () async {
-            await Future.wait([c.refreshCurrent(), c.loadRequests()]);
-          },
-          child: SingleChildScrollView(
+          onRefresh: c.pullRefresh,
+          child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.only(bottom: DS.s(24)),
-            child: Obx(() {
-              final i = c.selected.value;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  PeopleFindSection(api: widget.scanToFollow.api, onScan: () => widget.scanToFollow.start(context)),
-                  _requestsRow(),
-                  SegmentTabs(
-                    labels: SocialStringsA.peopleTabs,
-                    selected: i,
-                    onTap: c.select,
-                    tone: ListingTone.indigo,
-                    margin: DS.gapInsets(l: 18, t: 22, r: 18),
-                  ),
-                  switch (i) {
-                    1 => _following(),
-                    2 => _buddies(),
-                    _ => _followers(),
-                  },
-                ],
-              );
-            }),
+            slivers: [
+              SliverToBoxAdapter(child: PeopleFindSection(api: widget.scanToFollow.api, onScan: () => widget.scanToFollow.start(context))),
+              SliverToBoxAdapter(child: _requestsRow()),
+              SliverToBoxAdapter(
+                child: Obx(() => SegmentTabs(
+                      labels: PeopleScreen.tabLabels,
+                      selected: c.selected.value,
+                      onTap: c.select,
+                      tone: ListingTone.indigo,
+                      margin: DS.gapInsets(l: 18, t: 22, r: 18),
+                    )),
+              ),
+              Obx(() => switch (c.selectedTab) {
+                    PeopleController.tabDiscover => DiscoverSliver(c: c.discover),
+                    PeopleController.tabFollowing => SliverToBoxAdapter(child: _following()),
+                    PeopleController.tabBuddies => SliverToBoxAdapter(child: _buddies()),
+                    _ => SliverToBoxAdapter(child: _followers()),
+                  }),
+              SliverToBoxAdapter(child: SizedBox(height: DS.s(24))),
+            ],
           ),
         ),
       ),
@@ -218,7 +216,7 @@ class _PeopleScreenState extends State<PeopleScreen> {
         final list = c.followers;
         final items = list.items.toList();
         final state = PeopleStates.of(list.state.value,
-            empty: items.isEmpty, emptyTitle: SocialStringsA.noFollowers, emptyLine: SocialStringsA.noFollowersLine, onRetry: () => c.loadTab(0));
+            empty: items.isEmpty, emptyTitle: SocialStringsA.noFollowers, emptyLine: SocialStringsA.noFollowersLine, onRetry: () => c.loadKey(PeopleController.tabFollowers));
         if (state != null) return state;
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           PeopleLabel(SocialStringsA.followersCount(list.total.value)),
@@ -231,7 +229,7 @@ class _PeopleScreenState extends State<PeopleScreen> {
         final list = c.following;
         final items = list.items.toList();
         final state = PeopleStates.of(list.state.value,
-            empty: items.isEmpty, emptyTitle: SocialStringsA.noFollowing, emptyLine: SocialStringsA.noFollowingLine, onRetry: () => c.loadTab(1));
+            empty: items.isEmpty, emptyTitle: SocialStringsA.noFollowing, emptyLine: SocialStringsA.noFollowingLine, onRetry: () => c.loadKey(PeopleController.tabFollowing));
         if (state != null) return state;
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           PeopleLabel(SocialStringsA.followingCount(list.total.value)),
@@ -248,7 +246,7 @@ class _PeopleScreenState extends State<PeopleScreen> {
         top: 24,
         onTap: () async {
           await SocialNav.openAddBuddies();
-          c.loadTab(2);
+          c.loadKey(PeopleController.tabBuddies);
         },
       );
 
@@ -292,7 +290,7 @@ class _PeopleScreenState extends State<PeopleScreen> {
         final list = c.buddies;
         final items = list.items.toList();
         final state = PeopleStates.of(list.state.value,
-            empty: items.isEmpty, emptyTitle: SocialStringsA.noBuddies, emptyLine: SocialStringsA.noBuddiesLine, onRetry: () => c.loadTab(2));
+            empty: items.isEmpty, emptyTitle: SocialStringsA.noBuddies, emptyLine: SocialStringsA.noBuddiesLine, onRetry: () => c.loadKey(PeopleController.tabBuddies));
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           _addRow(),
           if (state != null)

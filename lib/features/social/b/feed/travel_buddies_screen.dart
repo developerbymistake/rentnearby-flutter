@@ -11,6 +11,9 @@ import '../../../../utils/input_formatters.dart';
 import '../../../buddy/shared/buddy_look.dart';
 import '../../../buddy/shared/widgets/buddy_page.dart';
 import '../../../buddy/shared/widgets/buddy_snack.dart';
+import '../../../buddy/shared/buddy_result.dart';
+import '../../shared/data/follow_api.dart';
+import '../../shared/social_live.dart';
 import '../../shared/social_me_controller.dart';
 import '../../shared/social_models.dart';
 import '../../shared/social_nav.dart';
@@ -19,6 +22,7 @@ import '../../shared/widgets/plus_widgets.dart';
 import '../../shared/widgets/public_trip_card.dart';
 import '../post/join_request_sheet.dart';
 import '../post/trip_post_actions.dart';
+import '../../a/people/discover/discover_rail.dart';
 import '../../a/people/people_widgets.dart';
 import '../../a/widgets/social_chips_a.dart';
 import '../models/join_gender_rule.dart';
@@ -41,6 +45,9 @@ class TravelBuddiesScreen extends StatefulWidget {
   static const Key searchKey = ValueKey('feed_search');
   static const Key liveKey = ValueKey('feed_live');
   static const Key liveCloseKey = ValueKey('feed_live_close');
+  static const Key railKey = ValueKey('feed_discover_rail');
+  static const int railAfter = 2;
+  static const int railSize = 5;
 
   @override
   State<TravelBuddiesScreen> createState() => _TravelBuddiesScreenState();
@@ -55,11 +62,14 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
   Worker? _ready;
   Worker? _nearFailed;
   Worker? _postedAgain;
+  Worker? _followChange;
   bool _snackShown = false;
   String? _liveTitle;
   String? _liveNote;
   bool _live = false;
   Timer? _liveTimer;
+  final _rail = <DiscoverPerson>[].obs;
+  int _railGen = 0;
 
   @override
   void initState() {
@@ -71,6 +81,10 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
       _ready = ever<FeedLoad>(c.state, (_) => _showLive());
       WidgetsBinding.instance.addPostFrameCallback((_) => _showLive());
     }
+    _loadRail();
+    _followChange = ever<(String, bool, bool)?>(SocialLive.followChange, (e) {
+      if (e != null) _railFollowChanged(e.$1, e.$2, e.$3);
+    });
     _nearFailed = ever<String?>(c.nearFailed, (m) {
       if (m != null && mounted) BuddySnack.show(context, m, danger: true);
     });
@@ -83,6 +97,7 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
     _ready?.dispose();
     _nearFailed?.dispose();
     _postedAgain?.dispose();
+    _followChange?.dispose();
     SocialNavB.feedClosed();
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
@@ -159,9 +174,37 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
   Future<void> _afterPost() async {
     if (!mounted) return;
     _snackShown = false;
+    _loadRail();
     await c.load();
     _showLive();
   }
+
+  Future<void> _loadRail() async {
+    final gen = ++_railGen;
+    final r = await const FollowApi().discover(limit: TravelBuddiesScreen.railSize);
+    if (gen != _railGen || !mounted) return;
+    _rail.assignAll(switch (r) {
+      BuddyOk<DiscoverPage>(:final value) => value.items,
+      _ => const <DiscoverPerson>[],
+    });
+  }
+
+  Future<void> _refresh() => Future.wait<void>([c.load(), _loadRail()]);
+
+  void _railFollowChanged(String userId, bool iFollow, bool requested) {
+    final i = _rail.indexWhere((p) => p.userId == userId);
+    if (i != -1) _rail[i] = _rail[i].copyWith(iFollow: iFollow, followRequested: requested);
+  }
+
+  Widget _discoverRail(List<DiscoverPerson> people) => KeyedSubtree(
+        key: TravelBuddiesScreen.railKey,
+        child: DiscoverRail(
+          people: people,
+          onSeeAll: () => SocialNav.openPeople(tab: 'discover'),
+          onFollowChanged: _railFollowChanged,
+          margin: DS.gapInsets(l: 18, r: 18, b: 16),
+        ),
+      );
 
   void _onScroll() {
     if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - DS.s(300)) c.loadMore();
@@ -427,6 +470,7 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
       final mine = c.mine.toList();
       final items = c.items.toList();
       final f = c.filter.value;
+      final rail = _rail.toList();
       final children = <Widget>[
         if (mine.isEmpty) const PlusBanner(from: 'feed'),
         _postButton(),
@@ -458,13 +502,18 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
                   : null,
             )));
           } else {
-            children.addAll([for (final t in items) _card(t)]);
+            final at = f.count > 0 || rail.isEmpty ? -1 : (items.length < TravelBuddiesScreen.railAfter ? items.length : TravelBuddiesScreen.railAfter);
+            for (var i = 0; i < items.length; i++) {
+              if (i == at) children.add(_discoverRail(rail));
+              children.add(_card(items[i]));
+            }
+            if (at == items.length) children.add(_discoverRail(rail));
             if (c.loadingMore.value) children.add(Padding(padding: DS.gapInsets(b: 20), child: const LoadMoreFooter(loading: true)));
           }
       }
       return RefreshIndicator(
         color: ListingTone.indigo.g2,
-        onRefresh: c.load,
+        onRefresh: _refresh,
         child: ListView(
           controller: _scroll,
           physics: const AlwaysScrollableScrollPhysics(),

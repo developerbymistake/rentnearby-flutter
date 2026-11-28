@@ -44,4 +44,6 @@ abstract final class SocialErrorTypes {
   static const String cannotRejoin = 'CannotRejoin';
   static const String publishLimit = 'PublishLimit';
   static const String removeMembersFirst = 'RemoveMembersFirst';
+  // Any follow limit or block (429, no data, no Retry-After); the app shows the same sheet for any 429 on follow.
+  static const String tryLater = 'TryLater';
 }

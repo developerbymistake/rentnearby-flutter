@@ -21,7 +21,10 @@ abstract final class SocialStrings {
   static const String blockSub = 'They are not told';
   static const String menOnly = 'Men only';
   static const String womenOnly = 'Women only';
-  static const String followLimit = 'You have followed many people today. Try again tomorrow.';
+  // Follow limit or block (D3): one generic message, never a counter or a date.
+  static const String tryLaterTitle = 'Try again later';
+  static const String tryLaterLine = 'We limit some actions to keep Bakhli safe.';
+  static const String ok = 'OK';
 
   // Delete waits until the other travellers are removed or have left.
   static String removeMembersFirstLine(int n) => n > 0 ? 'Remove the other travellers first ($n)' : 'Remove the other travellers first';
