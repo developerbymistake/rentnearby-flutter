@@ -23,12 +23,28 @@ class TravellerProfileController extends GetxController {
   final state = TravellerLoad.loading.obs;
   final profile = Rxn<TravellerProfile>();
   final buddyBusy = false.obs;
+  final similar = <DiscoverPerson>[].obs;
   int _gen = 0;
+  int _similarGen = 0;
+  bool _closed = false;
+  Worker? _followChange;
+
+  static const int similarSize = 5;
 
   @override
   void onInit() {
     super.onInit();
+    _followChange = ever<(String, bool, bool)?>(SocialLive.followChange, (e) {
+      if (e != null) onSimilarFollowChanged(e.$1, e.$2, e.$3);
+    });
     load();
+  }
+
+  @override
+  void onClose() {
+    _closed = true;
+    _followChange?.dispose();
+    super.onClose();
   }
 
   Future<void> load() async {
@@ -54,10 +70,36 @@ class TravellerProfileController extends GetxController {
 
   void onFollowChanged(bool iFollow, bool requested) {
     final p = profile.value;
-    if (p == null) return;
+    if (_closed || p == null) return;
     final delta = (iFollow ? 1 : 0) - (p.iFollow ? 1 : 0);
     profile.value = p.copyWith(iFollow: iFollow, followRequested: requested, followers: p.followers + delta < 0 ? 0 : p.followers + delta);
     if (iFollow && p.privateLocked) load();
+    if (!iFollow || requested) {
+      _similarGen++;
+      similar.clear();
+    }
+  }
+
+  /// B2: the similar strip loads only after the server accepted the follow.
+  void onFollowSettled(bool iFollow, bool requested) {
+    final p = profile.value;
+    if (_closed || p == null || !iFollow || requested || p.privateLocked) return;
+    _loadSimilar();
+  }
+
+  Future<void> _loadSimilar() async {
+    final gen = ++_similarGen;
+    final r = await _follow.similar(userId, limit: similarSize);
+    if (gen != _similarGen) return;
+    similar.assignAll(switch (r) {
+      BuddyOk<List<DiscoverPerson>>(:final value) => value,
+      _ => const <DiscoverPerson>[],
+    });
+  }
+
+  void onSimilarFollowChanged(String id, bool iFollow, bool requested) {
+    final i = similar.indexWhere((x) => x.userId == id);
+    if (i != -1) similar[i] = similar[i].copyWith(iFollow: iFollow, followRequested: requested);
   }
 
   Future<String?> toggleBuddy() async {

@@ -684,3 +684,120 @@ class SocialMe {
     );
   }
 }
+
+abstract final class DiscoverReasonKinds {
+  static const String sameTrip = 'sameTrip';
+  static const String travelledWith = 'travelledWith';
+  static const String followsYou = 'followsYou';
+  static const String mutual = 'mutual';
+  static const String near = 'near';
+  static const String interests = 'interests';
+  static const String places = 'places';
+}
+
+abstract final class DiscoverChips {
+  static const String forYou = 'forYou';
+  static const String sameTrip = 'sameTrip';
+  static const String near = 'near';
+  static const String mutual = 'mutual';
+  static const String interests = 'interests';
+
+  static const List<String> all = [forYou, sameTrip, near, mutual, interests];
+}
+
+/// Why a traveller is suggested. Only the fields of its kind are set; month is yyyymm (never an exact date).
+class DiscoverReason {
+  const DiscoverReason({required this.kind, this.cityName, this.month, this.mutualName, this.mutualCount = 0, this.tags = const []});
+
+  final String kind;
+  final String? cityName;
+  final int? month;
+  final String? mutualName;
+  final int mutualCount;
+  final List<String> tags;
+
+  static const DiscoverReason none = DiscoverReason(kind: '');
+
+  factory DiscoverReason.fromJson(Map<String, dynamic>? j) {
+    if (j == null) return none;
+    return DiscoverReason(
+      kind: BuddyJson.str(j['kind']),
+      cityName: BuddyJson.strOrNull(j['cityName']),
+      month: BuddyJson.intOrNull(j['month']),
+      mutualName: BuddyJson.strOrNull(j['mutualName']),
+      mutualCount: BuddyJson.integer(j['mutualCount']),
+      tags: BuddyJson.strings(j['tags']),
+    );
+  }
+}
+
+class DiscoverPerson {
+  const DiscoverPerson({
+    required this.person,
+    this.followsMe = false,
+    this.iFollow = false,
+    this.followRequested = false,
+    this.isPrivate = false,
+    this.reason = DiscoverReason.none,
+  });
+
+  final SocialPerson person;
+  final bool followsMe;
+  final bool iFollow;
+  final bool followRequested;
+  final bool isPrivate;
+  final DiscoverReason reason;
+
+  String get userId => person.userId;
+
+  DiscoverPerson copyWith({bool? iFollow, bool? followRequested}) => DiscoverPerson(
+        person: person,
+        followsMe: followsMe,
+        iFollow: iFollow ?? this.iFollow,
+        followRequested: followRequested ?? this.followRequested,
+        isPrivate: isPrivate,
+        reason: reason,
+      );
+
+  factory DiscoverPerson.fromJson(Map<String, dynamic> j) => DiscoverPerson(
+        person: SocialPerson.fromJson(j),
+        followsMe: BuddyJson.boolean(j['followsMe']),
+        iFollow: BuddyJson.boolean(j['iFollow']),
+        followRequested: BuddyJson.boolean(j['followRequested']),
+        isPrivate: BuddyJson.boolean(j['isPrivate']),
+        reason: DiscoverReason.fromJson(BuddyJson.mapOrNull(j['reason'])),
+      );
+}
+
+/// Header of the Same trip chip ("ALSO GOING TO MANALI · DEC"); month is yyyymm.
+class DiscoverTrip {
+  const DiscoverTrip({required this.cityName, required this.month});
+
+  final String cityName;
+  final int month;
+
+  static DiscoverTrip? fromJson(Map<String, dynamic>? j) {
+    if (j == null) return null;
+    final city = BuddyJson.str(j['cityName']);
+    return city.isEmpty ? null : DiscoverTrip(cityName: city, month: BuddyJson.integer(j['month']));
+  }
+}
+
+/// A page may hold fewer items than asked while nextCursor is set: keep loading while hasMore.
+class DiscoverPage {
+  const DiscoverPage({required this.items, this.nextCursor, this.myTrip});
+
+  final List<DiscoverPerson> items;
+  final String? nextCursor;
+  final DiscoverTrip? myTrip;
+
+  static const DiscoverPage empty = DiscoverPage(items: []);
+
+  bool get hasMore => nextCursor != null;
+
+  factory DiscoverPage.fromJson(Map<String, dynamic> j) => DiscoverPage(
+        items: BuddyJson.list(j['items'], DiscoverPerson.fromJson),
+        nextCursor: BuddyJson.strOrNull(j['nextCursor']),
+        myTrip: DiscoverTrip.fromJson(BuddyJson.mapOrNull(j['myTrip'])),
+      );
+}

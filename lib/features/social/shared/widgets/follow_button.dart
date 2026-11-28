@@ -8,6 +8,7 @@ import '../data/follow_api.dart';
 import '../social_error_types.dart';
 import '../social_live.dart';
 import '../social_strings.dart';
+import 'follow_limit_sheet.dart';
 
 class FollowButton extends StatefulWidget {
   const FollowButton({
@@ -17,6 +18,7 @@ class FollowButton extends StatefulWidget {
     required this.followRequested,
     required this.followsMe,
     this.onChanged,
+    this.onSettled,
     this.compact = false,
     this.light = false,
     this.api = const FollowApi(),
@@ -27,6 +29,9 @@ class FollowButton extends StatefulWidget {
   final bool followRequested;
   final bool followsMe;
   final void Function(bool iFollow, bool requested)? onChanged;
+
+  /// Called once with the server's final state after an accepted follow or unfollow.
+  final void Function(bool iFollow, bool requested)? onSettled;
   final bool compact;
   final bool light;
   final FollowApi api;
@@ -56,17 +61,22 @@ class _FollowButtonState extends State<FollowButton> {
   }
 
   void _set(bool iFollow, bool requested) {
+    SocialLive.followChange.trigger((widget.userId, iFollow, requested));
+    widget.onChanged?.call(iFollow, requested);
     if (!mounted) return;
     setState(() {
       _iFollow = iFollow;
       _requested = requested;
     });
-    widget.onChanged?.call(iFollow, requested);
+  }
+
+  void _settled(bool iFollow, bool requested) {
+    if (mounted) widget.onSettled?.call(iFollow, requested);
   }
 
   Future<void> _tap() async {
     if (_busy) return;
-    _busy = true;
+    setState(() => _busy = true);
     final wasFollow = _iFollow;
     final wasRequested = _requested;
     try {
@@ -78,6 +88,7 @@ class _FollowButtonState extends State<FollowButton> {
           _fail(r);
         } else {
           SocialLive.followers.value++;
+          _settled(false, false);
         }
       } else {
         _set(true, false);
@@ -86,21 +97,33 @@ class _FollowButtonState extends State<FollowButton> {
           final requested = value == FollowApi.stateRequested;
           _set(!requested, requested);
           SocialLive.followers.value++;
+          _settled(!requested, requested);
         } else {
           _set(wasFollow, wasRequested);
           _fail(r);
         }
       }
     } finally {
-      _busy = false;
+      if (mounted) {
+        setState(() => _busy = false);
+      } else {
+        _busy = false;
+      }
     }
   }
 
+  static bool _isTryLater(BuddyResult<dynamic> r) =>
+      r is BuddyRefused && (r.rateLimited || r.type == SocialErrorTypes.tryLater || r.type == SocialErrorTypes.tooManyRequests);
+
   void _fail(BuddyResult<dynamic> r) {
     if (!mounted) return;
+    if (_isTryLater(r)) {
+      FollowLimitSheet.show(context);
+      return;
+    }
     final text = switch (r) {
       BuddyOffline() => SocialStrings.offline,
-      BuddyRefused(:final type, :final message) => type == SocialErrorTypes.tooManyRequests ? SocialStrings.followLimit : (message ?? SocialStrings.failed),
+      BuddyRefused(:final message) => message ?? SocialStrings.failed,
       _ => SocialStrings.failed,
     };
     BuddySnack.show(context, text, danger: true);
@@ -111,12 +134,15 @@ class _FollowButtonState extends State<FollowButton> {
     final label = FollowButton.labelOf(iFollow: _iFollow, requested: _requested, followsMe: widget.followsMe);
     final height = widget.compact ? 36.0 : 50.0;
     final font = widget.compact ? 13.0 : 15.0;
+    final Widget pill;
     if (_iFollow || _requested) {
-      return WhitePillButton(tone: BuddyLook.indigo, label: label, onTap: _tap, neutral: true, height: height, fontSize: font, expand: !widget.compact);
+      pill = WhitePillButton(tone: BuddyLook.indigo, label: label, onTap: _tap, neutral: true, height: height, fontSize: font, expand: !widget.compact);
+    } else if (widget.light) {
+      pill = WhitePillButton(tone: BuddyLook.indigo, label: label, onTap: _tap, height: height, fontSize: font, expand: !widget.compact);
+    } else {
+      pill = GradientPillButton(tone: BuddyLook.teal, label: label, onTap: _tap, height: height, fontSize: font, expand: !widget.compact);
     }
-    if (widget.light) {
-      return WhitePillButton(tone: BuddyLook.indigo, label: label, onTap: _tap, height: height, fontSize: font, expand: !widget.compact);
-    }
-    return GradientPillButton(tone: BuddyLook.teal, label: label, onTap: _tap, height: height, fontSize: font, expand: !widget.compact);
+    // Busy keeps the live look; IgnorePointer only blocks a second tap.
+    return IgnorePointer(ignoring: _busy, child: pill);
   }
 }

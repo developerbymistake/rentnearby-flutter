@@ -7,6 +7,7 @@ import '../controllers/home_controller.dart';
 import '../design/design.dart';
 import '../design/extra/instagram_look.dart';
 import '../config/app_tabs.dart';
+import '../features/seeker_home/build_circle_card.dart';
 import '../features/seeker_home/seeker_feed_controller.dart';
 import '../features/seeker_home/seeker_home_parts.dart';
 import '../features/seeker_home/seeker_quick_actions.dart';
@@ -115,7 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const StaggerItem(index: 0, child: HomeHeroCarousel()),
+                const StaggerItem(index: 0, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [HomeHeroCarousel(), BuildCircleCard()])),
                 const StaggerItem(index: 1, child: SeekerQuickActions()),
                 const StaggerItem(index: 2, child: FindBuddiesPostCard(place: FindBuddiesPostPlace.home)),
                 const StaggerItem(index: 3, child: TripsToJoinRail()),

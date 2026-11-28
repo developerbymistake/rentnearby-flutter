@@ -8,6 +8,7 @@ import '../../shared/social_live.dart';
 import '../../shared/social_me_controller.dart';
 import '../../shared/social_models.dart';
 import '../../shared/social_strings.dart';
+import 'discover/discover_controller.dart';
 
 enum ListLoad { idle, loading, ready, offline, failed }
 
@@ -33,20 +34,23 @@ class PeopleList<T> {
 }
 
 class PeopleController extends GetxController {
-  PeopleController({String tab = 'followers', FollowApi api = const FollowApi(), BuddiesApi buddiesApi = const BuddiesApi()})
+  PeopleController({String tab = tabDiscover, FollowApi api = const FollowApi(), BuddiesApi buddiesApi = const BuddiesApi(), DiscoverController? discover})
       : _api = api,
         _buddiesApi = buddiesApi,
+        discover = discover ?? DiscoverController(api: api),
         initialTab = tab;
 
+  static const String tabDiscover = 'discover';
   static const String tabFollowers = 'followers';
   static const String tabFollowing = 'following';
   static const String tabBuddies = 'buddies';
   static const String tabRequests = 'requests';
-  static const List<String> tabs = [tabFollowers, tabFollowing, tabBuddies];
+  static const List<String> tabs = [tabDiscover, tabFollowers, tabFollowing, tabBuddies];
 
   final FollowApi _api;
   final BuddiesApi _buddiesApi;
   final String initialTab;
+  final DiscoverController discover;
 
   late final selected = (tabs.indexOf(initialTab) < 0 ? 0 : tabs.indexOf(initialTab)).obs;
   final followers = PeopleList<PersonRow>();
@@ -58,6 +62,8 @@ class PeopleController extends GetxController {
 
   bool get requestsOnly => initialTab == tabRequests;
 
+  String get selectedTab => tabs[selected.value];
+
   @override
   void onInit() {
     super.onInit();
@@ -67,8 +73,11 @@ class PeopleController extends GetxController {
       loadRequests();
       loadTab(selected.value);
     }
-    _workers.add(ever<int>(SocialLive.followers, (_) => refreshCurrent()));
+    _workers.add(ever<int>(SocialLive.followers, (_) => _onFollowsChanged()));
     _workers.add(ever<int>(SocialLive.followRequests, (_) => loadRequests()));
+    _workers.add(ever<(String, bool, bool)?>(SocialLive.followChange, (e) {
+      if (e != null) discover.onFollowChanged(e.$1, e.$2, e.$3);
+    }));
   }
 
   @override
@@ -86,20 +95,40 @@ class PeopleController extends GetxController {
     if (list.state.value == ListLoad.idle) loadTab(i);
   }
 
-  PeopleList<dynamic> _listOf(int i) => switch (i) {
-        1 => following,
-        2 => buddies,
+  PeopleList<dynamic> _listOf(int i) => switch (tabs[i]) {
+        tabDiscover => discover.current,
+        tabFollowing => following,
+        tabBuddies => buddies,
         _ => followers,
       };
+
+  // Discover never reloads after a follow (the card flips itself); the other lists reload when opened.
+  void _onFollowsChanged() {
+    if (requestsOnly || selectedTab != tabDiscover) {
+      refreshCurrent();
+      return;
+    }
+    followers.clear();
+    following.clear();
+  }
 
   Future<void> refreshCurrent() async {
     if (requestsOnly) return loadRequests();
     await loadTab(selected.value);
   }
 
-  Future<void> loadTab(int i, {bool more = false}) => switch (i) {
-        1 => _loadFollowing(more: more),
-        2 => _loadBuddies(more: more),
+  /// Pull to refresh: Discover asks the server to rebuild its suggestions.
+  Future<void> pullRefresh() async {
+    if (requestsOnly) return loadRequests();
+    await Future.wait([selectedTab == tabDiscover ? discover.refresh() : loadTab(selected.value), loadRequests()]);
+  }
+
+  Future<void> loadTab(int i, {bool more = false}) => loadKey(tabs[i], more: more);
+
+  Future<void> loadKey(String key, {bool more = false}) => switch (key) {
+        tabDiscover => discover.load(more: more),
+        tabFollowing => _loadFollowing(more: more),
+        tabBuddies => _loadBuddies(more: more),
         _ => _loadFollowers(more: more),
       };
 
@@ -228,7 +257,7 @@ class PeopleController extends GetxController {
       SocialMeController.maybe?.applyFollowRequests(requests.total.value);
       if (accept) {
         followers.clear();
-        if (!requestsOnly && selected.value == 0) loadTab(0);
+        if (!requestsOnly && selectedTab == tabFollowers) loadKey(tabFollowers);
         SocialMeController.maybe?.refreshQuiet();
       }
       return null;
@@ -243,6 +272,7 @@ class PeopleController extends GetxController {
     following.items.removeWhere((r) => r.person.userId == userId);
     requests.items.removeWhere((r) => r.person.userId == userId);
     buddies.items.removeWhere((b) => b.userId == userId);
+    discover.onBlocked(userId);
     SocialMeController.maybe?.refreshQuiet();
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:bakhli/config/app_routes.dart';
 import 'package:bakhli/config/app_tabs.dart';
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/controllers/chat_controller.dart';
@@ -9,6 +10,10 @@ import 'package:bakhli/controllers/notification_controller.dart';
 import 'package:bakhli/controllers/plan_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/features/buddy/shared/buddy_result.dart';
+import 'package:bakhli/features/buddy/triplimit/trip_limit_api.dart';
+import 'package:bakhli/features/buddy/triplimit/trip_limit_gate.dart';
+import 'package:bakhli/features/buddy/triplimit/trip_limit_models.dart';
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/models/my_plan_model.dart';
@@ -76,6 +81,13 @@ class _Plan extends PlanController {
   @override
   // ignore: must_call_super
   void onInit() {}
+}
+
+class _FreeSlots extends TripLimitApi {
+  const _FreeSlots();
+
+  @override
+  Future<BuddyResult<TripSlots>> slots() async => const BuddyOk(TripSlots(limit: 1, count: 0, trips: []));
 }
 
 class _Loc extends LocationController {
@@ -233,7 +245,10 @@ void main() {
   testWidgets('home taps reach the same targets', (t) async {
     debugDisableShadows = false;
     _register();
-    await pumpPhone(t, _app(), size: const Size(360, 3000));
+    TripLimitGate.api = const _FreeSlots();
+    addTearDown(TripLimitGate.debugReset);
+    final pages = [GetPage(name: AppRoutes.tripWhere, page: () => const Scaffold(body: Text('WHERE TO NEXT')))];
+    await pumpPhone(t, _app(), size: const Size(360, 3000), pages: pages);
     await _settle(t);
     expect(find.text('Hi, Rahul'), findsOneWidget);
     expect(find.text('Where to next?'), findsOneWidget);
@@ -243,9 +258,11 @@ void main() {
     expect(find.text('2'), findsOneWidget);
     expect(find.text('1'), findsOneWidget);
     final auth = Get.find<AuthController>();
+    // Popular See all opens the Trip Planner city pick (owner I-14), not the Trips tab.
     await t.tap(find.text('See all').first);
-    await t.pump();
-    expect(auth.tabIndex.value, AppTabs.trips);
+    await _settle(t);
+    expect(find.text('WHERE TO NEXT'), findsOneWidget);
+    expect(auth.tabIndex.value, AppTabs.home);
     debugDisableShadows = true;
     await t.pumpWidget(const SizedBox());
   });

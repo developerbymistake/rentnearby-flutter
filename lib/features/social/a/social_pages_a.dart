@@ -17,7 +17,7 @@ final List<GetPage<dynamic>> socialPagesA = [
   _page(AppRoutes.settings, () => const SettingsScreen()),
   _page(AppRoutes.editProfile, () => const EditProfileScreen()),
   _page(AppRoutes.traveller, () => TravellerProfileScreen(userId: BuddyArgs.text(BuddyArgs.current, 'userId'))),
-  _page(AppRoutes.people, () => PeopleScreen(tab: BuddyArgs.textOrNull(BuddyArgs.current, 'tab') ?? 'followers')),
+  _page(AppRoutes.people, () => PeopleScreen(tab: BuddyArgs.textOrNull(BuddyArgs.current, 'tab') ?? 'discover')),
   _page(AppRoutes.addBuddies, () => const AddBuddiesScreen()),
   _page(AppRoutes.travelLevels, () => const TravelLevelsScreen()),
 ];

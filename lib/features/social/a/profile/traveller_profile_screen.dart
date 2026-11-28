@@ -15,6 +15,7 @@ import '../../shared/widgets/follow_button.dart';
 import '../../shared/widgets/mutuals_line.dart';
 import '../../shared/widgets/person_actions.dart';
 import '../../shared/widgets/travel_level_widgets.dart';
+import '../people/discover/discover_rail.dart';
 import '../social_strings_a.dart';
 import 'profile_sections.dart';
 import 'traveller_profile_controller.dart';
@@ -29,6 +30,7 @@ class TravellerProfileScreen extends StatefulWidget {
   static const Key menuKey = ValueKey('traveller_menu');
   static const Key backKey = ValueKey('traveller_back');
   static const Key topBarKey = ValueKey('traveller_top_bar');
+  static const Key similarKey = ValueKey('traveller_similar');
 
   @override
   State<TravellerProfileScreen> createState() => _TravellerProfileScreenState();
@@ -140,6 +142,7 @@ class _TravellerProfileScreenState extends State<TravellerProfileScreen> {
       followRequested: p.followRequested,
       followsMe: p.followsMe,
       onChanged: c.onFollowChanged,
+      onSettled: c.onFollowSettled,
     );
     final rows = <Widget>[];
     if (p.followsMe) {
@@ -152,6 +155,35 @@ class _TravellerProfileScreenState extends State<TravellerProfileScreen> {
       rows.add(Row(children: [Expanded(flex: 13, child: follow), Gap.h(12), Expanded(flex: 10, child: message)]));
     }
     return Padding(padding: DS.gapInsets(l: 18, t: 22, r: 18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows));
+  }
+
+  Widget _similar(TravellerProfile p) {
+    return Obx(() {
+      final people = c.similar.toList();
+      if (people.isEmpty || !p.iFollow || p.followRequested) return const SizedBox.shrink();
+      final first = p.person.name.trim().split(' ').first;
+      return Column(
+        key: TravellerProfileScreen.similarKey,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            margin: DS.gapInsets(l: 18, t: 16, r: 18),
+            padding: DS.sym(h: 12, v: 10),
+            decoration: BoxDecoration(color: BuddyLook.snackBg, borderRadius: DS.circular(14)),
+            child: Text(SocialStringsA.youFollowLine(first, p.gender), style: Ink3D.text(13, FontWeight.w400, DesignColors.onPrimary, letterSpacing: 0)),
+          ),
+          DiscoverRail(
+            people: people,
+            title: SocialStringsA.similarTravellers,
+            viewedName: first,
+            tinted: false,
+            onSeeAll: () => SocialNav.openPeople(tab: 'discover'),
+            onFollowChanged: c.onSimilarFollowChanged,
+            margin: DS.gapInsets(l: 18, t: 10, r: 18),
+          ),
+        ],
+      );
+    });
   }
 
   Widget _content(TravellerProfile p) {
@@ -173,6 +205,7 @@ class _TravellerProfileScreenState extends State<TravellerProfileScreen> {
             after: mutuals,
           ),
           _actions(p),
+          _similar(p),
           if (p.privateLocked)
             NoteBanner(art: BuddyArt.locked, text: '${SocialStringsA.privateTitle}. ${SocialStringsA.privateLine}')
           else ...[

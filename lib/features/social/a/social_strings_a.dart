@@ -1,3 +1,7 @@
+import '../shared/social_formats.dart';
+import '../shared/social_models.dart';
+import '../shared/social_strings.dart';
+
 abstract final class SocialStringsA {
   static const String obTitle = 'Complete your profile';
   static const String obMenu = 'More options';
@@ -177,6 +181,115 @@ abstract final class SocialStringsA {
   static const String scanTryLater = 'Too many tries. Try again in a few minutes.';
   static const String myBuddies = 'My Buddies';
   static const List<String> peopleTabs = [followers, followingTab, myBuddies];
+  static const String discoverTab = 'Discover';
+
+  // Discover (mock A, B, D).
+  static const String chipForYou = 'For you';
+  static const String chipSameTrip = 'Same trip';
+  static const String chipNearYou = 'Near you';
+  static const String chipMutual = 'Mutual';
+  static const String chipInterests = 'Interests';
+
+  static String chipLabel(String chip) => switch (chip) {
+        DiscoverChips.sameTrip => chipSameTrip,
+        DiscoverChips.near => chipNearYou,
+        DiscoverChips.mutual => chipMutual,
+        DiscoverChips.interests => chipInterests,
+        _ => chipForYou,
+      };
+
+  static const String travellersForYou = 'TRAVELLERS FOR YOU';
+  static const String yourTrip = 'Your trip';
+  static const String nearYou = 'Near you';
+  static const String travelledWithYou = 'Travelled with you';
+  static const String hideTraveller = 'Hide';
+  static String hideLabel(String name) => 'Hide $name';
+  static const String noSuggestions = 'No travellers to suggest yet';
+  static const String noSuggestionsLine = 'Plan a trip or add interests to meet more travellers.';
+  static const String noNearYou = 'No travellers near you yet';
+  static const String nearLockedTitle = 'Travellers near you';
+  static const String nearLockedLine = 'Find people around you with Bakhli Plus.';
+  static const String getPlus = 'Get Plus';
+  static const String mayKnow = 'Travellers you may know';
+  static const String seeAll = 'See all';
+  static const String similarTravellers = 'Similar travellers';
+  static const String circleTitle = 'Build your travel circle';
+  static const String circleLine = 'Follow travellers going where you go.';
+  static const String findTravellers = 'Find travellers';
+
+  // "Dec" of a yyyymm month key ('' when unknown).
+  static String monthShort(int? yyyymm) {
+    final name = yyyymm == null ? '' : SocialFormats.monthName(yyyymm % 100);
+    return name.length >= 3 ? name.substring(0, 3) : name;
+  }
+
+  static String alsoGoingTo(String city, int month) {
+    final m = monthShort(month);
+    return 'ALSO GOING TO ${city.toUpperCase()}${m.isEmpty ? '' : ' · ${m.toUpperCase()}'}';
+  }
+
+  static String cityMonth(String city, int? month) {
+    final m = monthShort(month);
+    return m.isEmpty ? city : '$city · $m';
+  }
+
+  static String followedBy(String? name, int count) {
+    if (name == null || name.isEmpty) return count == 1 ? 'Followed by 1 person you follow' : 'Followed by $count people you follow';
+    final others = count - 1;
+    if (others <= 0) return 'Followed by $name';
+    return 'Followed by $name + $others ${others == 1 ? 'other' : 'others'}';
+  }
+
+  // Full reason line of a Discover card (A1).
+  static String reasonLine(DiscoverReason r) {
+    final city = r.cityName ?? '';
+    switch (r.kind) {
+      case DiscoverReasonKinds.sameTrip:
+        final m = monthShort(r.month);
+        if (city.isEmpty) return m.isEmpty ? 'Going on a trip like you' : 'Travelling in $m, like you';
+        return m.isEmpty ? 'Going to $city, like you' : 'Going to $city in $m, like you';
+      case DiscoverReasonKinds.travelledWith:
+        return city.isEmpty ? travelledWithYou : '$travelledWithYou · $city';
+      case DiscoverReasonKinds.followsYou:
+        return SocialStrings.followsYou;
+      case DiscoverReasonKinds.mutual:
+        return followedBy(r.mutualName, r.mutualCount);
+      case DiscoverReasonKinds.near:
+        return r.tags.isEmpty ? nearYou : '$nearYou · ${r.tags.take(2).join(', ')}';
+      case DiscoverReasonKinds.interests:
+      case DiscoverReasonKinds.places:
+        return r.tags.take(2).join(', ');
+      default:
+        return '';
+    }
+  }
+
+  // Short reason of a rail card (B1) and of the similar strip (B2, sameTrip = "Also Manali", mutual = "Kavya follows").
+  static String reasonShort(DiscoverReason r, {String? viewedName}) {
+    switch (r.kind) {
+      case DiscoverReasonKinds.sameTrip:
+        return r.cityName == null ? chipSameTrip : 'Also ${r.cityName}';
+      case DiscoverReasonKinds.travelledWith:
+        return travelledWithYou;
+      case DiscoverReasonKinds.followsYou:
+        return SocialStrings.followsYou;
+      case DiscoverReasonKinds.mutual:
+        return viewedName != null ? '$viewedName follows' : SocialStrings.mutualCount(r.mutualCount);
+      case DiscoverReasonKinds.near:
+        return nearYou;
+      case DiscoverReasonKinds.interests:
+      case DiscoverReasonKinds.places:
+        return r.tags.isEmpty ? '' : r.tags.first;
+      default:
+        return '';
+    }
+  }
+
+  // B2 line: "You follow Kavya. Travellers like her:" (them when the gender is not known).
+  static String youFollowLine(String firstName, String? gender) {
+    final pronoun = switch (gender) { 'Female' => 'her', 'Male' => 'him', _ => 'them' };
+    return 'You follow $firstName. Travellers like $pronoun:';
+  }
   static const String requests = 'Requests';
   static const String wantsToFollow = 'wants to follow you';
   static const String accept = 'Accept';

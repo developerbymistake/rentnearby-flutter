@@ -1,13 +1,21 @@
+import 'dart:async';
+
 import 'package:bakhli/config/app_routes.dart';
 import 'package:bakhli/features/buddy/buddies/data/buddies_api.dart';
 import 'package:bakhli/features/buddy/buddies/models/buddy_models.dart';
 import 'package:bakhli/features/buddy/scan/scan_outcome.dart';
 import 'package:bakhli/features/buddy/shared/buddy_result.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/features/social/a/people/discover/discover_card.dart';
+import 'package:bakhli/features/social/a/people/discover/discover_chips.dart';
+import 'package:bakhli/features/social/a/people/discover/discover_view.dart';
 import 'package:bakhli/features/social/a/people/people_find.dart';
 import 'package:bakhli/features/social/a/people/people_screen.dart';
 import 'package:bakhli/features/social/a/people/scan_to_follow.dart';
 import 'package:bakhli/features/social/a/social_strings_a.dart';
+import 'package:bakhli/features/social/shared/social_live.dart';
+import 'package:bakhli/features/social/shared/social_models.dart';
+import 'package:bakhli/features/social/shared/social_nav.dart';
 import 'package:bakhli/features/social/shared/social_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,6 +31,24 @@ final _pages = [
 
 Map<String, dynamic> _page(List<Map<String, dynamic>> items, {int? total, int buddies = 0}) =>
     {'items': items, 'nextCursor': null, 'total': total ?? items.length, 'buddies': buddies};
+
+Map<String, dynamic> _discoverJson(String id, String name, Map<String, dynamic> reason, {bool followsMe = false}) => {
+      ...personJson(id, name, level: 2),
+      'followsMe': followsMe,
+      'iFollow': false,
+      'followRequested': false,
+      'isPrivate': false,
+      'reason': reason,
+    };
+
+void _discover(SocialFakeServer s) => s.on('GET', '/social/discover', {
+      'items': [
+        _discoverJson('kavya', 'Kavya Sharma', {'kind': 'sameTrip', 'cityName': 'Manali', 'month': 202612}),
+        _discoverJson('rohit', 'Rohit Rana', {'kind': 'mutual', 'mutualName': 'Aman', 'mutualCount': 4}),
+        _discoverJson('arjun', 'Arjun Negi', {'kind': 'travelledWith', 'cityName': 'Rishikesh'}, followsMe: true),
+      ],
+      'nextCursor': null,
+    });
 
 SocialFakeServer _server({bool requests = true}) {
   final s = installServer();
@@ -71,10 +97,10 @@ void main() {
     for (final scale in socialScales) {
       testWidgets('Requests row on top, three tabs, followers with mutual lines ($size, $scale)', (t) async {
         _server();
-        await pumpSocial(t, const PeopleScreen(), size: size, textScale: scale, pages: _pages);
+        await pumpSocial(t, const PeopleScreen(tab: 'followers'), size: size, textScale: scale, pages: _pages);
         expect(find.byKey(PeopleScreen.requestsRowKey), findsOneWidget);
         expect(find.text(SocialStringsA.requestsLine('Meera J.', 2)), findsOneWidget);
-        for (final tab in SocialStringsA.peopleTabs) {
+        for (final tab in PeopleScreen.tabLabels) {
           expect(find.text(tab), findsWidgets);
         }
         expect(find.text(SocialStringsA.followersCount(128).toUpperCase()), findsOneWidget);
@@ -89,14 +115,14 @@ void main() {
 
   testWidgets('no Requests row when there are no follow requests', (t) async {
     _server(requests: false);
-    await pumpSocial(t, const PeopleScreen(), pages: _pages);
+    await pumpSocial(t, const PeopleScreen(tab: 'followers'), pages: _pages);
     expect(find.byKey(PeopleScreen.requestsRowKey), findsNothing);
     await drain(t);
   });
 
   testWidgets('Requests row opens the requests list', (t) async {
     _server();
-    await pumpSocial(t, const PeopleScreen(), pages: _pages);
+    await pumpSocial(t, const PeopleScreen(tab: 'followers'), pages: _pages);
     await t.tap(find.byKey(PeopleScreen.requestsRowKey));
     await settle(t);
     expect(find.text('PEOPLE requests'), findsOneWidget);
@@ -120,7 +146,7 @@ void main() {
   testWidgets('remove follower from the 3 dots', (t) async {
     final s = _server();
     s.on('DELETE', '/social/followers/kavya', {});
-    await pumpSocial(t, const PeopleScreen(), pages: _pages);
+    await pumpSocial(t, const PeopleScreen(tab: 'followers'), pages: _pages);
     await t.tap(find.descendant(of: find.byKey(const ValueKey('follower_kavya')), matching: find.byIcon(Icons.more_vert_rounded)));
     await settle(t);
     await t.tap(find.text(SocialStringsA.removeFollower));
@@ -160,7 +186,7 @@ void main() {
       },
       openTraveller: opened.add,
     );
-    await pumpSocial(t, PeopleScreen(scanToFollow: flow), pages: _pages);
+    await pumpSocial(t, PeopleScreen(tab: 'followers', scanToFollow: flow), pages: _pages);
     expect(find.byKey(PeopleScreen.scanQrKey), findsOneWidget);
     expect(find.text(SocialStringsA.scanQrLine), findsNothing, reason: 'I-12: no separate Scan QR card');
     final field = t.getRect(find.byKey(PeopleFindSection.fieldKey));
@@ -178,7 +204,7 @@ void main() {
     testWidgets('I-12 username search shows the person with $label', (t) async {
       _server();
       final api = _FindApi(followState: state);
-      await pumpSocial(t, PeopleScreen(scanToFollow: ScanToFollow(api: api)), pages: _pages);
+      await pumpSocial(t, PeopleScreen(tab: 'followers', scanToFollow: ScanToFollow(api: api)), pages: _pages);
       await t.enterText(find.byKey(PeopleFindSection.fieldKey), 'bakhli#29583047');
       await t.tap(find.byKey(PeopleFindSection.searchKey));
       await settle(t);
@@ -194,7 +220,7 @@ void main() {
   testWidgets('I-12 an unknown or badly typed username says no traveller found', (t) async {
     _server();
     final api = _FindApi(found: false);
-    await pumpSocial(t, PeopleScreen(scanToFollow: ScanToFollow(api: api)), pages: _pages);
+    await pumpSocial(t, PeopleScreen(tab: 'followers', scanToFollow: ScanToFollow(api: api)), pages: _pages);
     await t.enterText(find.byKey(PeopleFindSection.fieldKey), 'hello');
     await t.tap(find.byKey(PeopleFindSection.searchKey));
     await settle(t);
@@ -207,5 +233,139 @@ void main() {
     expect(find.text(SocialStringsA.noTravellerFound), findsOneWidget);
     expect(find.byKey(PeopleFindSection.resultKey), findsNothing);
     await drain(t);
+  });
+
+  group('Discover', () {
+    test('Discover is the first tab and the default everywhere', () {
+      expect(PeopleScreen.tabLabels.first, SocialStringsA.discoverTab);
+      expect(PeopleScreen.tabLabels.skip(1).toList(), SocialStringsA.peopleTabs);
+      expect(const PeopleScreen().tab, 'discover');
+    });
+
+    testWidgets('openPeople() opens Discover; an explicit tab keeps its tab', (t) async {
+      _server();
+      await pumpSocial(
+          t,
+          Scaffold(
+            body: Column(children: [
+              TextButton(onPressed: () => SocialNav.openPeople(), child: const Text('DEFAULT')),
+              TextButton(onPressed: () => SocialNav.openPeople(tab: 'followers'), child: const Text('FOLLOWERS')),
+            ]),
+          ),
+          pages: _pages);
+      await t.tap(find.text('DEFAULT'));
+      await settle(t);
+      expect(find.text('PEOPLE discover'), findsOneWidget);
+      Get.back();
+      await settle(t);
+      await t.tap(find.text('FOLLOWERS'));
+      await settle(t);
+      expect(find.text('PEOPLE followers'), findsOneWidget);
+      await drain(t);
+    });
+
+    for (final size in socialSizes) {
+      for (final scale in socialScales) {
+        testWidgets('opens on Discover: search on top, chips, cards with reasons ($size, $scale)', (t) async {
+          final s = _server();
+          _discover(s);
+          await pumpSocial(t, const PeopleScreen(), size: size, textScale: scale, pages: _pages);
+          expect(find.byKey(PeopleFindSection.fieldKey), findsOneWidget);
+          for (final chip in DiscoverChips.all) {
+            expect(find.byKey(DiscoverChipsRow.keyOf(chip)), findsOneWidget);
+          }
+          expect(find.byIcon(Icons.lock_rounded), findsOneWidget, reason: 'Near you is Plus');
+          expect(find.text(SocialStringsA.travellersForYou), findsOneWidget);
+          expect(find.text('Going to Manali in Dec, like you'), findsOneWidget);
+          expect(find.text('Followed by Aman + 3 others'), findsOneWidget);
+          expect(find.text('Travelled with you · Rishikesh'), findsOneWidget);
+          expect(find.text(SocialStrings.followBack), findsOneWidget);
+          expect(s.calls('GET', '/social/followers'), isEmpty);
+          await drain(t);
+          expect(t.takeException(), isNull);
+        });
+      }
+    }
+
+    testWidgets('X hides the card', (t) async {
+      final s = _server();
+      _discover(s);
+      s.on('POST', '/social/discover/hidden/rohit', {});
+      await pumpSocial(t, const PeopleScreen(), pages: _pages);
+      await t.tap(find.byKey(DiscoverCard.hideKeyOf('rohit')));
+      await settle(t);
+      expect(s.calls('POST', '/social/discover/hidden/rohit'), hasLength(1));
+      expect(find.byKey(DiscoverCard.keyOf('rohit')), findsNothing);
+      expect(find.byKey(DiscoverCard.keyOf('kavya')), findsOneWidget);
+      await drain(t);
+    });
+
+    testWidgets('locked Near you shows the Plus card over the For you list, no near call', (t) async {
+      final s = _server();
+      _discover(s);
+      await pumpSocial(t, const PeopleScreen(), pages: _pages);
+      await t.tap(find.byKey(DiscoverChipsRow.keyOf(DiscoverChips.near)));
+      await settle(t);
+      expect(find.byKey(DiscoverSliver.plusCardKey), findsOneWidget);
+      expect(find.text(SocialStringsA.nearLockedTitle), findsOneWidget);
+      expect(find.text(SocialStringsA.chipForYou.toUpperCase()), findsOneWidget);
+      expect(find.byKey(DiscoverCard.keyOf('kavya')), findsOneWidget);
+      expect(s.calls('GET', '/social/discover').where((o) => o.queryParameters['chip'] == DiscoverChips.near), isEmpty);
+      await drain(t);
+    });
+
+    testWidgets('a follow elsewhere does not reload Discover', (t) async {
+      final s = _server();
+      _discover(s);
+      await pumpSocial(t, const PeopleScreen(), pages: _pages);
+      final before = s.calls('GET', '/social/discover').length;
+      SocialLive.followers.value++;
+      await settle(t);
+      expect(s.calls('GET', '/social/discover'), hasLength(before));
+      await drain(t);
+    });
+
+    testWidgets('a follow made on another screen flips the Discover card, no reload', (t) async {
+      final s = _server();
+      _discover(s);
+      await pumpSocial(t, const PeopleScreen(), pages: _pages);
+      final before = s.calls('GET', '/social/discover').length;
+      final kavya = find.byKey(DiscoverCard.keyOf('kavya'));
+      expect(find.descendant(of: kavya, matching: find.text(SocialStrings.follow)), findsOneWidget);
+      SocialLive.followChange.trigger(('kavya', true, false));
+      await settle(t);
+      expect(find.descendant(of: kavya, matching: find.text(SocialStrings.following)), findsOneWidget);
+      SocialLive.followChange.trigger(('kavya', false, false));
+      await settle(t);
+      expect(find.descendant(of: kavya, matching: find.text(SocialStrings.follow)), findsOneWidget);
+      expect(s.calls('GET', '/social/discover'), hasLength(before));
+      await drain(t);
+    });
+
+    testWidgets('pull to refresh sends refresh=1', (t) async {
+      final s = _server();
+      _discover(s);
+      await pumpSocial(t, const PeopleScreen(), pages: _pages);
+      // A 400 px fling never arms the indicator on the 1400 px test surface with bouncing physics; start it directly.
+      unawaited(t.state<RefreshIndicatorState>(find.byType(RefreshIndicator)).show());
+      await t.pump();
+      await t.pump(const Duration(seconds: 1));
+      await settle(t);
+      final calls = s.calls('GET', '/social/discover');
+      expect(calls.first.queryParameters['refresh'], isNull);
+      expect(calls.where((o) => '${o.queryParameters['refresh']}' == '1'), isNotEmpty);
+      await drain(t);
+    });
+
+    testWidgets('the Followers tab still works from Discover', (t) async {
+      final s = _server();
+      _discover(s);
+      await pumpSocial(t, const PeopleScreen(), pages: _pages);
+      await t.tap(find.text(SocialStringsA.followers).first);
+      await settle(t);
+      expect(find.text('Followed by Aman'), findsOneWidget);
+      expect(s.calls('GET', '/social/followers'), hasLength(1));
+      await drain(t);
+    });
   });
 }

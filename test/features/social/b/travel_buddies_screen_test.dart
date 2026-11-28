@@ -1,8 +1,12 @@
 import 'package:bakhli/config/app_routes.dart';
 import 'package:bakhli/design/design.dart';
+import 'package:bakhli/features/social/a/people/discover/discover_card.dart';
+import 'package:bakhli/features/social/a/people/discover/discover_rail.dart';
+import 'package:bakhli/features/social/a/social_strings_a.dart';
 import 'package:bakhli/features/social/b/feed/travel_buddies_screen.dart';
 import 'package:bakhli/features/social/b/post/join_request_sheet.dart';
 import 'package:bakhli/features/social/b/social_strings_b.dart';
+import 'package:bakhli/features/social/shared/social_live.dart';
 import 'package:bakhli/features/social/shared/social_strings.dart';
 import 'package:bakhli/features/social/shared/widgets/plus_widgets.dart';
 import 'package:bakhli/features/social/shared/widgets/public_trip_card.dart';
@@ -18,9 +22,27 @@ final _pages = [
   GetPage(name: AppRoutes.tripPost, page: () => Scaffold(body: Text('POST ${(Get.arguments as Map)['tripId']}'))),
   GetPage(name: AppRoutes.joinRequests, page: () => Scaffold(body: Text('REQUESTS ${(Get.arguments as Map)['tripId']}'))),
   GetPage(name: AppRoutes.postTrip, page: () => const Scaffold(body: Text('WIZARD'))),
+  GetPage(name: AppRoutes.people, page: () => Scaffold(body: Text('PEOPLE ${(Get.arguments as Map)['tab']}'))),
 ];
 
 const _feed = '/social/trips/feed';
+const _discover = '/social/discover';
+
+Map<String, dynamic> _suggest(String id, String name, String kind) =>
+    {...personJson(id, name), 'followsMe': false, 'iFollow': false, 'followRequested': false, 'isPrivate': false, 'reason': {'kind': kind}};
+
+Map<String, dynamic> _suggestions() => {
+      'items': [_suggest('rohit', 'Rohit Rana', 'mutual'), _suggest('sneha', 'Sneha Joshi', 'near')],
+      'nextCursor': null,
+    };
+
+final _threePosts = _page(items: [
+  publicTripJson(id: 'trip-1'),
+  publicTripJson(id: 'trip-2', ownerId: 'aman', ownerName: 'Aman Kumar', cities: ['Spiti']),
+  publicTripJson(id: 'trip-3', ownerId: 'mehak', ownerName: 'Mehak Rao', cities: ['Manali']),
+]);
+
+const _tall = Size(392, 4000);
 
 Map<String, dynamic> _page({List<Map<String, dynamic>> mine = const [], List<Map<String, dynamic>> items = const []}) =>
     {'mine': mine, 'items': items, 'nextCursor': null};
@@ -221,5 +243,89 @@ void main() {
     expect(find.descendant(of: bell, matching: find.byWidgetPredicate((w) => w is Art3D && w.asset == ListingArt.bell)), findsOneWidget);
     expect(find.byIcon(Icons.notifications_none_rounded), findsNothing);
     await drain(t);
+  });
+  group('B1 Travellers you may know rail', () {
+    testWidgets('one rail right after the 2nd post, loaded once with limit 5', (t) async {
+      final server = installServer();
+      putSocialMe(server, socialMeWith());
+      server.on('GET', _feed, _threePosts);
+      server.on('GET', _discover, _suggestions());
+      await pumpSocial(t, const TravelBuddiesScreen(), size: _tall, pages: _pages);
+      final rail = find.byKey(TravelBuddiesScreen.railKey);
+      expect(rail, findsOneWidget);
+      expect(find.byType(DiscoverRail), findsOneWidget);
+      expect(find.text(SocialStringsA.mayKnow), findsOneWidget);
+      expect(find.text(SocialStringsA.nearYou), findsOneWidget);
+      final top = t.getTopLeft(rail).dy;
+      expect(top, greaterThan(t.getTopLeft(find.byKey(const ValueKey('feed-trip-2'))).dy));
+      expect(top, lessThan(t.getTopLeft(find.byKey(const ValueKey('feed-trip-3'))).dy));
+      final calls = server.calls('GET', _discover);
+      expect(calls, hasLength(1));
+      expect(calls.single.queryParameters['limit'], TravelBuddiesScreen.railSize);
+      await drain(t);
+      expect(t.takeException(), isNull);
+    });
+
+    testWidgets('a follow made on another screen flips the rail card', (t) async {
+      final server = installServer();
+      putSocialMe(server, socialMeWith());
+      server.on('GET', _feed, _threePosts);
+      server.on('GET', _discover, _suggestions());
+      await pumpSocial(t, const TravelBuddiesScreen(), size: _tall, pages: _pages);
+      final rohit = find.byKey(DiscoverCard.keyOf('rohit'));
+      expect(find.descendant(of: rohit, matching: find.text(SocialStrings.follow)), findsOneWidget);
+      SocialLive.followChange.trigger(('rohit', true, false));
+      await settle(t);
+      expect(find.descendant(of: rohit, matching: find.text(SocialStrings.following)), findsOneWidget);
+      expect(server.calls('GET', _discover), hasLength(1));
+      await drain(t);
+    });
+
+    testWidgets('See all opens the Discover tab', (t) async {
+      final server = installServer();
+      putSocialMe(server, socialMeWith());
+      server.on('GET', _feed, _threePosts);
+      server.on('GET', _discover, _suggestions());
+      await pumpSocial(t, const TravelBuddiesScreen(), size: _tall, pages: _pages);
+      await t.tap(find.byKey(DiscoverRail.seeAllKey));
+      await settle(t);
+      expect(find.text('PEOPLE discover'), findsOneWidget);
+      await drain(t);
+    });
+
+    testWidgets('hidden when nobody is suggested', (t) async {
+      final server = installServer();
+      putSocialMe(server, socialMeWith());
+      server.on('GET', _feed, _threePosts);
+      server.on('GET', _discover, {'items': [], 'nextCursor': null});
+      await pumpSocial(t, const TravelBuddiesScreen(), size: _tall, pages: _pages);
+      expect(find.byKey(TravelBuddiesScreen.railKey), findsNothing);
+      await drain(t);
+    });
+
+    testWidgets('hidden when the call fails, the feed still shows', (t) async {
+      final server = installServer();
+      putSocialMe(server, socialMeWith());
+      server.on('GET', _feed, _threePosts);
+      server.refuse('GET', _discover, status: 400, type: 'Bad');
+      await pumpSocial(t, const TravelBuddiesScreen(), size: _tall, pages: _pages);
+      expect(find.byKey(TravelBuddiesScreen.railKey), findsNothing);
+      expect(find.byKey(const ValueKey('feed-trip-3')), findsOneWidget);
+      await drain(t);
+    });
+
+    testWidgets('hidden while a search is typed', (t) async {
+      final server = installServer();
+      putSocialMe(server, socialMeWith());
+      server.on('GET', _feed, _threePosts);
+      server.on('GET', _discover, _suggestions());
+      await pumpSocial(t, const TravelBuddiesScreen(), size: _tall, pages: _pages);
+      expect(find.byKey(TravelBuddiesScreen.railKey), findsOneWidget);
+      await t.enterText(find.descendant(of: find.byKey(TravelBuddiesScreen.searchKey), matching: find.byType(TextField)), 'Spiti');
+      await t.pump(const Duration(milliseconds: 500));
+      await settle(t);
+      expect(find.byKey(TravelBuddiesScreen.railKey), findsNothing);
+      await drain(t);
+    });
   });
 }
