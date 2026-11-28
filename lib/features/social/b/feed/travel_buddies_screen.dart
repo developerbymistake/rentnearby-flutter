@@ -17,26 +17,22 @@ import '../../shared/social_live.dart';
 import '../../shared/social_me_controller.dart';
 import '../../shared/social_models.dart';
 import '../../shared/social_nav.dart';
-import '../../shared/social_strings.dart';
-import '../../shared/widgets/plus_widgets.dart';
-import '../../shared/widgets/public_trip_card.dart';
-import '../post/join_request_sheet.dart';
-import '../post/trip_post_actions.dart';
 import '../../a/people/discover/discover_rail.dart';
-import '../../a/people/people_widgets.dart';
-import '../../a/widgets/social_chips_a.dart';
-import '../models/join_gender_rule.dart';
 import '../social_nav_b.dart';
 import '../social_strings_b.dart';
 import '../widgets/find_buddies_post_card.dart';
-import '../widgets/social_widgets_b.dart';
+import '../widgets/sliding_tabs.dart';
+import 'explore_tab.dart';
 import 'feed_filter_sheet.dart';
+import 'my_posts_controller.dart';
+import 'my_posts_tab.dart';
 import 'travel_buddies_controller.dart';
 
 class TravelBuddiesScreen extends StatefulWidget {
-  const TravelBuddiesScreen({super.key, this.posted = false});
+  const TravelBuddiesScreen({super.key, this.posted = false, this.myPosts = false});
 
   final bool posted;
+  final bool myPosts;
 
   static const Key filterKey = ValueKey('feed_filter');
   static const Key bellKey = ValueKey('feed_bell');
@@ -46,6 +42,12 @@ class TravelBuddiesScreen extends StatefulWidget {
   static const Key liveKey = ValueKey('feed_live');
   static const Key liveCloseKey = ValueKey('feed_live_close');
   static const Key railKey = ValueKey('feed_discover_rail');
+  static const Key tabsKey = ValueKey('groups_tabs');
+  static const Key exploreKey = ValueKey('groups_explore');
+  static const Key mineKey = ValueKey('groups_mine');
+  static const Key mineEmptyKey = ValueKey('groups_mine_empty');
+  static const int tabExplore = 0;
+  static const int tabMine = 1;
   static const int railAfter = 2;
   static const int railSize = 5;
 
@@ -55,7 +57,9 @@ class TravelBuddiesScreen extends StatefulWidget {
 
 class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
   late final String _tag = 'travel-buddies-${identityHashCode(this)}';
-  late final TravelBuddiesController c = Get.put(TravelBuddiesController(), tag: _tag);
+  late final TravelBuddiesController c;
+  late final MyPostsController mine;
+  late int _tab = widget.posted || widget.myPosts ? TravelBuddiesScreen.tabMine : TravelBuddiesScreen.tabExplore;
   final _search = TextEditingController();
   final _scroll = ScrollController();
   Timer? _debounce;
@@ -75,15 +79,19 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
   void initState() {
     super.initState();
     SocialNavB.feedOpened();
+    c = Get.put(TravelBuddiesController(), tag: _tag);
+    mine = Get.put(MyPostsController(), tag: _tag);
     _scroll.addListener(_onScroll);
     _postedAgain = ever<int>(SocialNavB.posted, (_) => _afterPost());
     if (widget.posted) {
-      _ready = ever<FeedLoad>(c.state, (_) => _showLive());
+      _ready = ever<FeedLoad>(mine.state, (_) => _showLive());
       WidgetsBinding.instance.addPostFrameCallback((_) => _showLive());
     }
     _loadRail();
     _followChange = ever<(String, bool, bool)?>(SocialLive.followChange, (e) {
-      if (e != null) _railFollowChanged(e.$1, e.$2, e.$3);
+      if (e == null) return;
+      _railFollowChanged(e.$1, e.$2, e.$3);
+      c.applyFollow(e.$1, e.$2);
     });
     _nearFailed = ever<String?>(c.nearFailed, (m) {
       if (m != null && mounted) BuddySnack.show(context, m, danger: true);
@@ -103,13 +111,14 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
     _scroll.dispose();
     _search.dispose();
     Get.delete<TravelBuddiesController>(tag: _tag);
+    Get.delete<MyPostsController>(tag: _tag);
     super.dispose();
   }
 
   void _showLive() {
-    if (_snackShown || !mounted || c.state.value != FeedLoad.ready) return;
+    if (_snackShown || !mounted || mine.state.value != FeedLoad.ready) return;
     _snackShown = true;
-    final city = c.mine.isEmpty || c.mine.first.cityNames.isEmpty ? null : c.mine.first.cityNames.first;
+    final city = mine.items.isEmpty || mine.items.first.cityNames.isEmpty ? null : mine.items.first.cityNames.first;
     final note = SocialNavB.takePostedNote();
     setState(() {
       _liveTitle = city == null ? null : SocialStringsB.liveTitle(city);
@@ -174,8 +183,10 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
   Future<void> _afterPost() async {
     if (!mounted) return;
     _snackShown = false;
+    setState(() => _tab = TravelBuddiesScreen.tabMine);
     _loadRail();
-    await c.load();
+    unawaited(c.load());
+    await mine.load();
     _showLive();
   }
 
@@ -190,6 +201,17 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
   }
 
   Future<void> _refresh() => Future.wait<void>([c.load(), _loadRail()]);
+
+  void _clearFilters() {
+    _search.clear();
+    c.applyFilter(FeedFilter.none);
+  }
+
+  void _selectTab(int i) {
+    if (i == _tab) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _tab = i);
+  }
 
   void _railFollowChanged(String userId, bool iFollow, bool requested) {
     final i = _rail.indexWhere((p) => p.userId == userId);
@@ -207,7 +229,7 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
       );
 
   void _onScroll() {
-    if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - DS.s(300)) c.loadMore();
+    if (_scroll.hasClients && _scroll.position.pixels >= _scroll.position.maxScrollExtent - DS.s(300)) c.loadMore();
   }
 
   void _onSearch(String v) {
@@ -234,13 +256,6 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
   }
 
   Future<void> _postTrip() => PostTripEntry.open(context);
-
-  Future<void> _request(PublicTrip t) async {
-    final ok = await JoinRequestSheet.show(context, t, onStale: (type) => c.applyRefusal(t.tripId, type));
-    if (!ok || !mounted) return;
-    c.applyMyJoin(t.tripId, 'requested');
-    BuddySnack.show(context, SocialStringsB.requestSent);
-  }
 
   Widget _bell() {
     final ctrl = Get.isRegistered<NotificationController>() ? Get.find<NotificationController>() : null;
@@ -339,207 +354,83 @@ class _TravelBuddiesScreenState extends State<TravelBuddiesScreen> {
     );
   }
 
-  Widget _postButton() {
+  Widget _postBar() {
     final me = SocialMeController.maybe;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: DS.gapInsets(l: 18, t: 4, r: 18, b: 8),
-          child: GradientPillButton(key: TravelBuddiesScreen.postKey, tone: ListingTone.indigo, icon: Icons.add_rounded, label: SocialStringsB.postYourTrip, onTap: _postTrip),
-        ),
-        if (me != null)
-          Obx(() {
-            final l = me.me.value?.limits;
-            final hint = SocialStringsB.postEntryHint(l);
-            if (hint.isEmpty && (l == null || l.isPlus)) return const SizedBox.shrink();
-            return Padding(
-              padding: DS.gapInsets(l: 22, r: 22, b: 12),
-              child: Text(
-                hint.isEmpty ? SocialStringsB.freeLine(l!) : hint,
-                key: hint.isEmpty ? null : TravelBuddiesScreen.postHintKey,
-                textAlign: TextAlign.center,
-                style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0),
-              ),
-            );
-          }),
-      ],
+    return Container(
+      padding: EdgeInsets.fromLTRB(DS.s(18), DS.s(12), DS.s(18), DS.s(16) + MediaQuery.paddingOf(context).bottom),
+      decoration: BoxDecoration(color: DesignColors.surface, boxShadow: DS.shadows(Ink3D.topEdge)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          GradientPillButton(key: TravelBuddiesScreen.postKey, tone: ListingTone.indigo, icon: Icons.add_rounded, label: SocialStringsB.postYourTrip, onTap: _postTrip),
+          if (me != null)
+            Obx(() {
+              final l = me.me.value?.limits;
+              final hint = SocialStringsB.postEntryHint(l);
+              if (hint.isEmpty && (l == null || l.isPlus)) return const SizedBox.shrink();
+              return Padding(
+                padding: DS.gapInsets(l: 4, t: 8, r: 4),
+                child: Text(
+                  hint.isEmpty ? SocialStringsB.freeLine(l!) : hint,
+                  key: hint.isEmpty ? null : TravelBuddiesScreen.postHintKey,
+                  textAlign: TextAlign.center,
+                  style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0),
+                ),
+              );
+            }),
+        ],
+      ),
     );
-  }
-
-  Widget _footer(PublicTrip t) {
-    final teal = BuddyLook.teal;
-    if (t.isMine) {
-      final n = t.waitingRequests ?? 0;
-      if (n <= 0) {
-        return Text(SocialStringsB.noRequestsYet, textAlign: TextAlign.center, style: Ink3D.text(13.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0));
-      }
-      return GradientPillButton(
-        tone: teal,
-        label: SocialStringsB.requests(n),
-        height: SocialButtonsA.midHeight,
-        fontSize: SocialButtonsA.midFont,
-        onTap: () => SocialNav.openJoinRequests(t.tripId),
-      );
-    }
-    switch (t.myJoin) {
-      case 'requested':
-        return WhitePillButton(
-          tone: ListingTone.indigo,
-          neutral: true,
-          icon: Icons.check_rounded,
-          label: SocialStringsB.requested,
-          height: SocialButtonsA.midHeight,
-          fontSize: SocialButtonsA.midFont,
-          onTap: () => SocialNav.openTripPost(t.tripId),
-        );
-      case 'member':
-        return WhitePillButton(
-          tone: teal,
-          label: SocialStringsB.openTrip,
-          height: SocialButtonsA.midHeight,
-          fontSize: SocialButtonsA.midFont,
-          onTap: () => Get.toNamed(AppRoutes.tripView, arguments: {'tripId': t.tripId}),
-        );
-      case 'declined':
-        return GradientPillButton(tone: teal, label: SocialStringsB.notThisTime, enabled: false, height: SocialButtonsA.midHeight, fontSize: SocialButtonsA.midFont, onTap: null);
-      case 'removed':
-        return GradientPillButton(
-          key: ValueKey('feed_removed_${t.tripId}'),
-          tone: teal,
-          label: SocialStringsB.cannotRejoin,
-          enabled: false,
-          offColor: Form3D.fillOff,
-          offLabelColor: BuddyLook.subText,
-          height: SocialButtonsA.midHeight,
-          fontSize: SocialButtonsA.midFont,
-          onTap: null,
-        );
-    }
-    if (JoinGenderRule.blocks(t)) {
-      return GradientPillButton(
-        key: ValueKey('feed_only_for_${t.tripId}'),
-        tone: teal,
-        icon: Icons.lock_rounded,
-        label: SocialStringsB.onlyFor(t.joinGender),
-        enabled: false,
-        offColor: Form3D.fillOff,
-        offLabelColor: BuddyLook.subText,
-        height: SocialButtonsA.midHeight,
-        fontSize: SocialButtonsA.midFont,
-        onTap: null,
-      );
-    }
-    if (t.fullForOthers) {
-      return GradientPillButton(
-        key: ValueKey('feed_full_${t.tripId}'),
-        tone: teal,
-        label: SocialStringsB.fullLabel(t.seatsLeft),
-        enabled: false,
-        height: SocialButtonsA.midHeight,
-        fontSize: SocialButtonsA.midFont,
-        onTap: null,
-      );
-    }
-    return GradientPillButton(
-      key: ValueKey('feed_request_${t.tripId}'),
-      tone: teal,
-      label: SocialStringsB.requestToJoin,
-      height: SocialButtonsA.midHeight,
-      fontSize: SocialButtonsA.midFont,
-      onTap: () => _request(t),
-    );
-  }
-
-  Widget _card(PublicTrip t) => Padding(
-        padding: DS.gapInsets(l: 18, r: 18, b: 16),
-        child: PublicTripCard(
-          key: ValueKey('feed-${t.tripId}'),
-          trip: t,
-          onTap: () => SocialNav.openTripPost(t.tripId),
-          footer: _footer(t),
-          onMenu: t.isMine ? null : () => TripPostActions.showMenu(context, trip: t, onBlocked: () => c.removeOwner(t.owner.userId)),
-        ),
-      );
-
-  Widget _state(Widget card) => Padding(padding: DS.gapInsets(t: 24, b: 24), child: card);
-
-  Widget _body() {
-    return Obx(() {
-      final st = c.state.value;
-      final mine = c.mine.toList();
-      final items = c.items.toList();
-      final f = c.filter.value;
-      final rail = _rail.toList();
-      final children = <Widget>[
-        if (mine.isEmpty) const PlusBanner(from: 'feed'),
-        _postButton(),
-        for (final t in mine) _card(t),
-      ];
-      switch (st) {
-        case FeedLoad.loading:
-          children.addAll([
-            for (var i = 0; i < 2; i++)
-              Padding(padding: DS.gapInsets(l: 18, r: 18, b: 16), child: SkeletonBox(height: DS.s(300), borderRadius: SocialLookB.cardRadius)),
-          ]);
-        case FeedLoad.offline:
-          children.add(_state(StateCard.error(title: SocialStrings.offline, actionLabel: SocialStrings.retry, onAction: c.load)));
-        case FeedLoad.failed:
-          children.add(_state(StateCard.error(title: SocialStrings.failed, actionLabel: SocialStrings.retry, onAction: c.load)));
-        case FeedLoad.ready:
-          if (items.isEmpty) {
-            final filtered = f.count > 0;
-            children.add(_state(StateCard(
-              title: filtered ? (f.q.trim().isNotEmpty ? SocialStringsB.noMatch(f.q.trim()) : SocialStringsB.noMatchFilters) : SocialStringsB.feedEmptyTitle,
-              message: filtered ? null : SocialStringsB.feedEmptyBody,
-              asset: ListingArt.panda,
-              actionLabel: filtered ? SocialStringsB.clearFilters : null,
-              onAction: filtered
-                  ? () {
-                      _search.clear();
-                      c.applyFilter(FeedFilter.none);
-                    }
-                  : null,
-            )));
-          } else {
-            final at = f.count > 0 || rail.isEmpty ? -1 : (items.length < TravelBuddiesScreen.railAfter ? items.length : TravelBuddiesScreen.railAfter);
-            for (var i = 0; i < items.length; i++) {
-              if (i == at) children.add(_discoverRail(rail));
-              children.add(_card(items[i]));
-            }
-            if (at == items.length) children.add(_discoverRail(rail));
-            if (c.loadingMore.value) children.add(Padding(padding: DS.gapInsets(b: 20), child: const LoadMoreFooter(loading: true)));
-          }
-      }
-      return RefreshIndicator(
-        color: ListingTone.indigo.g2,
-        onRefresh: _refresh,
-        child: ListView(
-          controller: _scroll,
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.only(bottom: DS.s(40) + MediaQuery.paddingOf(context).bottom),
-          children: children,
-        ),
-      );
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     return BuddyPage(
-      title: SocialStringsB.travelBuddies,
+      title: SocialStringsB.travelGroups,
+      subtitle: SocialStringsB.travelGroupsSub,
       trailing: [_bell()],
-      top: _searchRow(),
+      top: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SlidingTabs(
+            key: TravelBuddiesScreen.tabsKey,
+            labels: const [SocialStringsB.tabExplore, SocialStringsB.tabMyPosts],
+            selected: _tab,
+            onTap: _selectTab,
+            tone: ListingTone.indigo,
+            margin: DS.gapInsets(l: 18, t: 12, r: 18),
+          ),
+          if (_tab == TravelBuddiesScreen.tabExplore) _searchRow(),
+        ],
+      ),
       scroll: false,
+      bottomBar: _postBar(),
       body: Stack(
         fit: StackFit.expand,
         children: [
-          _body(),
+          IndexedStack(
+            index: _tab,
+            sizing: StackFit.expand,
+            children: [
+              ExploreTab(
+                c: c,
+                mine: mine,
+                rail: _rail,
+                scroll: _scroll,
+                onRefresh: _refresh,
+                onClearFilters: _clearFilters,
+                railBuilder: _discoverRail,
+              ),
+              MyPostsTab(c: mine),
+            ],
+          ),
           if (_live)
             Positioned(
               left: DS.s(18),
               right: DS.s(18),
-              bottom: DS.s(24) + MediaQuery.paddingOf(context).bottom,
+              bottom: DS.s(16),
               child: _liveCard(),
             ),
         ],

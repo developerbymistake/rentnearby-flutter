@@ -20,7 +20,7 @@ class TripStringsV2Create {
   static String barTotal(int total) => ' · total $total places';
   static String doneCity(String name, int n) => '$name · $n';
   static String next(String city) => 'Next: $city';
-  static const String makeMyPlan = 'Make my plan';
+  static const String makeMyPlan = 'Make my itinerary';
   static const String limitReached = 'Place limit reached. Remove one to add another.';
   static const String maxDaysReached = 'This is the longest trip. Remove a place to add another.';
   static const String dayFull = 'This day has ${TripConstants.maxSpotsPerDay} places';

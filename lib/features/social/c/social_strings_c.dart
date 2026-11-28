@@ -51,6 +51,13 @@ abstract final class SocialStringsC {
   static const String membersItem = 'Members';
   static const String reportChat = 'Report';
   static const String leaveTrip = 'Leave trip';
+  static const String whoCanSend = 'Who can send messages';
+  static const String whoCanSendLine = 'Everyone on the trip can always read the chat.';
+  static const String everyone = 'Everyone';
+  static const String everyoneLine = 'All travellers on this trip';
+  static const String onlyMe = 'Only me';
+  static const String onlyMeLine = 'You post updates, others read';
+  static String onlyOwnerSends(String name) => 'Only ${name.trim().isEmpty ? 'the trip owner' : name.trim()} can send messages in this trip chat';
   static const String reportMessage = 'Report message';
   static const String reportMessageTitle = 'Report this message?';
   static const String reportMessageBody = 'The sender is not told who reported. A copy of this chat goes to our team.';

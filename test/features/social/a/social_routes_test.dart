@@ -3,8 +3,12 @@ import 'package:bakhli/config/user_roles.dart';
 import 'package:bakhli/controllers/auth_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/features/social/a/social_pages_a.dart';
+import 'package:bakhli/features/social/b/feed/travel_buddies_screen.dart';
+import 'package:bakhli/features/social/b/social_pages_b.dart';
+import 'package:bakhli/features/social/b/wizard/post_trip_screen.dart';
 import 'package:bakhli/features/social/shared/social_nav.dart';
 import 'package:bakhli/navigation/traveller_gate.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
@@ -76,6 +80,7 @@ void main() {
       SocialNav.openTravelBuddies,
       SocialNav.openTripPost,
       SocialNav.openPostTrip,
+      SocialNav.openEditPost,
       SocialNav.openJoinRequests,
       SocialNav.openChats,
       SocialNav.openDirectChat,
@@ -83,6 +88,92 @@ void main() {
       SocialNav.openTripChat,
       SocialNav.openPlus,
     ];
-    expect(methods, hasLength(14));
+    expect(methods, hasLength(15));
+  });
+
+  group('I-37 Travel groups tab argument', () {
+    Future<void> app(WidgetTester t) async {
+      await t.pumpWidget(GetMaterialApp(
+        initialRoute: '/home',
+        getPages: [
+          GetPage(name: '/home', page: () => const Scaffold(body: Text('HOME'))),
+          GetPage(
+            name: AppRoutes.travelBuddies,
+            page: () {
+              final w = socialPagesB.firstWhere((p) => p.name == AppRoutes.travelBuddies).page() as TravelBuddiesScreen;
+              return Scaffold(body: Text('ARGS ${Get.arguments} posted=${w.posted} mine=${w.myPosts}'));
+            },
+          ),
+        ],
+      ));
+      await t.pumpAndSettle();
+    }
+
+    test('the tab names are explore and mine', () {
+      expect(SocialNav.groupsExplore, 'explore');
+      expect(SocialNav.groupsMine, 'mine');
+    });
+
+    testWidgets('default opens Explore with no tab argument', (t) async {
+      await app(t);
+      SocialNav.openTravelBuddies();
+      await t.pumpAndSettle();
+      expect(find.text('ARGS {} posted=false mine=false'), findsOneWidget);
+    });
+
+    testWidgets('tab mine opens My posts', (t) async {
+      await app(t);
+      SocialNav.openTravelBuddies(tab: SocialNav.groupsMine);
+      await t.pumpAndSettle();
+      expect(find.text('ARGS {tab: mine} posted=false mine=true'), findsOneWidget);
+    });
+
+    testWidgets('posted keeps its flag and opens My posts with the live card', (t) async {
+      await app(t);
+      SocialNav.openTravelBuddies(posted: true);
+      await t.pumpAndSettle();
+      expect(find.text('ARGS {posted: true} posted=true mine=false'), findsOneWidget);
+    });
+
+    testWidgets('an explicit Explore tab sends no argument, and the page on top is never stacked twice', (t) async {
+      await app(t);
+      SocialNav.openTravelBuddies(tab: SocialNav.groupsExplore);
+      await t.pumpAndSettle();
+      expect(find.text('ARGS {} posted=false mine=false'), findsOneWidget);
+      expect(SocialNav.openTravelBuddies(tab: SocialNav.groupsMine), isNull);
+    });
+  });
+
+  group('I-38 Edit post', () {
+    Future<void> app(WidgetTester t) async {
+      await t.pumpWidget(GetMaterialApp(
+        initialRoute: '/home',
+        getPages: [
+          GetPage(name: '/home', page: () => const Scaffold(body: Text('HOME'))),
+          GetPage(
+            name: AppRoutes.postTrip,
+            page: () {
+              final w = socialPagesB.firstWhere((p) => p.name == AppRoutes.postTrip).page() as PostTripScreen;
+              return Scaffold(body: Text('ARGS ${Get.arguments} trip=${w.tripId} edit=${w.edit}'));
+            },
+          ),
+        ],
+      ));
+      await t.pumpAndSettle();
+    }
+
+    testWidgets('openEditPost sends tripId and edit true; the page reads edit', (t) async {
+      await app(t);
+      SocialNav.openEditPost('t-9');
+      await t.pumpAndSettle();
+      expect(find.text('ARGS {tripId: t-9, edit: true} trip=t-9 edit=true'), findsOneWidget);
+    });
+
+    testWidgets('openPostTrip stays a publish, not an edit', (t) async {
+      await app(t);
+      SocialNav.openPostTrip(tripId: 't-9');
+      await t.pumpAndSettle();
+      expect(find.text('ARGS {tripId: t-9} trip=t-9 edit=false'), findsOneWidget);
+    });
   });
 }

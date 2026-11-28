@@ -15,7 +15,6 @@ class TravelBuddiesController extends GetxController {
   final PublicTripsApi _api;
 
   final state = FeedLoad.loading.obs;
-  final mine = <PublicTrip>[].obs;
   final items = <PublicTrip>[].obs;
   final filter = FeedFilter.none.obs;
   final loadingMore = false.obs;
@@ -53,14 +52,13 @@ class TravelBuddiesController extends GetxController {
   Future<void> load() async {
     final gen = ++_gen;
     final f = filter.value;
-    if (items.isEmpty && mine.isEmpty) state.value = FeedLoad.loading;
+    if (items.isEmpty) state.value = FeedLoad.loading;
     final near = f.near && _lat != null && _lng != null;
     final r = await _api.feed(q: f.q, who: f.who, travel: f.travel, near: near, lat: near ? _lat : null, lng: near ? _lng : null);
     if (gen != _gen) return;
     loadingMore.value = false;
     switch (r) {
       case BuddyOk<FeedPage>(:final value):
-        mine.assignAll(value.mine);
         items.assignAll(value.items);
         _cursor = value.nextCursor;
         state.value = FeedLoad.ready;
@@ -71,11 +69,11 @@ class TravelBuddiesController extends GetxController {
           await load();
           return;
         }
-        if (items.isEmpty && mine.isEmpty) state.value = FeedLoad.failed;
+        if (items.isEmpty) state.value = FeedLoad.failed;
       case BuddyOffline():
-        if (items.isEmpty && mine.isEmpty) state.value = FeedLoad.offline;
+        if (items.isEmpty) state.value = FeedLoad.offline;
       case BuddyFailed():
-        if (items.isEmpty && mine.isEmpty) state.value = FeedLoad.failed;
+        if (items.isEmpty) state.value = FeedLoad.failed;
     }
   }
 
@@ -88,7 +86,6 @@ class TravelBuddiesController extends GetxController {
     final r = await _api.feed(q: f.q, who: f.who, travel: f.travel, near: near, lat: near ? _lat : null, lng: near ? _lng : null);
     if (gen != _gen || head != _headGen) return;
     if (r case BuddyOk<FeedPage>(:final value)) {
-      mine.assignAll(value.mine);
       for (final t in value.items) {
         final i = items.indexWhere((x) => x.tripId == t.tripId);
         if (i != -1) items[i] = t;
@@ -126,8 +123,11 @@ class TravelBuddiesController extends GetxController {
     if (type == SocialErrorTypes.cannotRejoin) items[i] = items[i].copyWith(myJoin: 'removed');
   }
 
-  void removeOwner(String userId) {
-    items.removeWhere((t) => t.owner.userId == userId);
+  void applyFollow(String ownerId, bool iFollow) {
+    for (var i = 0; i < items.length; i++) {
+      final t = items[i];
+      if (t.owner.userId == ownerId && t.iFollowOwner != iFollow) items[i] = t.copyWith(iFollowOwner: iFollow);
+    }
   }
 
   @override

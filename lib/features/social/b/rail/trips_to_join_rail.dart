@@ -66,7 +66,6 @@ class _TripsToJoinRailState extends State<TripsToJoinRail> {
                         child: PublicTripCard(
                           key: ValueKey('rail-${items[i].tripId}-$i'),
                           trip: items[i],
-                          mode: PublicTripCardMode.rail,
                           onTap: () => _open(items[i]),
                         ),
                       ),

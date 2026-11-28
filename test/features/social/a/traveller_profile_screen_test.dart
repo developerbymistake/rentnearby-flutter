@@ -5,16 +5,22 @@ import 'package:bakhli/features/social/a/profile/profile_sections.dart';
 import 'package:bakhli/features/social/a/profile/traveller_profile_screen.dart';
 import 'package:bakhli/features/social/a/social_strings_a.dart';
 import 'package:bakhli/features/social/a/widgets/social_section_card.dart';
+import 'package:bakhli/features/social/b/post/join_request_sheet.dart';
+import 'package:bakhli/features/social/b/social_strings_b.dart';
+import 'package:bakhli/features/social/shared/social_error_types.dart';
 import 'package:bakhli/features/social/shared/social_live.dart';
+import 'package:bakhli/features/social/shared/social_models.dart';
 import 'package:bakhli/features/social/shared/social_strings.dart';
 import 'package:bakhli/features/social/shared/widgets/follow_button.dart';
 import 'package:bakhli/features/social/shared/widgets/follow_limit_sheet.dart';
+import 'package:bakhli/features/social/shared/widgets/trip_join_card.dart';
 import 'package:bakhli/features/trip/widgets/trip_plan_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
 import '../../../support/buddy_render.dart';
+import '../b/social_b_test_kit.dart';
 import '../shared/social_test_support.dart';
 
 final _pages = [
@@ -278,6 +284,47 @@ void main() {
       expect(find.byKey(TravellerProfileScreen.similarKey), findsNothing);
       expect(server.calls('GET', _similar), isEmpty);
       await drain(t);
+    });
+  });
+
+  group('Public trips use the join card', () {
+    Widget section(List<PublicTrip> trips) => Scaffold(body: SingleChildScrollView(child: ProfileTripsSection(title: 'Public trips · 1', trips: trips)));
+
+    testWidgets('no poster row, Join turns into Requested after sending', (t) async {
+      final server = installServer();
+      putSocialMe(server, socialMeWith());
+      server.on('POST', '/social/trips/trip-1/join-requests', {'id': 'jr-1', 'status': 'Waiting'});
+      await pumpSocial(t, section([PublicTrip.fromJson(publicTripJson())]), pages: _pages);
+      expect(find.byType(TripJoinCard), findsOneWidget);
+      expect(find.text('Kavya S.'), findsNothing);
+      expect(find.byKey(TripJoinCard.followKey), findsNothing);
+      expect(find.text(SocialStringsB.join), findsOneWidget);
+      await t.tap(find.byKey(TripJoinCard.actionKey('trip-1')));
+      await settle(t);
+      await t.tap(find.byKey(JoinRequestSheet.sendKey));
+      await settle(t);
+      expect(find.text(SocialStringsB.requested), findsOneWidget);
+      await drain(t);
+    });
+
+    testWidgets('a refused request for a full post shows Full', (t) async {
+      final server = installServer();
+      putSocialMe(server, socialMeWith());
+      server.refuse('POST', '/social/trips/trip-1/join-requests', status: 409, type: SocialErrorTypes.tripRequestsFull);
+      await pumpSocial(t, section([PublicTrip.fromJson(publicTripJson())]), pages: _pages);
+      await t.tap(find.byKey(TripJoinCard.actionKey('trip-1')));
+      await settle(t);
+      await t.tap(find.byKey(JoinRequestSheet.sendKey));
+      await settle(t);
+      expect(find.byKey(TripJoinCard.fullKey), findsOneWidget);
+      await drain(t);
+    });
+
+    testWidgets('an empty list shows nothing', (t) async {
+      installServer();
+      await pumpSocial(t, section(const []), pages: _pages);
+      expect(find.byType(TripJoinCard), findsNothing);
+      expect(find.text('Public trips · 1'), findsNothing);
     });
   });
 }

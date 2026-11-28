@@ -31,30 +31,27 @@ void main() {
   tearDown(Get.reset);
 
   test('fromJson reads the trip invite and join request counts', () {
-    final me = SocialMe.fromJson(_json({'tripInvites': 2, 'joinRequests': 3, 'joinRequestsTripId': 'trip-1'}));
+    final me = SocialMe.fromJson(_json({'tripInvites': 2, 'joinRequests': 3}));
     expect(me.tripInvites, 2);
     expect(me.joinRequests, 3);
-    expect(me.joinRequestsTripId, 'trip-1');
     expect(me.followRequests, 2);
   });
 
-  test('missing, null or empty values fall back to 0 and null', () {
+  test('missing or null values fall back to 0', () {
     final missing = SocialMe.fromJson(_json({}));
     expect(missing.tripInvites, 0);
     expect(missing.joinRequests, 0);
-    expect(missing.joinRequestsTripId, isNull);
-    final empty = SocialMe.fromJson(_json({'tripInvites': null, 'joinRequestsTripId': ''}));
+    final empty = SocialMe.fromJson(_json({'tripInvites': null, 'joinRequests': null}));
     expect(empty.tripInvites, 0);
-    expect(empty.joinRequestsTripId, isNull);
+    expect(empty.joinRequests, 0);
   });
 
   test('copyWith keeps the new counts', () {
-    final me = SocialMe.fromJson(_json({'tripInvites': 4, 'joinRequests': 5, 'joinRequestsTripId': 'trip-2'}));
+    final me = SocialMe.fromJson(_json({'tripInvites': 4, 'joinRequests': 5}));
     final next = me.copyWith(followRequests: 9, chatUnread: ChatUnread.zero, guidelinesAccepted: true);
     expect(next.followRequests, 9);
     expect(next.tripInvites, 4);
     expect(next.joinRequests, 5);
-    expect(next.joinRequestsTripId, 'trip-2');
   });
 
   test('a tripInvites hub scope reloads the shared trips list', () {

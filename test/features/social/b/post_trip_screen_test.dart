@@ -7,8 +7,10 @@ import 'package:bakhli/features/social/b/wizard/post_about_step.dart';
 import 'package:bakhli/features/social/b/wizard/post_trip_controller.dart';
 import 'package:bakhli/features/social/b/wizard/post_trip_screen.dart';
 import 'package:bakhli/features/social/b/wizard/post_when_step.dart';
+import 'package:bakhli/features/social/b/wizard/post_where_step.dart';
 import 'package:bakhli/features/social/b/wizard/post_wizard_parts.dart';
 import 'package:bakhli/features/buddy/shared/widgets/segment_tabs.dart';
+import 'package:bakhli/features/social/shared/social_live.dart';
 import 'package:bakhli/features/social/shared/social_models.dart';
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
@@ -42,7 +44,10 @@ void main() {
         final server = installServer();
         putSocialMe(server, socialMeWith());
         await pumpSocial(t, PostTripScreen(controller: PostTripController(persist: false)), size: size, textScale: scale, pages: _pages);
-        expect(find.text(SocialStringsB.wizardTitle), findsOneWidget);
+        expect(find.byKey(PostTripScreen.headerKey), findsOneWidget);
+        expect(find.descendant(of: find.byKey(PostTripScreen.headerKey), matching: find.text(SocialStringsB.wizardTitle)), findsOneWidget);
+        expect(find.byKey(const ValueKey('post_wizard_close')), findsNothing);
+        expect(find.descendant(of: find.byKey(PostTripScreen.headerKey), matching: find.byIcon(Icons.close_rounded)), findsNothing);
         expect(find.text(SocialStringsB.stepWhere), findsOneWidget);
         expect(find.text(SocialStringsB.stepWhen), findsOneWidget);
         expect(find.text(SocialStringsB.stepAbout), findsOneWidget);
@@ -52,11 +57,13 @@ void main() {
         await t.tap(find.byKey(const ValueKey('post_city_101')));
         await settle(t);
         expect(find.text('Rishikesh'), findsOneWidget, reason: 'I-6: one city, no state filter');
-        expect(find.byKey(const ValueKey('post_draft_saved')), findsNothing);
+        expect(find.text('Manali'), findsOneWidget, reason: 'I-36: no picked-city chip under the search');
+        expect(find.byKey(WizardSavedTick.savedKey), findsNothing);
         await t.tap(find.byKey(WizardBottomBar.nextKey));
         await settle(t);
         expect(find.text(SocialStringsB.whenTitle('Manali')), findsOneWidget);
-        expect(find.byKey(const ValueKey('post_draft_saved')), findsOneWidget);
+        expect(find.byKey(WizardSavedTick.savedKey), findsOneWidget);
+        expect(find.descendant(of: find.byKey(PostTripScreen.headerKey), matching: find.byKey(WizardSavedTick.savedKey)), findsOneWidget);
         await drain(t);
         expect(t.takeException(), isNull);
       });
@@ -218,7 +225,7 @@ void main() {
     final server = installServer();
     putSocialMe(server, socialMeWith());
     server.on('POST', '/social/trips', publicTripJson(id: 'new-1', isMine: true, cities: ['Manali']));
-    server.on('GET', '/social/trips/feed', {'mine': [], 'items': [], 'nextCursor': null});
+    server.on('GET', '/social/trips/feed', {'items': [], 'nextCursor': null});
     final c = PostTripController(persist: false);
     await pumpSocial(t, PostTripScreen(controller: c), pages: _pages);
     await t.tap(find.byKey(const ValueKey('post_city_101')));
@@ -313,5 +320,142 @@ void main() {
     expect(t.takeException(), isNull);
     await t.pumpWidget(const SizedBox.shrink());
     await t.pump(const Duration(minutes: 1));
+  });
+
+  Finder headerBack() => find.descendant(of: find.byKey(PostTripScreen.headerKey), matching: find.byIcon(Icons.chevron_left_rounded));
+
+  Widget launcher(PostTripController c) => Scaffold(
+        body: Builder(
+          builder: (context) => Center(
+            child: TextButton(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => PostTripScreen(controller: c))),
+              child: const Text('LAUNCH'),
+            ),
+          ),
+        ),
+      );
+
+  testWidgets('I-36: header back on the first step leaves the wizard', (t) async {
+    final server = installServer();
+    putSocialMe(server, socialMeWith());
+    await pumpSocial(t, launcher(PostTripController(persist: false)), pages: _pages);
+    await t.tap(find.text('LAUNCH'));
+    await settle(t);
+    expect(find.byKey(PostTripScreen.headerKey), findsOneWidget);
+    expect(headerBack(), findsOneWidget);
+    await t.tap(headerBack());
+    await settle(t);
+    expect(find.byKey(PostTripScreen.headerKey), findsNothing);
+    expect(find.text('LAUNCH'), findsOneWidget);
+    await drain(t);
+  });
+
+  testWidgets('I-36: header back on the When step goes back to Where and stays in the wizard', (t) async {
+    final server = installServer();
+    putSocialMe(server, socialMeWith());
+    final c = PostTripController(persist: false);
+    await pumpSocial(t, launcher(c), pages: _pages);
+    await t.tap(find.text('LAUNCH'));
+    await settle(t);
+    await t.tap(find.byKey(const ValueKey('post_city_101')));
+    await settle(t);
+    await t.tap(find.byKey(WizardBottomBar.nextKey));
+    await settle(t);
+    expect(c.step.value, PostTripController.stepWhen);
+    await t.tap(headerBack());
+    await settle(t);
+    expect(c.step.value, PostTripController.stepWhere);
+    expect(find.byKey(PostTripScreen.headerKey), findsOneWidget);
+    expect(find.text(SocialStringsB.whereTitle), findsOneWidget);
+    await drain(t);
+  });
+
+  testWidgets('I-36: a post from my trip keeps the city chip on Where', (t) async {
+    final server = installServer();
+    putSocialMe(server, socialMeWith());
+    final c = PostTripController(tripId: 't-9', persist: false, loadTrip: (_) async => (cities: const [manali], startDate: null, days: 3));
+    Get.put(c, tag: 'where-from-trip');
+    await pumpSocial(t, Scaffold(body: SingleChildScrollView(child: PostWhereStep(c: c))), pages: _pages);
+    expect(c.fromTrip, isTrue);
+    expect(find.text('Manali'), findsOneWidget);
+    expect(find.text(SocialStringsB.whereFromTrip), findsOneWidget);
+    expect(find.byKey(const ValueKey('post_city_search')), findsNothing);
+    await drain(t);
+  });
+
+  group('I-38 edit post', () {
+    PostTripController editC() => PostTripController(
+          tripId: 't-9',
+          edit: true,
+          persist: false,
+          loadTrip: (_) async => (cities: const [manali], startDate: null, days: 3),
+        );
+
+    void stubPost(SocialFakeServer server) {
+      server.on('GET', '/social/trips/t-9', publicTripJson(id: 't-9', isMine: true, cities: ['Manali'], when: const {'kind': 'within', 'months': 2}, days: 3, text: 'Live text.'));
+      server.on('PUT', '/social/trips/t-9/post', publicTripJson(id: 't-9', isMine: true, cities: ['Manali']));
+    }
+
+    testWidgets('title Edit post, starts on When, last button Save; Save pops back with no live feed card', (t) async {
+      final server = installServer();
+      putSocialMe(server, socialMeWith());
+      stubPost(server);
+      final c = editC();
+      await pumpSocial(t, launcher(c), pages: _pages);
+      await t.tap(find.text('LAUNCH'));
+      await settle(t);
+      expect(find.descendant(of: find.byKey(PostTripScreen.headerKey), matching: find.text(SocialStringsB.editPost)), findsOneWidget);
+      expect(find.descendant(of: find.byKey(PostTripScreen.headerKey), matching: find.text(SocialStringsB.wizardTitle)), findsNothing);
+      expect(c.step.value, PostTripController.stepWhen);
+      expect(find.byKey(WizardSavedTick.savedKey), findsNothing);
+      await t.tap(find.byKey(WizardBottomBar.nextKey));
+      await settle(t);
+      expect(find.text(SocialStringsB.savePost), findsOneWidget);
+      expect(find.text(SocialStringsB.postTrip), findsNothing);
+      expect(find.byKey(PostAboutStep.notifyKey), findsNothing);
+      final before = SocialLive.posts.value;
+      await t.tap(find.byKey(WizardBottomBar.nextKey));
+      await settle(t);
+      expect(server.calls('PUT', '/social/trips/t-9/post'), hasLength(1));
+      expect(SocialLive.posts.value, before + 1);
+      expect(find.byKey(PostTripScreen.headerKey), findsNothing);
+      expect(find.text('LAUNCH'), findsOneWidget);
+      expect(find.textContaining('FEED posted'), findsNothing);
+      expect(find.text(SocialStringsB.postUpdated), findsOneWidget);
+      await drain(t);
+    });
+
+    testWidgets('back on the first step (When) leaves the edit', (t) async {
+      final server = installServer();
+      putSocialMe(server, socialMeWith());
+      stubPost(server);
+      await pumpSocial(t, launcher(editC()), pages: _pages);
+      await t.tap(find.text('LAUNCH'));
+      await settle(t);
+      await t.tap(headerBack());
+      await settle(t);
+      expect(find.byKey(PostTripScreen.headerKey), findsNothing);
+      expect(find.text('LAUNCH'), findsOneWidget);
+      expect(server.calls('PUT', '/social/trips/t-9/post'), isEmpty);
+      await drain(t);
+    });
+
+    testWidgets('a refused save keeps the wizard open and shows the server message', (t) async {
+      final server = installServer();
+      putSocialMe(server, socialMeWith());
+      stubPost(server);
+      server.refuse('PUT', '/social/trips/t-9/post', status: 409, type: 'DatesLocked', message: 'Dates are locked.');
+      final c = editC();
+      await pumpSocial(t, launcher(c), pages: _pages);
+      await t.tap(find.text('LAUNCH'));
+      await settle(t);
+      await t.tap(find.byKey(WizardBottomBar.nextKey));
+      await settle(t);
+      await t.tap(find.byKey(WizardBottomBar.nextKey));
+      await settle(t);
+      expect(find.byKey(PostTripScreen.headerKey), findsOneWidget);
+      expect(find.text('Dates are locked.'), findsOneWidget);
+      await drain(t);
+    });
   });
 }

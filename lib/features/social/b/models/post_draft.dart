@@ -151,6 +151,24 @@ class PostDraft {
     );
   }
 
+  // Edit post: a month post stays exact; with no trip start date the user must pick the day again. An old post with no travel mode becomes taxi.
+  factory PostDraft.fromPost(PublicTrip p, {required List<TripCityModel> cities, DateTime? startDate}) {
+    final month = p.when.kind == TripWhen.monthKind;
+    final exactDay = month && startDate != null ? DateTime(startDate.year, startDate.month, startDate.day) : null;
+    return PostDraft(
+      cities: cities.take(maxCities).toList(),
+      whenKind: month ? exact : within,
+      withinMonths: p.when.kind == TripWhen.within && p.when.months > 0 ? p.when.months.clamp(1, maxMonths) : 2,
+      startDate: exactDay,
+      days: p.days.clamp(1, maxDays),
+      joinGender: p.joinGender,
+      seats: p.seats,
+      text: p.text,
+      textEdited: true,
+      travelMode: _travel(p.travelMode),
+    );
+  }
+
   static String _travel(Object? v) => TravelModes.parse(v) ?? TravelModes.taxi;
 }
 

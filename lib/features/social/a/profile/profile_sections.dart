@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../design/design.dart';
 import '../../../buddy/shared/widgets/buddy_avatar.dart';
 import '../../shared/social_models.dart';
-import '../../shared/social_nav.dart';
-import '../../shared/widgets/public_trip_card.dart';
+import '../../shared/social_error_types.dart';
+import '../../shared/widgets/trip_join_card.dart';
 import '../social_strings_a.dart';
 import '../widgets/social_chips_a.dart';
 import '../widgets/social_section_card.dart';
@@ -193,26 +193,57 @@ class ProfileChipsSection extends StatelessWidget {
   }
 }
 
-class ProfileTripsSection extends StatelessWidget {
-  const ProfileTripsSection({super.key, required this.title, required this.trips});
+class ProfileTripsSection extends StatefulWidget {
+  const ProfileTripsSection({super.key, required this.title, required this.trips, this.onBack});
 
   final String title;
   final List<PublicTrip> trips;
+  final VoidCallback? onBack;
+
+  @override
+  State<ProfileTripsSection> createState() => _ProfileTripsSectionState();
+}
+
+class _ProfileTripsSectionState extends State<ProfileTripsSection> {
+  late List<PublicTrip> _trips = List.of(widget.trips);
+
+  @override
+  void didUpdateWidget(ProfileTripsSection old) {
+    super.didUpdateWidget(old);
+    if (!identical(old.trips, widget.trips)) _trips = List.of(widget.trips);
+  }
+
+  void _update(String tripId, PublicTrip Function(PublicTrip) change) {
+    final i = _trips.indexWhere((t) => t.tripId == tripId);
+    if (i == -1 || !mounted) return;
+    setState(() => _trips[i] = change(_trips[i]));
+  }
+
+  void _stale(String tripId, String? type) {
+    if (type == SocialErrorTypes.tripRequestsFull) _update(tripId, (t) => t.copyWith(requestsFull: true));
+    if (type == SocialErrorTypes.cannotRejoin) _update(tripId, (t) => t.copyWith(myJoin: 'removed'));
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (trips.isEmpty) return const SizedBox.shrink();
+    if (_trips.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
           padding: DS.gapInsets(l: 22, t: 26, r: 22, b: 12),
-          child: Text(title, style: Ink3D.text(18, FontWeight.w600, Ink3D.body, letterSpacing: 0.3)),
+          child: Text(widget.title, style: Ink3D.text(18, FontWeight.w600, Ink3D.body, letterSpacing: 0.3)),
         ),
-        for (final t in trips)
+        for (final t in _trips)
           Padding(
             padding: DS.gapInsets(l: 18, r: 18, b: 12),
-            child: PublicTripCard(trip: t, mode: PublicTripCardMode.profile, onTap: () => SocialNav.openTripPost(t.tripId)),
+            child: TripJoinCard(
+              trip: t,
+              showOwner: false,
+              onRequested: (id) => _update(id, (p) => p.copyWith(myJoin: 'requested')),
+              onStale: _stale,
+              onBack: widget.onBack,
+            ),
           ),
       ],
     );

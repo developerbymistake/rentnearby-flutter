@@ -18,7 +18,7 @@ abstract final class HomeUpdateTargets {
 
   static void followRequests() => SocialNav.openPeople(tab: 'requests');
 
-  static void joinRequests(String? tripId) => tripId != null ? SocialNav.openJoinRequests(tripId) : SocialNav.openTravelBuddies();
+  static void joinRequests() => SocialNav.openTravelBuddies(tab: SocialNav.groupsMine);
 }
 
 class _UpdateTile {
@@ -47,7 +47,6 @@ class HomeUpdates extends StatelessWidget {
 
   static List<_UpdateTile> _tiles(SocialMe? me) {
     if (!TravellerGate.allowed) return const [];
-    final joinTrip = me?.joinRequestsTripId;
     return [
       if (_tripsOn)
         _UpdateTile(
@@ -72,7 +71,7 @@ class HomeUpdates extends StatelessWidget {
         tone: ListingTone.coral,
         art: ListingArt.tent,
         count: me?.joinRequests ?? 0,
-        onTap: () => HomeUpdateTargets.joinRequests(joinTrip),
+        onTap: HomeUpdateTargets.joinRequests,
       ),
     ];
   }

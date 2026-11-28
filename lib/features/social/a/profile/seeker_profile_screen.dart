@@ -175,7 +175,7 @@ class _ProfileContent extends StatelessWidget {
         ),
         _accountRows(context),
         _activity(),
-        ProfileTripsSection(title: SocialStringsA.myPublicTrips(profile.publicTrips.length), trips: profile.publicTrips),
+        ProfileTripsSection(title: SocialStringsA.myPublicTrips(profile.publicTrips.length), trips: profile.publicTrips, onBack: SocialMeController.to.refreshQuiet),
         Gap.v(14),
       ],
     );

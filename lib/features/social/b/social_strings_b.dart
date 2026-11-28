@@ -3,14 +3,23 @@ import '../shared/social_formats.dart';
 import '../shared/social_models.dart';
 
 abstract final class SocialStringsB {
-  static const String travelBuddies = 'Travel buddies';
+  static const String travelGroups = 'Travel groups';
+  static const String travelGroupsSub = 'Trips you can join, and the ones you post';
+  static const String tabExplore = 'Explore';
+  static const String tabMyPosts = 'My posts';
+  static const String myPostsEmptyTitle = 'You have not posted a trip yet';
+  static const String myPostsEmptyBody = 'Post your first trip. Travellers can ask to join.';
+  static const String join = 'Join';
+  static const String noRequests = 'No requests';
+  static const String you = 'You';
+  static String levelN(int n) => 'Level $n';
+  static const String cannotJoin = 'Cannot join';
+  static const String aboutThisTrip = 'About this trip';
   static const String searchHint = 'Search trips, places…';
   static const String filters = 'Filters';
   static const String postYourTrip = 'Post your trip';
-  static const String yourPost = 'Your post';
   static const String plusPill = 'Plus';
   static const String postToFindBuddiesLine = 'Opens Post your trip, filled from this trip';
-  static const String noRequestsYet = 'No requests yet. They come to your bell.';
   static String requests(int n) => n == 1 ? '1 request' : '$n requests';
   static const String requestToJoin = 'Request to join';
   static const String requested = 'Requested';
@@ -203,6 +212,20 @@ abstract final class SocialStringsB {
   static const String blockLine = 'They are not told';
   static const String requestCancelled = 'Request cancelled';
   static const String moreOptions = 'More options';
+
+  // Own post menu
+  static const String editPost = 'Edit post';
+  static const String editPostLine = 'Change dates, seats or the text';
+  static String membersN(int n) => n > 0 ? 'Members · $n' : 'Members';
+  static const String membersLine = 'See who is going, remove someone';
+  static const String deleteTrip = 'Delete trip';
+  static const String deleteTripBlocked = 'Remove the other travellers first';
+  static String ownerStatus(int members, int waiting) => [
+        if (members > 0) '${_count(members, 'member', 'members')} going',
+        if (waiting > 0) '${_count(waiting, 'request', 'requests')} waiting',
+      ].join(' · ');
+  static const String savePost = 'Save';
+  static const String postUpdated = 'Post updated';
   static const String notificationsLabel = 'Notifications';
 
   // Request sheet

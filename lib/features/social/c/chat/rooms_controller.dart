@@ -150,6 +150,8 @@ class RoomsController extends GetxController {
         _onRoomChanged(roomId, status, lock);
       case DmReadEvent():
         break;
+      case DmRoomSettingsEvent():
+        break;
       case DmSessionEndedEvent():
         clear();
       case DmReconnectedEvent():

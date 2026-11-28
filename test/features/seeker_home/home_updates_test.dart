@@ -27,14 +27,13 @@ class _NoTripsAuth extends FakeAuth {
   bool get tripsEnabled => false;
 }
 
-SocialMe _me({int invites = 2, int follow = 3, int join = 1, String? joinTrip}) {
+SocialMe _me({int invites = 2, int follow = 3, int join = 1}) {
   final j = socialMeJson(profile: myProfileJson());
   j['counts'] = {
     ...(j['counts'] as Map),
     'followRequests': follow,
     'tripInvites': invites,
     'joinRequests': join,
-    'joinRequestsTripId': joinTrip,
   };
   return SocialMe.fromJson(j);
 }
@@ -134,24 +133,17 @@ void main() {
     await drain(t);
   });
 
-  testWidgets('join tile opens the requests of the one post when the server names it', (t) async {
-    _putMe(_me(joinTrip: 'trip-9'));
-    await pumpSocial(t, _host(), pages: _pages());
-    await t.tap(find.byKey(const ValueKey('home-upd-join')));
-    await settle(t);
-    expect(_visited, [AppRoutes.joinRequests]);
-    expect(Get.arguments, {'tripId': 'trip-9'});
-    await drain(t);
-  });
-
-  testWidgets('join tile opens the travel buddies feed when requests are on several posts', (t) async {
-    _putMe(_me());
-    await pumpSocial(t, _host(), pages: _pages());
-    await t.tap(find.byKey(const ValueKey('home-upd-join')));
-    await settle(t);
-    expect(_visited, [AppRoutes.travelBuddies]);
-    await drain(t);
-  });
+  for (final join in [0, 1, 7]) {
+    testWidgets('join tile always opens Travel groups on My posts ($join requests)', (t) async {
+      _putMe(_me(join: join));
+      await pumpSocial(t, _host(), pages: _pages());
+      await t.tap(find.byKey(const ValueKey('home-upd-join')));
+      await settle(t);
+      expect(_visited, [AppRoutes.travelBuddies]);
+      expect(Get.arguments, {'tab': 'mine'});
+      await drain(t);
+    });
+  }
 
   testWidgets('Trips module off: no Trip invites tile', (t) async {
     Get.reset();

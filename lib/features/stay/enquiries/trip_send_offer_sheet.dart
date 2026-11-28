@@ -279,7 +279,7 @@ class _OfferBodyState extends State<_OfferBody> {
 
   String? _validate() {
     if (_nights < 1) return StayEnquiryStrings.datesInvalid;
-    if (_nights > TripConstants.maxDaysCap) return StayEnquiryStrings.datesInvalid;
+    if (_nights > StayEnquiryStrings.maxNights) return StayEnquiryStrings.datesInvalid;
     if (_outsideTrip(_checkIn, _checkOut)) return _tripHint ?? StayEnquiryStrings.datesInvalid;
     for (final l in _lines) {
       if (l.price < 1) return StayEnquiryStrings.enterPrice;

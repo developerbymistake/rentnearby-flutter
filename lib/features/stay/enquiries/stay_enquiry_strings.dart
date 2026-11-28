@@ -1,4 +1,6 @@
 class StayEnquiryStrings {
+  // Stay nights keep their own cap (I-41 lowered only trip days to 5).
+  static const int maxNights = 14;
   static const String rowSubtitle = 'Trip enquiries for this stay';
   static const String guestFallback = 'Guest';
   static const String cancelAction = 'Cancel';

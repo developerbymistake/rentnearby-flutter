@@ -17,7 +17,7 @@ import '../social_strings_b.dart';
 typedef TripLoader = Future<({List<TripCityModel> cities, DateTime? startDate, int days})> Function(String tripId);
 
 class PostTripController extends GetxController {
-  PostTripController({this.tripId, PublicTripsApi api = const PublicTripsApi(), TripLoader? loadTrip, this.persist = true})
+  PostTripController({this.tripId, this.edit = false, PublicTripsApi api = const PublicTripsApi(), TripLoader? loadTrip, this.persist = true})
       : _api = api,
         _loadTrip = loadTrip ?? _defaultLoadTrip;
 
@@ -26,6 +26,7 @@ class PostTripController extends GetxController {
   static const int stepAbout = 2;
 
   final String? tripId;
+  final bool edit;
   final PublicTripsApi _api;
   final TripLoader _loadTrip;
   final bool persist;
@@ -44,6 +45,10 @@ class PostTripController extends GetxController {
   final catalogVersion = 0.obs;
 
   bool get fromTrip => tripId != null && tripId!.isNotEmpty;
+
+  bool get editing => edit && fromTrip;
+
+  bool get _store => persist && !editing;
 
   SocialLimits? get limits => SocialMeController.maybe?.me.value?.limits;
 
@@ -68,7 +73,7 @@ class PostTripController extends GetxController {
     return !((code == 'M' && gender == 'Male') || (code == 'F' && gender == 'Female'));
   }
 
-  bool get canNotifyNearby => !notifyPrivate && !notifyTooFar && !notifyGender;
+  bool get canNotifyNearby => !editing && !notifyPrivate && !notifyTooFar && !notifyGender;
 
   void setNotifyNearby(bool on) {
     if (on && !canNotifyNearby) return;
@@ -119,6 +124,7 @@ class PostTripController extends GetxController {
     final catalog = TripCityCatalog.to;
     catalog.warmFromDisk();
     if (!fromTrip) _loadCities();
+    if (editing) return _prepareEdit();
     PostDraft? restored;
     if (persist && _userId.isNotEmpty) {
       try {
@@ -151,6 +157,24 @@ class PostTripController extends GetxController {
     draft.value = fixed.textEdited ? fixed : fixed.copyWith(text: fixed.autoText());
     saved.value = restored != null;
     if (fromTrip) step.value = stepWhen;
+    preparing.value = false;
+  }
+
+  // Edit post: prefill from the live post; never the stored draft, never coerce the join gender.
+  Future<void> _prepareEdit() async {
+    try {
+      final t = await _loadTrip(tripId!);
+      final r = await _api.post(tripId!);
+      if (r case BuddyOk(:final value) when value.isMine) {
+        draft.value = PostDraft.fromPost(value, cities: t.cities, startDate: t.startDate);
+        saved.value = false;
+        step.value = stepWhen;
+      } else {
+        prepareFailed.value = true;
+      }
+    } catch (_) {
+      prepareFailed.value = true;
+    }
     preparing.value = false;
   }
 
@@ -261,6 +285,7 @@ class PostTripController extends GetxController {
   }
 
   void _save(PostDraft d) {
+    if (editing) return;
     if (!persist) {
       saved.value = true;
       return;
@@ -300,7 +325,7 @@ class PostTripController extends GetxController {
     try {
       final d = draft.value.copyWith(notifyNearby: draft.value.notifyNearby && canNotifyNearby);
       final r = fromTrip ? await _api.publish(tripId!, d) : await _api.create(d, clientTripId: clientTripId);
-      if (r.isOk && persist) await PostDraftStore.clear().catchError((Object _) {});
+      if (r.isOk && _store) await PostDraftStore.clear().catchError((Object _) {});
       return r;
     } finally {
       busy.value = false;

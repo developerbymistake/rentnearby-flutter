@@ -6,16 +6,14 @@ import '../../shared/social_models.dart';
 import '../models/post_draft.dart';
 
 class FeedPage {
-  const FeedPage({this.mine = const [], this.items = const [], this.nextCursor});
+  const FeedPage({this.items = const [], this.nextCursor});
 
-  final List<PublicTrip> mine;
   final List<PublicTrip> items;
   final String? nextCursor;
 
   bool get hasMore => nextCursor != null;
 
   factory FeedPage.fromJson(Map<String, dynamic> j) => FeedPage(
-        mine: BuddyJson.list(j['mine'], PublicTrip.fromJson),
         items: BuddyJson.list(j['items'], PublicTrip.fromJson),
         nextCursor: BuddyJson.strOrNull(j['nextCursor']),
       );
@@ -40,6 +38,9 @@ class PublicTripsApi {
 
   Future<BuddyResult<List<PublicTrip>>> rail() => BuddyApiBase.run(() async =>
       BuddyJson.list(BuddyApiBase.dataOf(await BuddyApiBase.read(() => ApiService.get('/social/trips/rail')))['items'], PublicTrip.fromJson));
+
+  Future<BuddyResult<List<PublicTrip>>> mine() => BuddyApiBase.run(() async =>
+      BuddyJson.list(BuddyApiBase.dataOf(await BuddyApiBase.read(() => ApiService.get('/social/trips/mine')))['items'], PublicTrip.fromJson));
 
   Future<BuddyResult<PublicTrip>> post(String tripId) =>
       BuddyApiBase.run(() async => PublicTrip.fromJson(BuddyApiBase.dataOf(await BuddyApiBase.read(() => ApiService.get('/social/trips/$tripId')))));

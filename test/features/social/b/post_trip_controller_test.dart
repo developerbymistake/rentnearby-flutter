@@ -219,4 +219,126 @@ void main() {
     const odd = PostDraft(cities: [manali], joinGender: 'Z', days: 3, withinMonths: 1);
     expect(odd.autoText(), contains('open to anyone'));
   });
+
+  group('I-38 edit post', () {
+    PostTripController editC({DateTime? start}) => PostTripController(
+          tripId: 't-9',
+          edit: true,
+          loadTrip: (_) async => (cities: const [manali, kasol], startDate: start, days: 3),
+        );
+
+    test('prefills from the live post: within months, text, seats, gender, travel mode; starts at When', () async {
+      final server = installServer();
+      server.on('GET', '/social/trips/t-9', publicTripJson(
+        id: 't-9',
+        isMine: true,
+        when: const {'kind': 'within', 'months': 3},
+        days: 3,
+        joinGender: 'F',
+        seats: 2,
+        text: 'My own post words.',
+        travelMode: 'bike',
+      ));
+      final c = await ready(editC());
+      expect(c.editing, isTrue);
+      expect(c.prepareFailed.value, isFalse);
+      expect(c.step.value, PostTripController.stepWhen);
+      final d = c.draft.value;
+      expect(d.cities.map((e) => e.name), ['Manali', 'Kasol']);
+      expect(d.whenKind, PostDraft.within);
+      expect(d.withinMonths, 3);
+      expect(d.days, 3);
+      expect(d.joinGender, 'F', reason: 'a live Women only post is never turned into Anyone on edit');
+      expect(d.seats, 2);
+      expect(d.text, 'My own post words.');
+      expect(d.textEdited, isTrue);
+      expect(d.travelMode, 'bike');
+      expect(c.saved.value, isFalse);
+      expect(c.back(), isFalse);
+    });
+
+    test('a month post becomes exact with the trip start date; no travel mode reads as taxi', () async {
+      final server = installServer();
+      server.on('GET', '/social/trips/t-9', publicTripJson(id: 't-9', isMine: true));
+      final c = await ready(editC(start: DateTime(2026, 12, 12, 9)));
+      final d = c.draft.value;
+      expect(d.whenKind, PostDraft.exact);
+      expect(d.startDate, DateTime(2026, 12, 12));
+      expect(d.travelMode, TravelModes.taxi);
+    });
+
+    test('a month post whose trip has no start date asks for the day before Next', () async {
+      final server = installServer();
+      server.on('GET', '/social/trips/t-9', publicTripJson(id: 't-9', isMine: true));
+      final c = await ready(editC());
+      expect(c.draft.value.whenKind, PostDraft.exact);
+      expect(c.draft.value.startDate, isNull);
+      expect(c.canNext(PostTripController.stepWhen), isFalse);
+      c.setDate(DateTime(2026, 12, 20));
+      expect(c.canNext(PostTripController.stepWhen), isTrue);
+    });
+
+    test('never reads, writes or clears the stored draft', () async {
+      final server = installServer();
+      server.on('GET', '/social/trips/t-9', publicTripJson(id: 't-9', isMine: true, seats: 2, text: 'Live text.'));
+      server.on('PUT', '/social/trips/t-9/post', publicTripJson(id: 't-9', isMine: true));
+      await PostDraftStore.init();
+      await PostDraftStore.save(const PostDraft(seats: 1, text: 'Stored draft.', textEdited: true), userId: 'me', tripId: 't-9');
+      final c = await ready(editC());
+      expect(c.draft.value.text, 'Live text.');
+      expect(c.draft.value.seats, 2);
+      c.setSeats(3);
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(c.saved.value, isFalse);
+      expect((await PostDraftStore.read(userId: 'me', tripId: 't-9'))?.text, 'Stored draft.');
+      await c.submit();
+      expect((await PostDraftStore.read(userId: 'me', tripId: 't-9'))?.text, 'Stored draft.');
+      await PostDraftStore.clear();
+    });
+
+    test('save = PUT /social/trips/{id}/post with notifyNearby false; the nearby switch is off', () async {
+      final server = installServer();
+      server.on('GET', '/social/trips/t-9', publicTripJson(id: 't-9', isMine: true, when: const {'kind': 'within', 'months': 2}));
+      server.on('PUT', '/social/trips/t-9/post', publicTripJson(id: 't-9', isMine: true));
+      final c = await ready(editC());
+      expect(c.canNotifyNearby, isFalse);
+      c.setNotifyNearby(true);
+      expect(c.draft.value.notifyNearby, isFalse);
+      c.setSeats(1);
+      final r = await c.submit();
+      expect(r, isA<BuddyOk<PublicTrip>>());
+      final body = server.calls('PUT', '/social/trips/t-9/post').single.data as Map;
+      expect(body['notifyNearby'], isFalse);
+      expect(body['seats'], 1);
+      expect(body.containsKey('cityKeys'), isFalse);
+      expect(server.calls('POST', '/social/trips'), isEmpty);
+    });
+
+    test('a post that is not mine, or is gone, fails to prepare', () async {
+      final server = installServer();
+      server.on('GET', '/social/trips/t-9', publicTripJson(id: 't-9'));
+      final other = await ready(editC());
+      expect(other.prepareFailed.value, isTrue);
+      final gone = installServer();
+      final missing = await ready(editC());
+      expect(missing.prepareFailed.value, isTrue);
+      expect(gone.calls('GET', '/social/trips/t-9'), hasLength(1));
+      expect(server.calls('GET', '/social/trips/t-9'), hasLength(1));
+    });
+
+    test('edit without a trip id is a normal new post', () {
+      expect(PostTripController(edit: true, persist: false).editing, isFalse);
+    });
+  });
+
+  test('PostDraft.fromPost clamps days and months', () {
+    final p = PublicTrip.fromJson(publicTripJson(when: const {'kind': 'within', 'months': 9}, days: 7, isMine: true));
+    final d = PostDraft.fromPost(p, cities: const [manali]);
+    expect(d.withinMonths, PostDraft.maxMonths);
+    expect(d.days, PostDraft.maxDays);
+    final month = PostDraft.fromPost(PublicTrip.fromJson(publicTripJson(isMine: true)), cities: const [manali]);
+    expect(month.whenKind, PostDraft.exact, reason: 'a month post is never silently turned into a window');
+    expect(month.startDate, isNull);
+    expect(month.whenReady, isFalse, reason: 'with no trip start date the user picks the day again');
+  });
 }

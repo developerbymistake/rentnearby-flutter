@@ -184,6 +184,7 @@ void main() {
       expect(SocialStringsB.notifyNearbyLine, 'Sent at 7 am to travellers near you');
       expect(find.text(SocialStringsB.notifyNearbyLine), findsOneWidget);
       expect(find.textContaining('this week'), findsNothing);
+      expect(find.text(SocialStringsB.aboutNote(c.limits), skipOffstage: false), findsOneWidget);
       expect(_switch(t).value, isFalse);
       expect(_switch(t).onChanged, isNotNull);
       await t.tap(find.byKey(PostAboutStep.notifyKey));
@@ -258,6 +259,34 @@ void main() {
       await settle(t);
       expect(find.textContaining('You have posted a lot this week. Try again on'), findsOneWidget);
       expect(find.text('FEED posted=true'), findsNothing);
+      await drain(t);
+    });
+  });
+
+  group('I-38 edit post', () {
+    test('editing: notify nearby is off and the PUT says false', () async {
+      final server = installServer();
+      server.on('GET', '/social/trips/t-9', publicTripJson(id: 't-9', isMine: true, when: const {'kind': 'within', 'months': 2}));
+      server.on('PUT', '/social/trips/t-9/post', publicTripJson(id: 't-9', isMine: true));
+      final c = await _ready(PostTripController(tripId: 't-9', edit: true, persist: false, loadTrip: (_) async => (cities: const [manali], startDate: null, days: 3)));
+      expect(c.canNotifyNearby, isFalse);
+      c.setNotifyNearby(true);
+      await c.submit();
+      expect((server.calls('PUT', '/social/trips/t-9/post').single.data as Map)['notifyNearby'], isFalse);
+    });
+
+    testWidgets('the About step hides the notify nearby switch while editing', (t) async {
+      final server = installServer();
+      putSocialMe(server, _me());
+      server.on('GET', '/social/trips/t-9', publicTripJson(id: 't-9', isMine: true, when: const {'kind': 'within', 'months': 2}));
+      final c = PostTripController(tripId: 't-9', edit: true, persist: false, loadTrip: (_) async => (cities: const [manali], startDate: null, days: 3));
+      await pumpSocial(t, PostTripScreen(controller: c), pages: _pages);
+      c.goTo(PostTripController.stepAbout);
+      await settle(t);
+      expect(find.text(SocialStringsB.aboutTitle), findsOneWidget);
+      expect(find.byKey(PostAboutStep.notifyKey), findsNothing);
+      expect(find.text(SocialStringsB.notifyNearby), findsNothing);
+      expect(find.textContaining('Post trip creates the trip', skipOffstage: false), findsNothing, reason: 'the new-post note never shows while editing a live post');
       await drain(t);
     });
   });

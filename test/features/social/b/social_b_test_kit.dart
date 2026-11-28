@@ -78,3 +78,16 @@ const rishikesh = TripCityModel(cityKey: 201, name: 'Rishikesh', stateName: 'Utt
 const notReady = TripCityModel(cityKey: 202, name: 'Chopta', stateName: 'Uttarakhand', latitude: 30.4, longitude: 79.2, status: TripCityStatus.notReady);
 
 void seedCities() => TripCityCatalog.to.seedForTest(const [manali, kasol, shimla, dharamshala, tosh, rishikesh, notReady]);
+
+const feedPath = '/social/trips/feed';
+const minePath = '/social/trips/mine';
+
+Map<String, dynamic> feedPage({List<Map<String, dynamic>> items = const [], String? nextCursor}) => {'items': items, 'nextCursor': nextCursor};
+
+Map<String, dynamic> minePage([List<Map<String, dynamic>> items = const []]) => {'items': items};
+
+/// Stubs both Travel groups tabs: Explore (feed) and My posts (mine).
+void stubGroups(SocialFakeServer server, {List<Map<String, dynamic>> feed = const [], List<Map<String, dynamic>> mine = const []}) {
+  server.on('GET', feedPath, feedPage(items: feed));
+  server.on('GET', minePath, minePage(mine));
+}

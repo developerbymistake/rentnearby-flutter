@@ -37,6 +37,14 @@ class DmRoomChangedEvent extends DmEvent {
   final String lock;
 }
 
+class DmRoomSettingsEvent extends DmEvent {
+  const DmRoomSettingsEvent({required this.roomId, required this.onlyOwnerSends, required this.ownerName});
+
+  final String roomId;
+  final bool onlyOwnerSends;
+  final String ownerName;
+}
+
 class DmUnreadEvent extends DmEvent {
   const DmUnreadEvent(this.unread);
 
@@ -68,7 +76,7 @@ class DmHubBridge implements DmTransport {
 
   static const Duration sendTimeout = Duration(seconds: 5);
   static const Duration readDebounce = Duration(seconds: 1);
-  static const List<String> _events = ['DmMessage', 'DmRead', 'DmRoomChanged', 'DmUnread', 'SessionEnded'];
+  static const List<String> _events = ['DmMessage', 'DmRead', 'DmRoomChanged', 'DmRoomSettings', 'DmUnread', 'SessionEnded'];
 
   final _controller = StreamController<DmEvent>.broadcast();
   HubConnection? _connection;
@@ -90,6 +98,7 @@ class DmHubBridge implements DmTransport {
     connection.on('DmMessage', (a) => _emit(a, _message));
     connection.on('DmRead', (a) => _emit(a, (m) => DmReadEvent(roomId: BuddyJson.str(m['roomId']), userId: BuddyJson.str(m['userId']), seq: BuddyJson.integer(m['seq']))));
     connection.on('DmRoomChanged', (a) => _emit(a, (m) => DmRoomChangedEvent(roomId: BuddyJson.str(m['roomId']), status: BuddyJson.str(m['status']), lock: BuddyJson.str(m['lock'], RoomLock.none))));
+    connection.on('DmRoomSettings', (a) => _emit(a, (m) => DmRoomSettingsEvent(roomId: BuddyJson.str(m['roomId']), onlyOwnerSends: BuddyJson.boolean(m['onlyOwnerSends']), ownerName: BuddyJson.str(m['ownerName']))));
     connection.on('DmUnread', (a) => _emit(a, (m) => DmUnreadEvent(ChatUnread.fromJson(m))));
     connection.on('SessionEnded', (a) => _emit(a, (m) => DmSessionEndedEvent(BuddyJson.str(m['reason']))));
   }
@@ -148,7 +157,7 @@ class DmHubBridge implements DmTransport {
     final live = c != null && c.state == HubConnectionState.Connected;
     for (final e in batch.entries) {
       if (live) {
-        unawaited(c!.send('DmRead', args: [e.key, e.value]).catchError((Object _) {}));
+        unawaited(c.send('DmRead', args: [e.key, e.value]).catchError((Object _) {}));
       } else {
         unawaited(const SocialChatApi().read(e.key, e.value).then((r) {
           if (r case BuddyOk(:final value)) _controller.add(DmUnreadEvent(value));
