@@ -6,11 +6,35 @@ import 'package:bakhli/config/app_routes.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('hub shows five tiles in order, where and buddy are live', () {
+  test('hub shows six tiles in order, where, groups and buddy are live', () {
     final v = HubTiles.visible();
-    expect(v.map((t) => t.id).toList(), ['where', 'adventures', 'buddy', 'guide', 'rentals']);
-    expect(v.where((t) => t.status == HubTileStatus.live).map((t) => t.id).toList(), ['where', 'buddy']);
-    expect(v.firstWhere((t) => t.id == 'buddy').route, AppRoutes.buddies);
+    expect(v.map((t) => t.id).toList(), ['where', 'groups', 'buddy', 'guide', 'rentals', 'adventures']);
+    expect(v.where((t) => t.status == HubTileStatus.live).map((t) => t.id).toList(), ['where', 'groups', 'buddy']);
+    expect(v.firstWhere((t) => t.id == 'groups').route, AppRoutes.travelBuddies);
+    expect(v.firstWhere((t) => t.id == 'buddy').route, AppRoutes.people);
+  });
+
+  test('tile sides alternate left and right', () {
+    expect([for (final t in HubTiles.all) t.side], [
+      for (var i = 0; i < HubTiles.all.length; i++) i.isEven ? HubTileSide.textLeft : HubTileSide.textRight,
+    ]);
+  });
+
+  test('groups and buddy tiles carry their copy', () {
+    final groups = HubTiles.all.firstWhere((t) => t.id == 'groups');
+    expect(groups.line, 'Join destination and activity');
+    expect(groups.title, 'TRAVEL GROUPS');
+    final buddy = HubTiles.all.firstWhere((t) => t.id == 'buddy');
+    expect(buddy.line, 'Find your perfect');
+    expect(buddy.title, 'TRAVEL BUDDY');
+  });
+
+  test('groups tile has its own art, not the buddy art', () {
+    final groups = HubTiles.all.firstWhere((t) => t.id == 'groups');
+    final buddy = HubTiles.all.firstWhere((t) => t.id == 'buddy');
+    final groupsArt = groups.art.map((a) => a.asset).toList();
+    expect(groupsArt, [ListingArt.camping, TravelIcon.chat]);
+    expect(groupsArt.any(buddy.art.map((a) => a.asset).contains), isFalse);
   });
 
   testWidgets('tile is 160 high and its art box is 158 wide', (tester) async {

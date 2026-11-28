@@ -25,6 +25,7 @@ import 'package:bakhli/features/trip/widgets/trip_lifecycle_actions.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/screens/trip_dates_sheet.dart';
+import 'package:bakhli/features/trip/trip_strings_v2_plan.dart';
 import 'package:bakhli/features/trip/widgets/trip_leg_impact_dialog.dart';
 import 'package:bakhli/features/trip/widgets/trip_update_ask_sheet.dart';
 import 'package:flutter/material.dart';
@@ -389,6 +390,17 @@ void main() {
 
   testWidgets('plan empty', (t) async {
     await _plan(t, 'plan_empty', setup: (c) => c.plan.value = _withSpots(journeyPlan(const [3, 2]), (_) => 0));
+    expect(find.text(TripStringsV2Plan.noPlanTitle), findsNothing);
+    expect(find.text(TripStringsV2Plan.noPlacesThisDay), findsWidgets);
+    expect(find.text(TripStringsV2Plan.addPlace), findsWidgets);
+  });
+
+  testWidgets('plan nodays', (t) async {
+    await _plan(t, 'plan_nodays', setup: (c) {
+      final p = journeyPlan(const [3, 2]);
+      c.plan.value = TripPlan(legs: p.legs, days: const [], settings: p.settings);
+    });
+    expect(find.text(TripStringsV2Plan.noPlanTitle), findsOneWidget);
   });
   testWidgets('plan dayfull', (t) async {
     await _plan(t, 'plan_dayfull', setup: (c) => c.plan.value = _withSpots(journeyPlan(const [3, 2]), (d) => d == 1 ? 6 : 1), then: (t, c) async {

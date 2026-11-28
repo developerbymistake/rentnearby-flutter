@@ -7,6 +7,7 @@ import '../trip_strings.dart';
 import '../trip_strings_enquiry_simple.dart';
 import 'trip_sheet_frame.dart';
 import 'trip_step_full_sheet.dart';
+import 'trip_undo_snack.dart';
 
 class TripTwoButtons extends StatelessWidget {
   const TripTwoButtons({
@@ -49,34 +50,35 @@ class TripWithdrawSheet {
     return row is TripEnquiryModel ? row : null;
   }
 
+  static const int _undoMaxMs = 10000;
+
   static void showUndo(BuildContext context, TripEnquiryModel row, {VoidCallback? onGone}) {
     final until = row.undoUntil;
     final m = ScaffoldMessenger.maybeOf(context);
     final host = Navigator.of(context, rootNavigator: true).context;
-    if (until == null || m == null || !until.isAfter(DateTime.now())) {
+    final left = until?.difference(DateTime.now());
+    if (left == null || m == null || left <= Duration.zero) {
       onGone?.call();
       return;
     }
-    final ms = until.difference(DateTime.now()).inMilliseconds.clamp(3000, 10000);
-    var undone = false;
-    m.hideCurrentSnackBar();
-    m.showSnackBar(
-      SnackBar(
-        content: Text(TripStringsEnq.withdrawnUndo(row.listingName.isEmpty ? TripStrings.stay : row.listingName), style: const TextStyle(fontFamily: FitnessAppTheme.fontName)),
-        duration: Duration(milliseconds: ms),
-        action: SnackBarAction(
-          label: TripStringsEnq.undo,
-          onPressed: () async {
-            undone = true;
-            final ctrl = TripEnquiryController.to;
-            if (await ctrl.undoWithdraw(row.id)) return;
-            final full = ctrl.lastStepFull;
-            if (full != null && host.mounted) await TripStepFullSheet.show(host, full);
-          },
-        ),
-      ),
-    ).closed.then((_) {
-      if (!undone) onGone?.call();
+    final handle = TripUndoSnack.show(
+      m,
+      TripStringsEnq.withdrawnUndo(row.listingName.isEmpty ? TripStrings.stay : row.listingName),
+      actionLabel: TripStringsEnq.undo,
+      duration: Duration(milliseconds: left.inMilliseconds.clamp(1000, _undoMaxMs)),
+      onUndo: () async {
+        final ctrl = TripEnquiryController.to;
+        if (await ctrl.undoWithdraw(row.id)) return;
+        final full = ctrl.lastStepFull;
+        if (full != null && host.mounted) await TripStepFullSheet.show(host, full);
+      },
+    );
+    if (handle == null) {
+      onGone?.call();
+      return;
+    }
+    handle.closed.then((r) {
+      if (r != SnackBarClosedReason.action) onGone?.call();
     });
   }
 

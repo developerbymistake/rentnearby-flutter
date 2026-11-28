@@ -22,7 +22,7 @@ void main() {
     expect(steps[0].body, 'Tap here to pick a city and plan your journey.');
     expect(steps[1].key, TourKeys.tripsBuddyTile);
     expect(steps[1].title, 'Find a buddy');
-    expect(steps[1].body, 'Tap here to find people going your way.');
+    expect(steps[1].body, 'Tap here to find your perfect travel buddy.');
   });
 
   test('tourForTab is null for every other tab and for owner shells', () {

@@ -178,7 +178,7 @@ void main() {
     for (final s in [
       'Hi, there',
       'Where to next?',
-      'Quick actions',
+      'Your updates',
       'Follow us',
     ]) {
       expect(find.textContaining(s), findsWidgets, reason: s);

@@ -37,6 +37,7 @@ class PickedPlace {
   final String cityId;
   final String districtId;
   final String districtName;
+  final String? stateName;
 
   const PickedPlace({
     required this.name,
@@ -45,6 +46,7 @@ class PickedPlace {
     required this.cityId,
     required this.districtId,
     required this.districtName,
+    this.stateName,
   });
 }
 
@@ -293,6 +295,7 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet>
           cityId: city.id,
           districtId: district.id,
           districtName: district.name,
+          stateName: district.stateName,
         ),
       );
       return;

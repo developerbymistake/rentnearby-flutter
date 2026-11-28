@@ -97,7 +97,12 @@ class TripDaysRules {
 
   static int suggestedDays(int spotCount) => (spotCount / perDay).ceil().clamp(1, 3).toInt();
 
-  static bool canAddOnDay(TripPlan p, int day) => (p.dayAt(day)?.spots.length ?? perDay) < perDay;
+  static bool isDayFull(TripPlan p, int day) => (p.dayAt(day)?.spots.length ?? 0) >= perDay;
+
+  static bool canAddOnDay(TripPlan p, int day) {
+    final d = p.dayAt(day);
+    return d != null && d.spots.length < perDay;
+  }
 
   static bool canRemoveDay(TripPlan p, int day) {
     final d = p.dayAt(day);

@@ -14,6 +14,7 @@ class TripExitConfirm {
         art: ListingArt.luggage,
         title: TripStringsOverview.exitTitle,
         body: TripStringsOverview.exitBody,
+        tight: true,
         secondaryLabel: TripStringsOverview.keepPlanning,
         secondaryKey: stayKey,
         onSecondary: () => Navigator.pop(ctx, false),

@@ -18,39 +18,26 @@ class PickedHome {
 }
 
 class _PlaceOption {
-  const _PlaceOption({required this.title, required this.subtitle, required this.city, required this.state});
+  const _PlaceOption({required this.title, required this.subtitle});
 
   final String title;
   final String subtitle;
-  final String city;
-  final String state;
 }
 
 class PlacePickerSheet extends StatefulWidget {
-  const PlacePickerSheet({super.key, required this.citiesOnly});
-
-  final bool citiesOnly;
+  const PlacePickerSheet({super.key});
 
   static const int maxResults = 30;
 
   static Future<String?> pick(BuildContext context) async {
-    final r = await _open(context, citiesOnly: false, title: SocialStringsA.pickPlaceTitle);
-    return r?.title;
-  }
-
-  static Future<PickedHome?> pickHome(BuildContext context) async {
-    final r = await _open(context, citiesOnly: true, title: SocialStringsA.pickHomeTitle);
-    return r == null ? null : PickedHome(city: r.city, state: r.state);
-  }
-
-  static Future<_PlaceOption?> _open(BuildContext context, {required bool citiesOnly, required String title}) {
     TripCityCatalog.to.load().ignore();
-    return BuddySheet.show<_PlaceOption>(
+    final r = await BuddySheet.show<_PlaceOption>(
       context,
-      title: title,
+      title: SocialStringsA.pickPlaceTitle,
       art: ListingArt.roundPushpin,
-      builder: (_) => PlacePickerSheet(citiesOnly: citiesOnly),
+      builder: (_) => const PlacePickerSheet(),
     );
+    return r?.title;
   }
 
   @override
@@ -84,18 +71,18 @@ class _PlacePickerSheetState extends State<PlacePickerSheet> {
     final cities = TripCityCatalog.to.search(q);
     final out = <_PlaceOption>[];
     final query = q.trim().toLowerCase();
-    if (!widget.citiesOnly && query.length >= 2) {
+    if (query.length >= 2) {
       final seen = <String>{};
       for (final c in cities) {
         final s = c.stateName.trim();
         if (s.isNotEmpty && s.toLowerCase().contains(query) && seen.add(s.toLowerCase())) {
-          out.add(_PlaceOption(title: s, subtitle: SocialStringsA.stateLine, city: '', state: s));
+          out.add(_PlaceOption(title: s, subtitle: SocialStringsA.stateLine));
         }
       }
     }
     for (final c in cities) {
       if (out.length >= PlacePickerSheet.maxResults) break;
-      out.add(_PlaceOption(title: c.name, subtitle: c.placeLine, city: c.name, state: c.stateName));
+      out.add(_PlaceOption(title: c.name, subtitle: c.placeLine));
     }
     return out;
   }

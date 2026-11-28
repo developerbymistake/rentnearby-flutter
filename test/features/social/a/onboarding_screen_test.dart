@@ -1,12 +1,15 @@
 import 'package:bakhli/config/app_routes.dart';
 import 'package:bakhli/config/profile_photo_strings.dart';
+import 'package:bakhli/controllers/location_controller.dart';
 import 'package:bakhli/design/extra/ext_auth.dart';
 import 'package:bakhli/design/extra/ext_buddy.dart';
+import 'package:bakhli/features/social/a/edit/place_picker_sheet.dart';
 import 'package:bakhli/features/social/a/onboarding/onboarding_steps.dart';
 import 'package:bakhli/features/social/a/social_strings_a.dart';
 import 'package:bakhli/features/social/a/widgets/social_chips_a.dart';
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
+import 'package:bakhli/models/city_model.dart';
 import 'package:bakhli/screens/onboarding_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,12 +18,41 @@ import 'package:get/get.dart';
 import '../../../support/buddy_render.dart';
 import '../shared/social_test_support.dart';
 
+class _Loc extends LocationController {
+  @override
+  // ignore: must_call_super
+  void onInit() {}
+
+  @override
+  Future<List<CityModel>> loadCitiesForDistrict(String districtId, {bool forceRefresh = false}) => Future.value([
+        for (final n in ['Bhimtal', 'Haldwani']) CityModel(id: n, districtId: districtId, name: n, latitude: 29.3, longitude: 79.5),
+      ]);
+}
+
+_Loc _putLoc() {
+  final loc = Get.put<LocationController>(_Loc()) as _Loc;
+  loc.selectedDistrict.value = DistrictModel(id: 'nt', name: 'Nainital', stateName: 'Uttarakhand');
+  return loc;
+}
+
 final _pages = [GetPage(name: AppRoutes.main, page: () => const Scaffold(body: Text('MAIN')))];
 
 Future<void> _tap(WidgetTester t, Finder f) async {
   await t.ensureVisible(f);
   await t.pump();
   await t.tap(f);
+  await settle(t);
+}
+
+Future<void> _toStep3(WidgetTester t) async {
+  final c = t.widget<OnboardingStepYou>(find.byType(OnboardingStepYou)).c;
+  c.gender.value = SocialStringsA.male;
+  c.birthMonth.value = 1;
+  c.birthYear.value = DateTime.now().year - 18;
+  c.interests.assignAll(const ['Mountains', 'Treks', 'Food']);
+  c.skills.assignAll(const ['Driver', 'Cook']);
+  expect(c.next(), isTrue);
+  expect(c.next(), isTrue);
   await settle(t);
 }
 
@@ -225,6 +257,103 @@ void main() {
     await drain(t);
   });
 
+  testWidgets('step 3 shows three cards in order: Home city, Places, About', (t) async {
+    installServer();
+    _putLoc();
+    await pumpSocial(t, const OnboardingScreen(), size: const Size(392, 2000), pages: _pages);
+    await _toStep3(t);
+    final cards = find.descendant(of: find.byType(OnboardingStepAbout), matching: find.byType(OnboardingCard));
+    expect(cards, findsNWidgets(3));
+    bool inCard(int i, Finder f) => find.descendant(of: cards.at(i), matching: f).evaluate().isNotEmpty;
+    expect(inCard(0, find.byKey(const ValueKey('ob_home_city'))), isTrue);
+    expect(inCard(1, find.byKey(const ValueKey('ob_add_place'))), isTrue);
+    expect(inCard(2, find.byKey(const ValueKey('ob_about'))), isTrue);
+    expect(t.getRect(cards.at(0)).bottom, lessThan(t.getRect(cards.at(1)).top));
+    expect(t.getRect(cards.at(1)).bottom, lessThan(t.getRect(cards.at(2)).top));
+    expect(find.text(SocialStringsA.homeCity), findsOneWidget);
+    expect(find.text(SocialStringsA.homeCityHint), findsOneWidget);
+    expect(find.text(SocialStringsA.addHomeCity), findsOneWidget);
+    expect(find.text(SocialStringsA.homeCityFound), findsNothing);
+    await drain(t);
+    expect(t.takeException(), isNull);
+  });
+
+  testWidgets('step 3 cards fit a small phone with large text', (t) async {
+    installServer();
+    _putLoc();
+    await pumpSocial(t, const OnboardingScreen(), size: const Size(320, 2400), textScale: 1.3, pages: _pages);
+    await _toStep3(t);
+    expect(find.byKey(const ValueKey('ob_home_city')), findsOneWidget);
+    await drain(t);
+    expect(t.takeException(), isNull);
+  });
+
+  testWidgets('step 3 home city pill shows the controller value', (t) async {
+    installServer();
+    _putLoc();
+    await pumpSocial(t, const OnboardingScreen(), size: const Size(392, 2000), pages: _pages);
+    await _toStep3(t);
+    final c = t.widget<OnboardingStepAbout>(find.byType(OnboardingStepAbout)).c;
+    c.pickHomeCity(const PickedHome(city: 'Dehradun', state: 'Uttarakhand'));
+    await settle(t);
+    expect(find.descendant(of: find.byKey(const ValueKey('ob_home_city')), matching: find.text('Dehradun, Uttarakhand')), findsOneWidget);
+    expect(find.text(SocialStringsA.homeCityFound), findsNothing);
+    await drain(t);
+  });
+
+  testWidgets('step 3 home city found from GPS shows the help line until the user picks', (t) async {
+    installServer();
+    final loc = _putLoc();
+    loc.gpsCityDistrict.value = DistrictModel(id: 'dd', name: 'Dehradun', stateName: 'Uttarakhand');
+    loc.gpsCity.value = CityModel(id: 'ddn', districtId: 'dd', name: 'Dehradun', latitude: 30.3, longitude: 78.0);
+    await pumpSocial(t, const OnboardingScreen(), size: const Size(392, 2000), pages: _pages);
+    await _toStep3(t);
+    expect(find.text('Dehradun, Uttarakhand'), findsOneWidget);
+    expect(find.text(SocialStringsA.homeCityFound), findsOneWidget);
+    final c = t.widget<OnboardingStepAbout>(find.byType(OnboardingStepAbout)).c;
+    c.pickHomeCity(const PickedHome(city: 'Haldwani', state: 'Uttarakhand'));
+    await settle(t);
+    expect(find.text('Haldwani, Uttarakhand'), findsOneWidget);
+    expect(find.text(SocialStringsA.homeCityFound), findsNothing);
+    await drain(t);
+  });
+
+  testWidgets('step 3 picking the same GPS city hides the help line', (t) async {
+    installServer();
+    final loc = _putLoc();
+    loc.gpsCityDistrict.value = DistrictModel(id: 'dd', name: 'Dehradun', stateName: 'Uttarakhand');
+    loc.gpsCity.value = CityModel(id: 'ddn', districtId: 'dd', name: 'Dehradun', latitude: 30.3, longitude: 78.0);
+    await pumpSocial(t, const OnboardingScreen(), size: const Size(392, 2000), pages: _pages);
+    await _toStep3(t);
+    expect(find.text(SocialStringsA.homeCityFound), findsOneWidget);
+    final c = t.widget<OnboardingStepAbout>(find.byType(OnboardingStepAbout)).c;
+    c.pickHomeCity(const PickedHome(city: 'Dehradun', state: 'Uttarakhand'));
+    await settle(t);
+    expect(find.text('Dehradun, Uttarakhand'), findsOneWidget);
+    expect(find.text(SocialStringsA.homeCityFound), findsNothing);
+    await drain(t);
+  });
+
+  testWidgets('step 3 home city opens the city sheet and the preview shows the pick', (t) async {
+    installServer();
+    _putLoc();
+    await pumpSocial(t, const OnboardingScreen(), size: const Size(392, 2000), pages: _pages);
+    await _toStep3(t);
+    await _tap(t, find.byKey(const ValueKey('ob_home_city')));
+    expect(find.text(SocialStringsA.pickHomeTitle), findsOneWidget);
+    await t.tap(find.text('Bhimtal').last);
+    await settle(t);
+    expect(find.descendant(of: find.byKey(const ValueKey('ob_home_city')), matching: find.text('Bhimtal, Uttarakhand')), findsOneWidget);
+    final c = t.widget<OnboardingStepAbout>(find.byType(OnboardingStepAbout)).c;
+    expect(c.homeCity.value, 'Bhimtal');
+    expect(c.homeState.value, 'Uttarakhand');
+    await t.ensureVisible(find.byKey(const ValueKey('ob_about')));
+    await t.enterText(find.byKey(const ValueKey('ob_about')), 'Weekend trekker.');
+    await settle(t);
+    expect(find.descendant(of: find.byKey(const ValueKey('ob_preview')), matching: find.text('Bhimtal')), findsOneWidget);
+    await drain(t);
+  });
+
   Future<void> toStep2(WidgetTester t, {Size size = const Size(392, 1600), double scale = 1.0}) async {
     installServer();
     await pumpSocial(t, const OnboardingScreen(), size: size, textScale: scale, pages: _pages);
@@ -284,4 +413,16 @@ void main() {
       expect(t.takeException(), isNull);
     });
   }
+
+  testWidgets('step 2 shows two cards, interests above skills', (t) async {
+    await toStep2(t);
+    final cards = find.descendant(of: find.byType(OnboardingStepStyle), matching: find.byType(OnboardingCard));
+    expect(cards, findsNWidgets(2));
+    expect(find.descendant(of: cards.at(0), matching: find.byKey(const ValueKey('ob_int_Mountains'))), findsOneWidget);
+    expect(find.descendant(of: cards.at(0), matching: find.byKey(const ValueKey('ob_skill_Driver'))), findsNothing);
+    expect(find.descendant(of: cards.at(1), matching: find.byKey(const ValueKey('ob_skill_Driver'))), findsOneWidget);
+    expect(t.getRect(cards.at(0)).bottom, lessThan(t.getRect(cards.at(1)).top));
+    await drain(t);
+    expect(t.takeException(), isNull);
+  });
 }

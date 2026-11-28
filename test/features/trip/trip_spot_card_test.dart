@@ -321,30 +321,28 @@ void main() {
   });
 
   group('draft', () {
-    testWidgets('unselected: circle toggle, no add to trip label, tap calls onToggle', (t) async {
+    testWidgets('unselected: same Add to trip pill as the normal picker, tap calls onToggle', (t) async {
       var n = 0;
       await _host(t, TripSpotRow(spot: _spot(), selected: false, draft: true, subtitle: 'Lake · 1 h 30 min', onToggle: () => n++));
-      expect(find.byIcon(Icons.circle_outlined), findsOneWidget);
-      expect(t.widget<Icon>(find.byIcon(Icons.circle_outlined)).color, TripSpotCard.inkOf(0));
-      final dot = t.widget<DecoratedBox>(find.ancestor(of: find.byIcon(Icons.circle_outlined), matching: find.byType(DecoratedBox)).first);
-      expect((dot.decoration as BoxDecoration).color, DesignColors.surface);
-      expect(find.text(TripStringsSpotsX.addToTrip), findsNothing);
+      expect(find.text(TripStringsSpotsX.addToTrip), findsOneWidget);
+      expect(find.byType(WhitePillButton), findsOneWidget);
+      expect(find.byIcon(Icons.circle_outlined), findsNothing);
       expect(find.text('Lake · 1 h 30 min'), findsOneWidget);
-      await t.tap(find.byIcon(Icons.circle_outlined));
+      await t.tap(find.text(TripStringsSpotsX.addToTrip));
       await t.pump(const Duration(milliseconds: 300));
       expect(n, 1);
       expect(find.byType(TripSpotDetailSheet), findsNothing);
     });
 
-    testWidgets('selected: check circle and ring', (t) async {
-      await _host(t, TripSpotRow(spot: _spot(), selected: true, draft: true, onToggle: () {}));
-      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
-      expect(t.widget<Icon>(find.byIcon(Icons.check_rounded)).color, DesignColors.surface);
-      final dot = t.widget<DecoratedBox>(find.ancestor(of: find.byIcon(Icons.check_rounded), matching: find.byType(DecoratedBox)).first);
-      expect((dot.decoration as BoxDecoration).color, TripSpotCard.inkOf(0));
-      expect(((dot.decoration as BoxDecoration).border! as Border).top.color, DesignColors.surface);
-      expect(find.text(TripStringsSpotsX.addedToTrip), findsNothing);
+    testWidgets('selected: Added pill and ring, tap unpicks', (t) async {
+      var n = 0;
+      await _host(t, TripSpotRow(spot: _spot(), selected: true, draft: true, onToggle: () => n++));
+      expect(find.text(TripStringsSpotsX.addedToTrip), findsOneWidget);
+      expect(find.byIcon(Icons.circle_outlined), findsNothing);
       expect(find.descendant(of: find.byType(TripSpotCard), matching: find.byWidgetPredicate((w) => w is Container && w.foregroundDecoration != null)), findsOneWidget);
+      await t.tap(find.text(TripStringsSpotsX.addedToTrip));
+      await t.pump(const Duration(milliseconds: 300));
+      expect(n, 1);
     });
 
     testWidgets('dimmed existing: Added, faded, tap does nothing', (t) async {
@@ -374,9 +372,9 @@ void main() {
             scale: s,
           );
           expect(t.takeException(), isNull);
-          expect(find.text(TripStringsSpotsX.addToTrip), findsOneWidget);
-          expect(t.getSize(find.byType(WhitePillButton)).height, DS.s(KitMetrics.touch));
-          final pill = t.getRect(find.byType(WhitePillButton));
+          expect(find.text(TripStringsSpotsX.addToTrip), findsNWidgets(2));
+          expect(t.getSize(find.byType(WhitePillButton).first).height, DS.s(KitMetrics.touch));
+          final pill = t.getRect(find.byType(WhitePillButton).first);
           final card = t.getRect(find.byType(TripSpotCard).first);
           expect(pill.right, lessThanOrEqualTo(card.right - DS.s(14) - DS.s(18) + 0.5));
         });

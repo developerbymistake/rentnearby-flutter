@@ -42,24 +42,20 @@ abstract final class TaxiAddTrip {
 }
 
 class TaxiUpcomingCard extends StatelessWidget {
-  const TaxiUpcomingCard({super.key, this.load});
+  const TaxiUpcomingCard({super.key});
 
-  final OwnerLoad<OwnerUpcoming> Function()? load;
-
-  OwnerLoad<OwnerUpcoming> _read() {
-    final l = load;
-    if (l != null) return l();
-    final home = TaxiDriverHomeController.maybe;
-    if (home == null) return const OwnerLoadLoading();
-    return switch (home.load.value) {
-      OwnerLoadData<OwnerHomeDto>(:final value, :final stale) => OwnerLoadData(value.upcoming, stale: stale),
-      OwnerLoadLoading<OwnerHomeDto>() => const OwnerLoadLoading(),
-      _ => const OwnerLoadError(),
-    };
-  }
+  static OwnerLoad<OwnerUpcoming> _read(TaxiDriverHomeController home) => switch (home.load.value) {
+        OwnerLoadData<OwnerHomeDto>(:final value, :final stale) => OwnerLoadData(value.upcoming, stale: stale),
+        OwnerLoadLoading<OwnerHomeDto>() => const OwnerLoadLoading(),
+        _ => const OwnerLoadError(),
+      };
 
   @override
-  Widget build(BuildContext context) => Obx(() => TaxiUpcomingCardView(load: _read()));
+  Widget build(BuildContext context) {
+    final home = TaxiDriverHomeController.maybe;
+    if (home == null) return const TaxiUpcomingCardView(load: OwnerLoadLoading());
+    return Obx(() => TaxiUpcomingCardView(load: _read(home)));
+  }
 }
 
 class TaxiUpcomingCardView extends StatelessWidget {

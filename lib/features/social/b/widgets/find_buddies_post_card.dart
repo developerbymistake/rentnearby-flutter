@@ -37,7 +37,7 @@ abstract final class PostTripEntry {
 
 enum FindBuddiesPostPlace { home, myTrips }
 
-// Spec 23.6/23.7: Home card right below Quick actions, built like the Home hero banner (WorkoutCard, 3D art, white action pill);
+// Spec 23.6/23.7: Home card right below the hero and Find travellers card, built like the Home hero banner (WorkoutCard, 3D art, white action pill);
 // My Trips card on top in the compact row look; both in the coral family. Both open the Post your trip wizard.
 class FindBuddiesPostCard extends StatelessWidget {
   const FindBuddiesPostCard({super.key, required this.place, this.margin});

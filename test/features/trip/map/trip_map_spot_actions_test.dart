@@ -33,7 +33,7 @@ class _Rig {
   int selected;
   final added = <({List<TripSpotModel> spots, int? leg, int? day})>[];
   final removed = <String>[];
-  final inserted = <({TripSpotRef ref, int day, int index})>[];
+  final undone = <TripSpotRemoval>[];
   final sheets = <({TripSpotModel spot, bool selected, bool locked, bool hasToggle, int? cityKey, String? version, bool partial, bool revalidate})>[];
   bool addResult = true;
   bool removeSticks = false;
@@ -49,13 +49,17 @@ class _Rig {
           added.add((spots: spots, leg: legIndex, day: day));
           return addResult;
         },
-        removeSpot: (id, {keepEmptyDays = false}) {
+        removeForUndo: (id) {
           removed.add(id);
           final p = plan;
-          if (removeSticks || p == null) return;
+          if (removeSticks || p == null) return null;
           plan = TripPlan(legs: p.legs, days: [for (final d in p.days) d.copyWith(spots: d.spots.where((s) => s.id != id).toList())]);
+          return TripSpotRemoval(tripId: null, spotId: id, before: p.days, afterKey: '');
         },
-        insertSpotAt: (ref, day, index) => inserted.add((ref: ref, day: day, index: index)),
+        undoRemove: (r) {
+          undone.add(r);
+          return true;
+        },
         context: () => ctx!,
         cachedSpots: (k) => cache[k],
         cachedVersion: (k) => cache.containsKey(k) ? 'v$k' : null,
@@ -155,7 +159,7 @@ void main() {
     });
   });
 
-  testWidgets('remove: removes with keepEmptyDays, shows Place removed with Undo that reinserts at the old place', (tester) async {
+  testWidgets('remove: shows Place removed with Undo that calls undoRemove with the removal', (tester) async {
     final r = _Rig(_plan(day1: 3));
     await pumpPhone(tester, Scaffold(body: Builder(builder: (c) {
       r.ctx = c;
@@ -169,8 +173,24 @@ void main() {
     expect(find.text(TripStringsV2Plan.placeRemoved), findsOneWidget);
     await tester.tap(find.text(TripStringsV2Plan.undo));
     await tester.pump();
-    expect(r.inserted.single.ref.id, 'p1');
-    expect((r.inserted.single.day, r.inserted.single.index), (1, 1));
+    expect(r.undone.single.spotId, 'p1');
+    expect(r.undone.single.before.first.spots.map((s) => s.id), ['p0', 'p1', 'p2']);
+  });
+
+  testWidgets('remove: the Place removed bar hides by itself after 5 s', (tester) async {
+    final r = _Rig(_plan(day1: 3));
+    await pumpPhone(tester, Scaffold(body: Builder(builder: (c) {
+      r.ctx = c;
+      return const SizedBox.expand();
+    })));
+    expect(r.build().remove(const DiscoverySpot(id: 'p1', lat: 1, lon: 1, category: 'temple', rank: 1, name: 'p1', cityKey: 10)), isTrue);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 750));
+    expect(find.text(TripStringsV2Plan.placeRemoved), findsOneWidget);
+    await tester.pump(const Duration(seconds: 6));
+    await tester.pump(const Duration(milliseconds: 750));
+    expect(find.text(TripStringsV2Plan.placeRemoved), findsNothing);
+    expect(r.undone, isEmpty);
   });
 
   testWidgets('remove blocked by the controller shows no snackbar', (tester) async {

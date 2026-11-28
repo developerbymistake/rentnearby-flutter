@@ -20,7 +20,6 @@ class TripCustomizeDayCard extends StatelessWidget {
   final int dayIndex;
   final DateTime? date;
   final int dayLimitMinutes;
-  final bool flagged;
   final String? selectedSpotId;
   final String? draggingSpotId;
   final ValueChanged<String> onSelect;
@@ -39,7 +38,6 @@ class TripCustomizeDayCard extends StatelessWidget {
     required this.dayIndex,
     required this.date,
     required this.dayLimitMinutes,
-    required this.flagged,
     required this.selectedSpotId,
     this.draggingSpotId,
     required this.onSelect,
@@ -113,33 +111,25 @@ class TripCustomizeDayCard extends StatelessWidget {
             boxShadow: DS.shadows(TripLook.dayCardShadow),
           ),
           position: DecorationPosition.background,
-          child: DecoratedBox(
-            key: flagged ? ValueKey('customize-day-error-$dayIndex') : null,
-            position: DecorationPosition.foreground,
-            decoration: BoxDecoration(
-              borderRadius: radius,
-              border: flagged ? Border.all(color: DesignColors.error, width: DS.s(3), strokeAlign: BorderSide.strokeAlignOutside) : null,
-            ),
-            child: ClipRRect(
-              borderRadius: radius,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _header(_shownCount),
-                  Padding(
-                    padding: EdgeInsets.only(bottom: DS.s(8)),
-                    child: _closedToDrop
-                        ? Padding(
-                            padding: DS.sym(h: 14, v: 12),
-                            child: const TripCustomizeDashedNote(TripStringsCustomize.dayFullDrop),
-                          )
-                        : spots.isEmpty
-                            ? _empty(hover)
-                            : _rows(hover),
-                  ),
-                ],
-              ),
+          child: ClipRRect(
+            borderRadius: radius,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _header(_shownCount),
+                Padding(
+                  padding: EdgeInsets.only(bottom: DS.s(8)),
+                  child: _closedToDrop
+                      ? Padding(
+                          padding: DS.sym(h: 14, v: 12),
+                          child: const TripCustomizeDashedNote(TripStringsCustomize.dayFullDrop),
+                        )
+                      : spots.isEmpty
+                          ? _empty(hover)
+                          : _rows(hover),
+                ),
+              ],
             ),
           ),
         );
@@ -154,19 +144,12 @@ class TripCustomizeDayCard extends StatelessWidget {
             },
             builder: (context, cand, rej) => card(cand.isNotEmpty),
           );
-    final column = Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (flagged)
-          Container(
-            margin: DS.insets(l: 18, t: 28, r: 18),
-            padding: DS.sym(h: 16, v: 12),
-            decoration: BoxDecoration(color: DesignColors.dayFullChip, borderRadius: DS.br(TripCustomizeLook.errorRadius)),
-            child: Text(TripStringsCustomize.emptyDayError(dayNumber), style: Ink3D.text(13, FontWeight.w600, TripLook.badText, height: 1.4)),
-          ),
         Padding(
-          padding: EdgeInsets.only(top: DS.gv(flagged ? 44 : 48)),
+          padding: EdgeInsets.only(top: DS.gv(48)),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
@@ -186,7 +169,6 @@ class TripCustomizeDayCard extends StatelessWidget {
         ),
       ],
     );
-    return flagged ? _RevealOnShow(child: column) : column;
   }
 
   Widget _header(int count) {
@@ -504,26 +486,4 @@ class _DropZone extends StatelessWidget {
       ),
     );
   }
-}
-
-class _RevealOnShow extends StatefulWidget {
-  final Widget child;
-
-  const _RevealOnShow({required this.child});
-
-  @override
-  State<_RevealOnShow> createState() => _RevealOnShowState();
-}
-
-class _RevealOnShowState extends State<_RevealOnShow> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) Scrollable.ensureVisible(context, alignment: 0.5, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) => widget.child;
 }

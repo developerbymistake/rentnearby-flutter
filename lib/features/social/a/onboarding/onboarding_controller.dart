@@ -2,11 +2,13 @@ import 'package:get/get.dart';
 
 import '../../../../controllers/auth_controller.dart';
 import '../../../../controllers/location_controller.dart';
+import '../../../../models/city_model.dart';
 import '../../../buddy/shared/buddy_result.dart';
 import '../../shared/data/social_me_api.dart';
 import '../../shared/social_error_types.dart';
 import '../../shared/social_me_controller.dart';
 import '../../shared/social_strings.dart';
+import '../edit/place_picker_sheet.dart';
 import '../social_strings_a.dart';
 
 abstract final class SocialCatalogDefaults {
@@ -58,8 +60,12 @@ class OnboardingController extends GetxController {
   final about = ''.obs;
   final submitting = false.obs;
   final error = RxnString();
-  String? homeCity;
-  String? homeState;
+  final homeCity = RxnString();
+  final homeState = RxnString();
+  final _homePicked = false.obs;
+  Worker? _gpsWorker;
+
+  bool get homeCityFromGps => !_homePicked.value && homeCity.value != null;
 
   List<String> get interestOptions {
     final c = SocialMeController.maybe?.catalog.interests ?? const <String>[];
@@ -82,11 +88,33 @@ class OnboardingController extends GetxController {
     }
     if (Get.isRegistered<LocationController>()) {
       final loc = Get.find<LocationController>();
-      final city = loc.autoCity.value?.name.trim();
-      if (city != null && city.isNotEmpty) homeCity = city;
-      final state = loc.selectedDistrict.value?.stateName?.trim();
-      if (state != null && state.isNotEmpty) homeState = state;
+      _applyGpsCity(loc);
+      _gpsWorker = ever<CityModel?>(loc.gpsCity, (_) => _applyGpsCity(loc));
+      loc.ensureGpsCity().ignore();
     }
+  }
+
+  @override
+  void onClose() {
+    _gpsWorker?.dispose();
+    super.onClose();
+  }
+
+  void _applyGpsCity(LocationController loc) {
+    if (_homePicked.value) return;
+    final city = loc.gpsCity.value?.name.trim();
+    if (city == null || city.isEmpty) return;
+    final state = loc.gpsCityDistrict.value?.stateName?.trim();
+    homeCity.value = city;
+    homeState.value = state == null || state.isEmpty ? null : state;
+  }
+
+  void pickHomeCity(PickedHome h) {
+    _homePicked.value = true;
+    final city = h.city.trim();
+    final state = h.state.trim();
+    homeCity.value = city.isEmpty ? null : city;
+    homeState.value = state.isEmpty ? null : state;
   }
 
   String get trimmedName => name.value.trim();
@@ -176,8 +204,8 @@ class OnboardingController extends GetxController {
         'skills': skills.toList(),
         'places': places.toList(),
         'about': about.value.trim(),
-        'homeCityName': ?homeCity,
-        'homeStateName': ?homeState,
+        'homeCityName': ?homeCity.value,
+        'homeStateName': ?homeState.value,
       };
 
   Future<bool> finish() async {

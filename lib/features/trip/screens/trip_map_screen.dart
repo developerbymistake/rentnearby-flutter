@@ -25,6 +25,7 @@ import '../trip_strings_v2_plan.dart';
 import '../widgets/trip_plan_header.dart';
 import '../widgets/trip_archived_view.dart';
 import '../widgets/trip_not_found_view.dart';
+import '../widgets/trip_undo_snack.dart';
 import '../map/discovery_api.dart';
 import '../map/trip_discovery_layer.dart';
 import '../map/discovery_overlay.dart';
@@ -160,6 +161,7 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
 
   @override
   void dispose() {
+    TripUndoSnack.dismiss(_plan);
     _enter.dispose();
     _map?.onSymbolTapped.remove(_onSymbolTapped);
     _map?.onCircleTapped.remove(_onCircleTapped);

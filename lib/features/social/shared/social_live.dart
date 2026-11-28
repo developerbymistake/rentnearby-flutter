@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 
+import '../../buddy/buddy_live.dart';
 import '../../trip/controllers/my_trips_controller.dart';
 import 'social_me_controller.dart';
 
@@ -31,6 +32,9 @@ abstract final class SocialLive {
         joinRequests.value++;
       case 'posts':
         posts.value++;
+      case 'tripInvites':
+        BuddyLive.sharedTrips.value++;
+        return;
       case 'limits':
         if (Get.isRegistered<MyTripsController>()) MyTripsController.to.load();
     }

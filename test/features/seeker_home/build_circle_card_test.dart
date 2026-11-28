@@ -145,7 +145,7 @@ void main() {
       }
     }
 
-    testWidgets('the card sits between the trip card and Quick actions', (t) async {
+    testWidgets('the card sits between the trip card and Post your trip', (t) async {
       registerHome(feed: fixtureNoTrip());
       Get.find<AuthController>().roleKey.value = UserRoleKeys.seeker;
       _putMe(following: 2);
@@ -153,10 +153,10 @@ void main() {
       final card = find.byKey(BuildCircleCard.cardKey);
       expect(card, findsOneWidget);
       final trip = t.getTopLeft(find.text('Plan your trip').first).dy;
-      final quick = t.getTopLeft(find.text('Quick actions').first).dy;
+      final post = t.getTopLeft(find.text('Post your trip').first).dy;
       final top = t.getTopLeft(card).dy;
       expect(top, greaterThan(trip));
-      expect(top, lessThan(quick));
+      expect(top, lessThan(post));
     });
 
     testWidgets('no card on Home at 5 follows', (t) async {
@@ -165,7 +165,7 @@ void main() {
       _putMe(following: 5);
       await pumpHome(t);
       expect(find.byKey(BuildCircleCard.cardKey), findsNothing);
-      expect(find.text('Quick actions'), findsWidgets);
+      expect(find.text('Your updates'), findsWidgets);
     });
   });
 }

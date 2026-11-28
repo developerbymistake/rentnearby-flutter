@@ -96,6 +96,7 @@ class TripStringsV2Plan {
   static const String makeRestDay = 'Make it a rest day';
   static const String undoRestDay = 'Add places again';
   static const String placeRemoved = 'Place removed';
+  static const String undoGone = 'The plan changed, so this cannot be undone.';
   static const String orderChanged = 'Order changed';
   static String movedToDay(int n) => 'Moved to Day $n';
   static const String moveUp = 'Move up';

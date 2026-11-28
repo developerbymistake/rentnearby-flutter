@@ -34,6 +34,7 @@ import '../widgets/trip_not_found_view.dart';
 import '../widgets/drag/trip_spot_drag_scope.dart';
 import '../widgets/trip_plan_header.dart';
 import '../widgets/trip_today_card.dart';
+import '../widgets/trip_undo_snack.dart';
 import '../widgets/trip_update_app_card.dart';
 import 'trip_dates_sheet.dart';
 
@@ -64,6 +65,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   Worker? _startWorker;
   Worker? _addedWorker;
   String? _tripId;
+  bool _fromOverview = false;
   int? _legFilter;
   int? _focusDay;
   final _dayKeys = <int, GlobalKey>{};
@@ -86,6 +88,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     final args = Get.arguments;
     final map = args is Map ? args : const {};
     _tripId = map['tripId'] as String?;
+    _fromOverview = map['fromOverview'] == true;
     final fresh = map['fresh'] == true;
     final day = map['day'];
     _focusDay = day is int && day > 0 ? day : null;
@@ -111,6 +114,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
 
   @override
   void dispose() {
+    TripUndoSnack.dismiss(_c);
     WidgetsBinding.instance.removeObserver(this);
     _startWorker?.dispose();
     _addedWorker?.dispose();
@@ -285,8 +289,9 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
 
   bool get _archivedHere => _c.isArchived && (_tripId == null || _c.trip.value?.id == _tripId);
 
+  // Opened from this trip's Overview: Back returns there; the exit question belongs to the trip's root screen.
   bool get _exitGuard =>
-      _c.trip.value != null && _c.plan.value != null && !_c.tripGone.value && !_c.plannerOff.value && !_archivedHere;
+      !_fromOverview && _c.trip.value != null && _c.plan.value != null && !_c.tripGone.value && !_c.plannerOff.value && !_archivedHere;
 
   bool _askingExit = false;
 
@@ -523,7 +528,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
                       onCustomize: () => _openCustomize(leg.index),
                       gapBelow: i < shownLegs.length - 1
                           ? TripLegSectionHeader.gapAbove
-                          : addCity && plan.spotCount > 0
+                          : addCity && plan.days.isNotEmpty
                               ? DS.gv(24)
                               : 0,
                       body: [
@@ -532,7 +537,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
                             KeyedSubtree(key: _dayKey(d.day), child: TripDaySpotList(d.day, key: ValueKey('trip-day-${d.day}'), inSection: true)),
                       ],
                     )),
-                if (plan.spotCount == 0 && !editing && editable) _emptyPlan(),
+                if (plan.days.isEmpty && !editing && editable) _emptyPlan(),
                 if (editing && _c.canAddDay) _addDayButton(),
                 if (addCity) w(const TripAddCityCard()),
               ],
@@ -574,7 +579,9 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     }
   }
 
-  Widget _nextButton(int spots) => Column(
+  Widget _nextButton(int spots) {
+    final blocked = spots == 0 && _c.isNewUnsaved;
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           GradientPillButton(
@@ -583,9 +590,9 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
             label: _c.isNewUnsaved ? TripStringsDayplan.saveTrip : TripStringsDayplan.backToOverview,
             loading: _savingTrip,
             shadows: TripLook.pillShadow,
-            onTap: spots == 0 ? null : _saveTrip,
+            onTap: blocked ? null : _saveTrip,
           ),
-          if (spots == 0)
+          if (blocked)
             Padding(
               padding: EdgeInsets.only(top: DS.gv(10)),
               child: Text(
@@ -596,6 +603,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
             ),
         ],
       );
+  }
 
   EdgeInsets _barPadding(BuildContext context, bool bottomInset) =>
       EdgeInsets.fromLTRB(DS.s(16), DS.s(12), DS.s(16), (bottomInset ? AppInsets.bottomViewPadding(context) : 0) + DS.s(16));
@@ -671,7 +679,9 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         actionLabel: TripStringsV2Plan.addPlace,
         onAction: () {
           _c.layOutPostedDays();
-          TripLegActions.addPlaces(1, pickDay: 1);
+          final first = _c.plan.value?.days.firstOrNull;
+          if (first == null) return;
+          TripLegActions.addPlaces(first.leg, pickDay: first.day);
         },
       );
 

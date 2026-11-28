@@ -5,6 +5,9 @@ import 'package:bakhli/controllers/report_controller.dart';
 import 'package:bakhli/controllers/tab_config_controller.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/sheet_close_button.dart';
+import 'package:bakhli/features/social/a/edit/home_city_sheet.dart';
+import 'package:bakhli/features/social/a/edit/place_picker_sheet.dart';
+import 'package:bakhli/features/social/a/social_strings_a.dart';
 import 'package:bakhli/features/stay/guest/stay_bottom_sheet.dart';
 import 'package:bakhli/features/stay/models/stay_nearby_model.dart';
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
@@ -261,6 +264,34 @@ void main() {
     _locBase();
     final run = await _open(t, (c) => LocationSwitchSheet.pick(c));
     await _tapClose(t, run);
+  });
+
+  testWidgets('I-29 location switch pick returns the state of the viewed district', (t) async {
+    _locBase();
+    final run = await _open(t, (c) => LocationSwitchSheet.pick(c));
+    await t.tap(find.text('Haldwani'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 700));
+    await settlePhone(t);
+    expect(run.done, isTrue);
+    final p = run.result as PickedPlace;
+    expect(p.name, 'Haldwani');
+    expect(p.districtName, 'Nainital');
+    expect(p.stateName, 'Uttarakhand');
+  });
+
+  testWidgets('I-29 home city sheet is the city sheet with the home title and returns city + state', (t) async {
+    _locBase();
+    final run = await _open(t, (c) => HomeCitySheet.pick(c));
+    expect(find.text(SocialStringsA.pickHomeTitle), findsOneWidget);
+    await t.tap(find.text('Haldwani'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 700));
+    await settlePhone(t);
+    final h = run.result as PickedHome;
+    expect(h.city, 'Haldwani');
+    expect(h.state, 'Uttarakhand');
+    expect(h.label, 'Haldwani, Uttarakhand');
   });
 
   testWidgets('location search sheet: X closes', (t) async {

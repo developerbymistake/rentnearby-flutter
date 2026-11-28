@@ -1,5 +1,6 @@
 import 'package:bakhli/config/user_roles.dart';
 import 'package:bakhli/controllers/auth_controller.dart';
+import 'package:bakhli/controllers/location_controller.dart';
 import 'package:bakhli/controllers/profile_photo_controller.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/features/social/a/edit/edit_profile_screen.dart';
@@ -8,7 +9,9 @@ import 'package:bakhli/features/social/a/widgets/social_chips_a.dart';
 import 'package:bakhli/features/social/a/widgets/social_section_card.dart';
 import 'package:bakhli/features/social/shared/social_formats.dart';
 import 'package:bakhli/features/social/shared/social_me_controller.dart';
+import 'package:bakhli/models/city_model.dart';
 import 'package:bakhli/models/user_model.dart';
+import 'package:bakhli/widgets/location_switch_sheet.dart';
 import 'package:bakhli/widgets/profile_photo_circle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -17,6 +20,20 @@ import 'package:get/get.dart';
 
 import '../../../support/buddy_render.dart';
 import '../shared/social_test_support.dart';
+
+class _Loc extends LocationController {
+  @override
+  // ignore: must_call_super
+  void onInit() {}
+
+  @override
+  Future<List<CityModel>> loadCitiesForDistrict(String districtId, {bool forceRefresh = false}) => Future.value([
+        for (final n in ['Bhimtal', 'Haldwani']) CityModel(id: n, districtId: districtId, name: n, latitude: 29.3, longitude: 79.5),
+      ]);
+
+  @override
+  Future<List<DistrictModel>> loadAllDistricts({bool forceRefresh = false}) => Future.value([DistrictModel(id: 'nt', name: 'Nainital', stateName: 'Uttarakhand')]);
+}
 
 GradientPillButton _save(WidgetTester t) => t.widget<GradientPillButton>(find.byKey(EditProfileScreen.saveKey));
 
@@ -75,6 +92,31 @@ void main() {
     expect(body.containsKey('gender'), isFalse);
     expect(body.containsKey('birthMonth'), isFalse);
     expect(_save(t).enabled, isFalse);
+    await drain(t);
+  });
+
+  testWidgets('I-29 home city dropdown opens the city sheet; a pick sets city + state as one change', (t) async {
+    final loc = Get.put<LocationController>(_Loc());
+    loc.selectedDistrict.value = DistrictModel(id: 'nt', name: 'Nainital', stateName: 'Uttarakhand');
+    final server = await open(t);
+    final pill = find.byKey(const ValueKey('edit_home_city'));
+    expect(find.descendant(of: pill, matching: find.text('Dehradun, Uttarakhand')), findsOneWidget);
+    expect(find.text(SocialStringsA.change), findsNothing);
+    await t.ensureVisible(pill);
+    await t.tap(pill);
+    await settle(t);
+    expect(find.byType(LocationSwitchSheet), findsOneWidget);
+    expect(find.text(SocialStringsA.pickHomeTitle), findsOneWidget);
+    await t.tap(find.text('Haldwani'));
+    await settle(t);
+    expect(find.byType(LocationSwitchSheet), findsNothing);
+    expect(find.descendant(of: pill, matching: find.text('Haldwani, Uttarakhand')), findsOneWidget);
+    expect(find.text(SocialStringsA.changes(1)), findsOneWidget);
+    server.on('PUT', '/social/me/profile', {...myProfileJson(), 'homeCity': 'Haldwani'});
+    await t.tap(find.byKey(EditProfileScreen.saveKey));
+    await settle(t);
+    final body = server.calls('PUT', '/social/me/profile').single.data as Map;
+    expect(body, {'homeCityName': 'Haldwani', 'homeStateName': 'Uttarakhand'});
     await drain(t);
   });
 

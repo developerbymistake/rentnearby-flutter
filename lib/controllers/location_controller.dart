@@ -22,6 +22,18 @@ class _LoadContextResult {
   const _LoadContextResult({required this.district, this.nearestCity, required this.lat, required this.lng});
 }
 
+// cityResolved: the server matched the reverse-geocoded City/Town, not the nearest-row fallback.
+class _FetchedContext extends LocationContext {
+  final bool cityResolved;
+  const _FetchedContext({
+    required super.district,
+    super.nearestCity,
+    super.citiesInDistrict,
+    super.address,
+    required this.cityResolved,
+  });
+}
+
 class LocationController extends GetxController {
   // Public reactive state observed by explore screens and MainScreen
   final userLocation        = Rxn<LatLng>();
@@ -54,6 +66,12 @@ class LocationController extends GetxController {
   // a real background trip or forced refresh (see `refreshOnResume()`).
   final browsingDistrict = Rxn<DistrictModel>();
   final browsingCity     = Rxn<CityModel>();
+
+  // The real town/city of the GPS fix (reverse geocoded), for place names the traveller sees.
+  final gpsCity         = Rxn<CityModel>();
+  final gpsCityDistrict = Rxn<DistrictModel>();
+
+  CityModel? get gpsCityOrNearest => gpsCity.value ?? autoCity.value;
 
   // ── Location-search feature — precise pin, fully shared (like browsing
   // above) so every screen always shows the exact same searched spot, not
@@ -261,6 +279,13 @@ class LocationController extends GetxController {
   static const _minBackgroundForRefresh = Duration(minutes: 2);
   StreamSubscription<ServiceStatus>? _serviceStatusSub;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+  bool _gpsCityWanted = false;
+  String? _gpsCityAnchor;
+  int _gpsCityVersion = 0;
+  Future<CityModel?>? _gpsCityFlight;
+  Worker? _gpsCityWorker;
+  Worker? _gpsCityLocWorker;
+  bool _gpsCityNeedsFix = false;
 
   @override
   void onInit() {
@@ -274,7 +299,67 @@ class LocationController extends GetxController {
   void onClose() {
     _serviceStatusSub?.cancel();
     _connectivitySub?.cancel();
+    _gpsCityWorker?.dispose();
+    _gpsCityLocWorker?.dispose();
     super.onClose();
+  }
+
+  Future<CityModel?> ensureGpsCity() {
+    _gpsCityWanted = true;
+    _gpsCityWorker ??= ever<CityModel?>(autoCity, _onAutoCityForGps);
+    _gpsCityLocWorker ??= ever<LatLng?>(userLocation, _onUserLocationForGps);
+    final have = gpsCity.value;
+    if (have != null && _gpsCityAnchor == autoCity.value?.id) return Future.value(have);
+    return _gpsCityFlight ?? _startGpsCityResolve();
+  }
+
+  void _onAutoCityForGps(CityModel? next) {
+    if (!_gpsCityWanted || next == null || next.id == _gpsCityAnchor) return;
+    final d = gpsCityDistrict.value;
+    if (d != null && d.id != next.districtId) {
+      gpsCity.value = null;
+      gpsCityDistrict.value = null;
+      _gpsCityAnchor = null;
+    }
+    unawaited(_startGpsCityResolve());
+  }
+
+  // Retry only a resolve that was skipped for want of a GPS fix, not one the server answered.
+  void _onUserLocationForGps(LatLng? at) {
+    if (!_gpsCityWanted || at == null || !_gpsCityNeedsFix || _gpsCityFlight != null) return;
+    unawaited(_startGpsCityResolve());
+  }
+
+  Future<CityModel?> _startGpsCityResolve() {
+    final f = _resolveGpsCity();
+    _gpsCityFlight = f;
+    f.then((_) {
+      if (identical(_gpsCityFlight, f)) _gpsCityFlight = null;
+    });
+    return f;
+  }
+
+  Future<CityModel?> _resolveGpsCity() async {
+    final at = userLocation.value;
+    final anchor = autoCity.value?.id;
+    if (at == null || anchor == null) {
+      _gpsCityNeedsFix = true;
+      return null;
+    }
+    _gpsCityNeedsFix = false;
+    final my = ++_gpsCityVersion;
+    try {
+      final ctx = await _fetchLocationContext(at.latitude, at.longitude, includeAddress: true);
+      if (my != _gpsCityVersion) return gpsCity.value;
+      final city = ctx.nearestCity;
+      if (city == null || ctx is! _FetchedContext || !ctx.cityResolved) return null;
+      gpsCityDistrict.value = ctx.district;
+      _gpsCityAnchor = anchor;
+      gpsCity.value = city;
+      return city;
+    } catch (_) {
+      return null;
+    }
   }
 
   // ── GPS service stream (one subscription for the entire app) ───────────────
@@ -484,11 +569,12 @@ class LocationController extends GetxController {
       final nearestCity = nearestCityId != null
           ? cities.firstWhereOrNull((c) => c.id == nearestCityId)
           : cities.firstOrNull;
-      return LocationContext(
+      return _FetchedContext(
           district: district,
           nearestCity: nearestCity,
           citiesInDistrict: cities,
-          address: data['address'] as String?);
+          address: data['address'] as String?,
+          cityResolved: data['cityResolved'] == true);
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) throw const DistrictNotFoundException();
       rethrow;

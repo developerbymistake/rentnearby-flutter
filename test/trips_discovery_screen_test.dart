@@ -58,6 +58,8 @@ Future<void> _pump(WidgetTester t, double w, double scale, {MyTripsController? t
     getPages: [
       GetPage(name: AppRoutes.myTrips, page: () => const Scaffold(body: Text('my trips page'))),
       GetPage(name: AppRoutes.tripWhere, page: () => const Scaffold(body: Text('where page'))),
+      GetPage(name: AppRoutes.travelBuddies, page: () => const Scaffold(body: Text('groups page'))),
+      GetPage(name: AppRoutes.people, page: () => const Scaffold(body: Text('people page'))),
     ],
     home: MediaQuery(
       data: MediaQueryData(size: Size(w, 800), textScaler: TextScaler.linear(scale)),
@@ -80,7 +82,7 @@ void main() {
       testWidgets('hub shows without overflow @${w.toInt()} x$scale', (t) async {
         await _pump(t, w, scale, trips: _Trips([_trip(1), _trip(2)]));
         expect(find.text('Trips'), findsOneWidget);
-        expect(find.byType(HubTile, skipOffstage: false), findsNWidgets(5));
+        expect(find.byType(HubTile, skipOffstage: false), findsNWidgets(6));
         expect(find.text('Continue your trip'), findsOneWidget);
         expect(t.takeException(), isNull);
       });
@@ -102,13 +104,34 @@ void main() {
 
   testWidgets('a coming soon tile does not navigate', (t) async {
     await _pump(t, 360, 1);
-    final tile = find.byType(HubTile).at(1);
+    final tile = find.byKey(const ValueKey('hub-tile-guide'));
     await t.ensureVisible(tile);
     await t.pump();
     await t.tap(tile, warnIfMissed: false);
     await t.pump(const Duration(milliseconds: 400));
     expect(Get.currentRoute, isNot(AppRoutes.tripWhere));
     await t.pumpAndSettle(const Duration(seconds: 6));
+  });
+
+  testWidgets('the groups tile opens the travel groups feed', (t) async {
+    await _pump(t, 360, 1);
+    final tile = find.byKey(const ValueKey('hub-tile-groups'));
+    await t.ensureVisible(tile);
+    await t.pump();
+    await t.tap(tile);
+    await t.pumpAndSettle();
+    expect(Get.currentRoute, AppRoutes.travelBuddies);
+  });
+
+  testWidgets('the buddy tile opens People on the discover tab', (t) async {
+    await _pump(t, 360, 1);
+    final tile = find.byKey(const ValueKey('hub-tile-buddy'));
+    await t.ensureVisible(tile);
+    await t.pump();
+    await t.tap(tile);
+    await t.pumpAndSettle();
+    expect(Get.currentRoute, AppRoutes.people);
+    expect(Get.arguments, {'tab': 'discover'});
   });
 
   Finder dots() => find.byKey(const ValueKey('hub-dots'));

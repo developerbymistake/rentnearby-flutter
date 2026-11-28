@@ -314,6 +314,31 @@ void main() {
     await _drain(t);
   });
 
+  testWidgets('I-35 itinerary_from_overview_back_returns_to_overview', (t) async {
+    await _app(t);
+    await _toOverview(t);
+    await t.tap(find.byKey(const ValueKey('overview_itinerary_card')));
+    await _settle(t);
+    expect(find.byType(TripPlanScreen), findsOneWidget);
+    await _systemBack(t);
+    expect(_exitTitle, findsNothing);
+    expect(find.byType(TripPlanScreen), findsNothing);
+    expect(Get.currentRoute, AppRoutes.tripOverview);
+    await _drain(t);
+  });
+
+  testWidgets('I-35 itinerary_from_overview_header_back_returns_to_overview', (t) async {
+    await _app(t);
+    await _toOverview(t);
+    await t.tap(find.byKey(const ValueKey('overview_itinerary_card')));
+    await _settle(t);
+    await t.tap(_planBack.first);
+    await _settle(t);
+    expect(_exitTitle, findsNothing);
+    expect(Get.currentRoute, AppRoutes.tripOverview);
+    await _drain(t);
+  });
+
   testWidgets('exit_dialog_five_sizes', (t) async {
     for (final size in fiveSizes) {
       await t.pumpWidget(const SizedBox.shrink());

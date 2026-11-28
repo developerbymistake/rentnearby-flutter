@@ -4,6 +4,7 @@ import '../../../buddy/shared/buddy_result.dart';
 import '../../../trip/controllers/my_trips_controller.dart';
 import '../../shared/social_error_types.dart';
 import '../../shared/social_live.dart';
+import '../../shared/social_me_controller.dart';
 import '../../shared/social_models.dart';
 import '../../shared/social_strings.dart';
 import '../data/join_api.dart';
@@ -97,6 +98,7 @@ class JoinRequestsController extends GetxController {
         if (t != null) trip.value = t.copyWith(seatsLeft: value.seatsLeft, waitingRequests: items.length);
         SocialLive.posts.value++;
         if (Get.isRegistered<MyTripsController>()) MyTripsController.to.load();
+        SocialMeController.maybe?.refreshQuiet();
         return (true, SocialStringsB.joinedTrip(item.person.person.shortName));
       case BuddyRefused(:final type) when type == SocialErrorTypes.joinRequestGone:
         return (false, SocialStringsB.requestGone);
@@ -114,6 +116,7 @@ class JoinRequestsController extends GetxController {
       case BuddyOk():
         final t = trip.value;
         if (t != null) trip.value = t.copyWith(waitingRequests: items.length);
+        SocialMeController.maybe?.refreshQuiet();
         return (true, SocialStringsB.declined(item.person.person.shortName));
       case BuddyRefused(:final type) when type == SocialErrorTypes.joinRequestGone:
         return (false, SocialStringsB.requestGone);

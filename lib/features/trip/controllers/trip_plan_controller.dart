@@ -83,9 +83,17 @@ enum TripDayAddBlock { none, readOnly, locked, maxDays, running, bookings }
 
 enum TripStructureBlock { none, readOnly, locked, pastDay }
 
-enum TripLegApplyBlock { none, readOnly, locked, stale, emptyDay, bookings, running, invalid }
+enum TripLegApplyBlock { none, readOnly, locked, stale, bookings, running, invalid }
 
 enum _MoveBlock { none, refused, differentCity, dayFull }
+
+class TripSpotRemoval {
+  final String? tripId;
+  final String spotId;
+  final List<TripDay> before;
+  final String afterKey;
+  const TripSpotRemoval({required this.tripId, required this.spotId, required this.before, required this.afterKey});
+}
 
 class TripPlanController extends GetxController {
   static TripPlanController get to =>
@@ -2973,7 +2981,8 @@ class TripPlanController extends GetxController {
     final p = plan.value;
     final fromDay = p?.dayOfSpot(id);
     if (p == null || !_structureOk(day: toDay) || (fromDay != null && !_structureOk(day: fromDay))) return _MoveBlock.refused;
-    if (fromDay != null && p.dayAt(toDay) != null && p.legIndexOf(fromDay) != p.legIndexOf(toDay)) return _MoveBlock.differentCity;
+    if (p.dayAt(toDay) == null) return _MoveBlock.refused;
+    if (fromDay != null && p.legIndexOf(fromDay) != p.legIndexOf(toDay)) return _MoveBlock.differentCity;
     if (fromDay != null && fromDay != toDay && !TripDaysRules.canAddOnDay(p, toDay)) return _MoveBlock.dayFull;
     return _MoveBlock.none;
   }
@@ -3033,6 +3042,33 @@ class TripPlanController extends GetxController {
     final next = _removedDays(id);
     if (next != null) _applyEdit(next, keepEmptyDays: keepEmptyDays);
   }
+
+  // Removes with keepEmptyDays: true; null when nothing was removed (locked, read-only, unknown id).
+  TripSpotRemoval? removeSpotForUndo(String id) {
+    final p = plan.value;
+    if (p == null || p.dayOfSpot(id) == null) return null;
+    final before = p.days;
+    removeSpot(id, keepEmptyDays: true);
+    final now = plan.value;
+    if (now == null || now.dayOfSpot(id) != null) return null;
+    return TripSpotRemoval(tripId: trip.value?.id, spotId: id, before: before, afterKey: _daysKey(now.days));
+  }
+
+  // Restores the exact days from before the removal, only while nothing else changed since.
+  bool undoRemove(TripSpotRemoval r) {
+    final p = plan.value;
+    if (isClosed || p == null) return false;
+    if (r.tripId != null && trip.value?.id != r.tripId) return false;
+    if (_daysKey(p.days) != r.afterKey || p.spotById(r.spotId) != null) return false;
+    final from = r.before.firstWhereOrNull((d) => d.spots.any((s) => s.id == r.spotId));
+    if (from == null || !_structureOk(day: from.day)) return false;
+    _applyEdit(r.before, keepEmptyDays: true);
+    return true;
+  }
+
+  static String _daysKey(List<TripDay> days) => [
+        for (final d in days) '${d.day}.${d.leg}.${d.restDay ? 1 : 0}:${d.spots.map((s) => s.id).join(',')}',
+      ].join('|');
 
   void insertSpotAt(TripSpotRef spot, int day, int index) {
     final p = plan.value;
@@ -3172,7 +3208,6 @@ class TripPlanController extends GetxController {
     if (draft.legIndex != legIndex || (p.legs.isNotEmpty && p.legAt(legIndex) == null)) return TripLegApplyBlock.readOnly;
     final current = p.daysOf(legIndex);
     if (TripLegDraft.signatureOf(current) != draft.baseSignature) return TripLegApplyBlock.stale;
-    if (draft.firstEmptyDay != null) return TripLegApplyBlock.emptyDay;
     final next = draft.toLegDays();
     if (!_draftFits(p, legIndex, next)) return TripLegApplyBlock.invalid;
     final past = _pastDaysOf(legIndex);

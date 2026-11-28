@@ -7,7 +7,7 @@ typedef TaxiFromPlace = ({PlaceResult place, String districtId, String? cityId})
 
 // GPS city only, never the browsing city.
 TaxiFromPlace? travellerCity(LocationController loc) {
-  final auto = loc.autoCity.value;
+  final auto = loc.gpsCityOrNearest;
   if (auto != null && auto.latitude != null && auto.longitude != null) {
     return (
       place: PlaceResult(name: auto.name, subtitle: '', latLng: LatLng(auto.latitude!, auto.longitude!)),

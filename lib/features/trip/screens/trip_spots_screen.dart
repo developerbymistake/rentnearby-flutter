@@ -218,7 +218,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
     if (day == null || p == null) return false;
     final replaceId = _replaceId;
     if (replaceId != null && p.spotById(replaceId) != null) return false;
-    return !TripDaysRules.canAddOnDay(p, day);
+    return TripDaysRules.isDayFull(p, day);
   }
 
   void _pickOne(TripSpotModel spot) {
@@ -231,7 +231,13 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
       AppToast.warning(TripStringsMcaA2.maxPlaces);
       return;
     }
-    if (!replacing && !TripDaysRules.canAddOnDay(p, day)) {
+    if (!replacing && p.dayAt(day) == null) {
+      _starting = true;
+      AppToast.warning(TripStringsV2Create.dayGone);
+      Get.back();
+      return;
+    }
+    if (!replacing && TripDaysRules.isDayFull(p, day)) {
       AppToast.warning(TripStringsV2Create.dayFullMove);
       return;
     }
@@ -706,8 +712,10 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> with TickerProviderSt
       );
 
   Widget _buildLimitNotice() {
+    if (_pickDay != null) return const SizedBox.shrink();
     return Obx(() {
-      if (_pickDay != null || _ctrl.plannerOff.value || !_ctrl.atLimit) return const SizedBox.shrink();
+      final off = _ctrl.plannerOff.value;
+      if (off || !_ctrl.atLimit) return const SizedBox.shrink();
       return _limitNotice();
     });
   }

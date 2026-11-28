@@ -10,11 +10,12 @@ import '../config/app_tabs.dart';
 import '../features/seeker_home/build_circle_card.dart';
 import '../features/seeker_home/seeker_feed_controller.dart';
 import '../features/seeker_home/seeker_home_parts.dart';
-import '../features/seeker_home/seeker_quick_actions.dart';
+import '../features/seeker_home/home_updates.dart';
 import '../features/seeker_home/strings/seeker_home_strings.dart';
 import '../features/social/b/rail/trips_to_join_rail.dart';
 import '../features/social/b/rail/trips_rail_controller.dart';
 import '../features/social/b/widgets/find_buddies_post_card.dart';
+import '../features/social/shared/social_me_controller.dart';
 import '../features/trip/widgets/trip_popular_rail.dart';
 import '../widgets/home_hero_carousel.dart';
 import '../widgets/tab_header.dart';
@@ -46,7 +47,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _refresh() async {
     final feed = _feed;
     final rail = TripsRailController.maybe;
-    await Future.wait<void>([_home.reload(), if (feed != null) feed.reload(), if (rail != null) rail.load()]);
+    final social = SocialMeController.maybe;
+    await Future.wait<void>([_home.reload(), if (feed != null) feed.reload(), if (rail != null) rail.load(), if (social != null) social.refreshQuiet()]);
     if (mounted) _replay.value++;
   }
 
@@ -117,8 +119,8 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const StaggerItem(index: 0, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [HomeHeroCarousel(), BuildCircleCard()])),
-                const StaggerItem(index: 1, child: SeekerQuickActions()),
-                const StaggerItem(index: 2, child: FindBuddiesPostCard(place: FindBuddiesPostPlace.home)),
+                const StaggerItem(index: 1, child: FindBuddiesPostCard(place: FindBuddiesPostPlace.home)),
+                const StaggerItem(index: 2, child: HomeUpdates()),
                 const StaggerItem(index: 3, child: TripsToJoinRail()),
                 StaggerItem(index: 4, child: _buildRailsArea()),
                 StaggerItem(index: 5, child: _buildInstagramCard()),

@@ -76,13 +76,6 @@ class TripLegDraft {
 
   int get _editableCount => _days.length - frozenDays;
 
-  int? get firstEmptyDay {
-    for (var i = frozenDays; i < _days.length; i++) {
-      if (_days[i].spots.isEmpty && !_days[i].restDay) return i;
-    }
-    return null;
-  }
-
   bool get canAddDay => otherLegsDayCount + _days.length < TripConstants.maxDaysCap;
 
   int get spotRoom => math.max(0, TripConstants.maxSpots - otherLegsSpotCount - spotCount);

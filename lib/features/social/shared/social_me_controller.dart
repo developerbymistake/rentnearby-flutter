@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 
+import '../../buddy/buddy_live.dart';
 import '../../buddy/shared/buddy_result.dart';
 import 'data/social_me_api.dart';
 import 'social_models.dart';
@@ -12,12 +15,16 @@ class SocialMeController extends GetxController {
 
   static SocialMeController? get maybe => Get.isRegistered<SocialMeController>() ? Get.find<SocialMeController>() : null;
 
+  static const sharedTripsDebounce = Duration(milliseconds: 600);
+
   final SocialMeApi _api;
   final me = Rxn<SocialMe>();
   final loading = false.obs;
   final failed = false.obs;
   int _gen = 0;
   bool _quietRunning = false;
+  Worker? _sharedWorker;
+  Timer? _sharedTimer;
 
   SocialLimits get limits => me.value?.limits ?? SocialLimits.free;
 
@@ -28,7 +35,18 @@ class SocialMeController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _sharedWorker = ever<int>(BuddyLive.sharedTrips, (_) {
+      _sharedTimer?.cancel();
+      _sharedTimer = Timer(sharedTripsDebounce, refreshQuiet);
+    });
     load();
+  }
+
+  @override
+  void onClose() {
+    _sharedWorker?.dispose();
+    _sharedTimer?.cancel();
+    super.onClose();
   }
 
   Future<void> load() async {

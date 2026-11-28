@@ -126,7 +126,9 @@ class TaxiListControllerV2 extends GetxController {
   // City of the list centre when no pin is set: the browsed city or the GPS city, then the server header.
   String? get centreCity {
     final f = _cityNameOf;
-    final local = f != null ? _clean(f()) : (_centreOf == null && Get.isRegistered<LocationController>() ? _clean(Get.find<LocationController>().effectiveCity?.name) : null);
+    if (f != null) return _clean(f()) ?? _clean(header.value?.centreCityName);
+    final loc = _centreOf == null && Get.isRegistered<LocationController>() ? Get.find<LocationController>() : null;
+    final local = loc == null ? null : _clean((loc.browsingCity.value ?? loc.gpsCityOrNearest)?.name);
     return local ?? _clean(header.value?.centreCityName);
   }
 
@@ -165,6 +167,9 @@ class TaxiListControllerV2 extends GetxController {
           _resetSearch();
         }
       }));
+    }
+    if (_centreOf == null && _cityNameOf == null && Get.isRegistered<LocationController>()) {
+      unawaited(Get.find<LocationController>().ensureGpsCity());
     }
     _paintCopies();
     if (_tabActive) {

@@ -27,7 +27,6 @@ Widget _host(
   TripLegDraft draft,
   _Calls calls, {
   int dayLimit = 450,
-  int? errorDay,
   ScrollController? scroll,
   double header = 0,
 }) =>
@@ -41,7 +40,6 @@ Widget _host(
             TripCustomizeBoard(
               draft: draft,
               dayLimitMinutes: dayLimit,
-              errorDay: errorDay,
               firstDate: DateTime(2030, 12, 18),
               onChanged: () => calls.changed++,
               onAddPlaces: calls.added.add,
@@ -274,18 +272,6 @@ void main() {
     expect(find.byKey(const ValueKey('customize-empty-add-1')), findsOneWidget);
   });
 
-  testWidgets('error outline when flagged', (tester) async {
-    final d = _draft([2, 0]);
-    await pumpAtSize(tester, _host(d, _Calls(), errorDay: 1), _tall);
-    expect(find.byKey(const ValueKey('customize-day-error-1')), findsOneWidget);
-    expect(find.byKey(const ValueKey('customize-day-error-0')), findsNothing);
-    expect(find.text(TripStringsCustomize.emptyDayError(2)), findsOneWidget);
-
-    await pumpAtSize(tester, _host(d, _Calls()), _tall);
-    expect(find.byKey(const ValueKey('customize-day-error-1')), findsNothing);
-    expect(find.text(TripStringsCustomize.emptyDayError(2)), findsNothing);
-  });
-
   testWidgets('chips at 3 and 6, no busy chip (mock has none)', (tester) async {
     final d = _draft([3, 6, 5]);
     await pumpAtSize(tester, _host(d, _Calls(), dayLimit: 290), _tall);
@@ -311,7 +297,6 @@ void main() {
     expect(TripStringsCustomize.span(45), '45 m');
     expect(TripStringsCustomize.span(0), '0 h');
     expect(TripStringsCustomize.spotLine('lake', 90), 'Lake · 1 h 30 m');
-    expect(TripStringsCustomize.emptyDayError(3), 'Day 3 is empty. Delete it or add places.');
   });
 
   testWidgets('frozen day cannot be dragged or dropped on', (tester) async {
@@ -383,7 +368,7 @@ void main() {
 
   testFiveSizes(
     'board_five_sizes',
-    () => _host(_draft([6, 6, 0, 3, 5], frozen: 1), _Calls(), dayLimit: 300, errorDay: 2),
+    () => _host(_draft([6, 6, 0, 3, 5], frozen: 1), _Calls(), dayLimit: 300),
     check: (tester, size) async {
       expect(find.text(TripStringsCustomize.full), findsWidgets);
       await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -6000));
@@ -403,7 +388,7 @@ void main() {
 
   testFiveSizes(
     'board_five_sizes_large_text',
-    () => _host(_draft([6, 0, 4]), _Calls(), dayLimit: 300, errorDay: 1),
+    () => _host(_draft([6, 0, 4]), _Calls(), dayLimit: 300),
     textScale: 1.3,
   );
 }
