@@ -20,6 +20,7 @@ class CalendarEntryDraft {
     this.receivedSoFar,
     this.paidInFull = false,
     this.version,
+    this.keepVisible,
   });
 
   final String id;
@@ -34,6 +35,7 @@ class CalendarEntryDraft {
   final int? receivedSoFar;
   final bool paidInFull;
   final int? version;
+  final bool? keepVisible;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -48,6 +50,7 @@ class CalendarEntryDraft {
         MoneyWire.receivedKey: ?receivedSoFar,
         'paidInFull': paidInFull,
         'version': ?version,
+        'keepVisible': ?keepVisible,
       };
 }
 

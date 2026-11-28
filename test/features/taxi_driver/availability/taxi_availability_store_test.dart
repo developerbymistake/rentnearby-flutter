@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bakhli/features/owner_core/data/owner_cache.dart';
+import 'package:bakhli/features/owner_core/data/owner_result.dart';
 import 'package:bakhli/features/owner_core/sheets/owner_states.dart';
 import 'package:bakhli/features/taxi_driver/availability/taxi_availability_models.dart';
 import 'package:bakhli/features/taxi_driver/availability/taxi_availability_store.dart';
@@ -124,13 +125,69 @@ void main() {
     expect(store.isOff(DateTime(2026, 11, 27)), isTrue);
   });
 
-  test('prefetch runs once per session', () async {
-    final fake = AvailFake(read: availJson());
-    final store = availStore(fake);
-    store.prefetch();
-    await Future<void>.delayed(Duration.zero);
-    store.prefetch();
-    await Future<void>.delayed(Duration.zero);
-    expect(fake.count('GET'), 1);
+  group('saveDay', () {
+    test('marking a day off sends one set row with the reason and publishes the answer', () async {
+      final fake = AvailFake(read: availJson(daysOff: const []));
+      fake.save = (body) async => {'data': availJson(daysOff: [dayRow('2026-11-29', 'Family function')])};
+      final store = availStore(fake);
+      await store.refresh();
+      final r = await store.saveDay(DateTime(2026, 11, 29, 15), off: true, reason: '  Family function  ');
+      expect(r, isA<OwnerOk<TaxiAvailability>>());
+      expect(fake.saves.single, {
+        'set': [
+          {'date': '2026-11-29', 'reason': 'Family function'},
+        ],
+        'clear': const <String>[],
+      });
+      expect(store.isOff(DateTime(2026, 11, 29)), isTrue);
+    });
+
+    test('removing a day off sends one clear key', () async {
+      final fake = AvailFake(read: availJson());
+      fake.save = (body) async => {'data': availJson(daysOff: [dayRow('2026-11-30')])};
+      final store = availStore(fake);
+      await store.refresh();
+      await store.saveDay(DateTime(2026, 11, 27), off: false);
+      expect(fake.saves.single, {'set': const <Map<String, dynamic>>[], 'clear': ['2026-11-27']});
+      expect(store.isOff(DateTime(2026, 11, 27)), isFalse);
+    });
+
+    test('a bucket 429 holds the next save without a call', () async {
+      final fake = AvailFake(read: availJson());
+      fake.save = (body) async => throw refusal(daysOffPath, 429, bucket429(seconds: 130));
+      final store = availStore(fake);
+      await store.refresh();
+      final first = await store.saveDay(DateTime(2026, 11, 29), off: true);
+      expect((first as OwnerRefused<TaxiAvailability>).message, 'You can change this 3 times an hour. Try again in 3 min.');
+      final second = await store.saveDay(DateTime(2026, 11, 29), off: true);
+      expect(second, isA<OwnerRefused<TaxiAvailability>>());
+      expect(fake.saves.length, 1);
+      expect(store.isOff(DateTime(2026, 11, 29)), isFalse);
+    });
+
+    test('a booked-day refusal keeps the value', () async {
+      final fake = AvailFake(read: availJson());
+      fake.save = (body) async => throw refusal(daysOffPath, 409, {
+            'data': {'dates': ['2026-11-28']},
+            'error': {'type': 'DayOffBooked', 'message': 'This day has a booking.'},
+          });
+      final store = availStore(fake);
+      await store.refresh();
+      final r = await store.saveDay(DateTime(2026, 11, 28), off: true);
+      expect((r as OwnerRefused<TaxiAvailability>).type, 'DayOffBooked');
+      expect(store.isOff(DateTime(2026, 11, 28)), isFalse);
+    });
+  });
+
+  test('inWindow follows the plan window (Free: this month, Plus: 6 months)', () async {
+    final free = availStore(AvailFake(read: availJson()));
+    await free.refresh();
+    expect(free.inWindow(DateTime(2026, 11, 30)), isTrue);
+    expect(free.inWindow(DateTime(2026, 12, 1)), isFalse);
+    Get.delete<TaxiAvailabilityStore>(force: true);
+    final plus = availStore(AvailFake(read: availJson(plus: true)));
+    await plus.refresh();
+    expect(plus.inWindow(DateTime(2027, 5, 31)), isTrue);
+    expect(plus.inWindow(DateTime(2027, 6, 1)), isFalse);
   });
 }

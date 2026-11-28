@@ -18,13 +18,14 @@ abstract final class TaxiSetupStrings {
   static const save = 'Save';
 
   static const wizardSteps = [
-    'Step 1 of 5 · Vehicle',
-    'Step 2 of 5 · Licence',
-    'Step 3 of 5 · Contact and base',
-    'Step 4 of 5 · Route',
-    'Step 5 of 5 · Local sightseeing',
+    'Step 1 of 6 · Vehicle',
+    'Step 2 of 6 · Licence',
+    'Step 3 of 6 · Contact and base',
+    'Step 4 of 6 · Route',
+    'Step 5 of 6 · Local sightseeing',
+    'Step 6 of 6 · Review',
   ];
-  static const wizardLabels = [...progressLabels, 'Route', 'Rate'];
+  static const wizardLabels = [...progressLabels, 'Route', 'Rate', 'Review'];
   static const routeTitleOne = 'Route and fare';
   static const rateTitle = 'Local sightseeing';
   static const addOneRoute = 'Add 1 route.';

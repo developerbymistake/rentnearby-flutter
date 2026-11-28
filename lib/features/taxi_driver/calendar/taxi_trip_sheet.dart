@@ -20,10 +20,7 @@ import '../../owner_core/plan/plan_keys.dart';
 import '../../owner_core/sheets/owner_sheet.dart';
 import '../../owner_core/strings/owner_shared_strings.dart';
 import '../availability/taxi_availability_api.dart';
-import '../availability/taxi_availability_store.dart';
-import '../strings/taxi_availability_strings.dart';
 import '../strings/taxi_calendar_strings.dart';
-import '../taxi_driver_deps.dart';
 import '../strings/taxi_gate_strings_calendar.dart';
 import 'taxi_calendar_controller.dart';
 import 'taxi_calendar_widgets.dart';
@@ -39,8 +36,9 @@ class TaxiTripForm extends ChangeNotifier {
         to = TextEditingController(text: editing?.toPlace ?? ''),
         note = TextEditingController(text: editing?.note ?? ''),
         money = MoneyNotesController(finalAmount: editing?.finalAmount, receivedSoFar: editing?.receivedSoFar, paidInFull: editing?.paidInFull ?? false),
-        date = editing?.dateFrom ?? firstFreeDay(date ?? controller.serverToday),
-        time = OwnerDates.time(editing?.timeOfDay) {
+        date = editing?.dateFrom ?? OwnerDates.only(date ?? controller.serverToday),
+        time = OwnerDates.time(editing?.timeOfDay),
+        keepVisible = editing?.keepVisible ?? false {
     for (final c in [label, from, to, note]) {
       c.addListener(_changed);
     }
@@ -63,6 +61,7 @@ class TaxiTripForm extends ChangeNotifier {
   final FocusNode labelFocus = FocusNode();
   DateTime date;
   ({int hour, int minute})? time;
+  bool keepVisible;
   final Map<TaxiTripField, String> errors = {};
   bool stale = false;
   late final String _start;
@@ -70,20 +69,7 @@ class TaxiTripForm extends ChangeNotifier {
 
   bool get isEdit => editing != null;
 
-  static DateTime firstFreeDay(DateTime from) {
-    var d = OwnerDates.only(from);
-    for (var i = 0; i < 400 && TaxiDriverDeps.isDayOff(d); i++) {
-      d = OwnerDates.addDays(d, 1);
-    }
-    return d;
-  }
-
-  bool get _dateMoved {
-    final was = editing?.dateFrom;
-    return was == null || !OwnerDates.sameDay(was, date);
-  }
-
-  String _snapshot() => [label.text, from.text, to.text, note.text, money.finalText.text, money.receivedText.text, money.paidInFull, date, time].join('|');
+  String _snapshot() => [label.text, from.text, to.text, note.text, money.finalText.text, money.receivedText.text, money.paidInFull, date, time, keepVisible].join('|');
 
   bool get dirty => _snapshot() != _start;
 
@@ -93,11 +79,12 @@ class TaxiTripForm extends ChangeNotifier {
 
   void setDate(DateTime d) {
     date = OwnerDates.only(d);
-    if (_dateMoved && TaxiDriverDeps.isDayOff(date)) {
-      errors[TaxiTripField.date] = TaxiAvailabilityStrings.dayIsOff;
-    } else {
-      errors.remove(TaxiTripField.date);
-    }
+    errors.remove(TaxiTripField.date);
+    _changed();
+  }
+
+  void setKeepVisible(bool on) {
+    keepVisible = on;
     _changed();
   }
 
@@ -128,8 +115,6 @@ class TaxiTripForm extends ChangeNotifier {
     }
     if (date.isBefore(OwnerDates.only(firstDay)) || date.isAfter(OwnerDates.only(lastDay))) {
       errors[TaxiTripField.date] = TaxiCalendarStrings.outsideWindow;
-    } else if (_dateMoved && TaxiDriverDeps.isDayOff(date)) {
-      errors[TaxiTripField.date] = TaxiAvailabilityStrings.dayIsOff;
     }
     _changed();
     return errors.isEmpty && money.error == null;
@@ -148,6 +133,7 @@ class TaxiTripForm extends ChangeNotifier {
         receivedSoFar: money.paidInFull ? null : money.receivedSoFar,
         paidInFull: money.paidInFull,
         version: editing?.version,
+        keepVisible: keepVisible,
       );
 
   void applyRefusal(OwnerRefused<dynamic> r) {
@@ -155,8 +141,6 @@ class TaxiTripForm extends ChangeNotifier {
       errors[TaxiTripField.note] = OwnerSharedStrings.noPhone;
     } else if (r.type == OwnerErrorTypes.calendarOutsideWindow) {
       errors[TaxiTripField.date] = TaxiCalendarStrings.outsideWindow;
-    } else if (r.type == OwnerErrorTypes.dayIsOff) {
-      errors[TaxiTripField.date] = TaxiAvailabilityStrings.dayIsOff;
     } else if (OwnerRefusal.stale(r)) {
       stale = true;
     }
@@ -231,9 +215,8 @@ abstract final class TaxiTripSheet {
           return;
         }
         form.applyRefusal(r);
-        if (r.type == OwnerErrorTypes.dayIsOff) TaxiAvailabilityStore.maybe?.refresh(force: true).ignore();
         if (r.type == OwnerErrorTypes.moneyNoteInvalid ||
-            (r.type != OwnerErrorTypes.phoneNotAllowed && r.type != OwnerErrorTypes.calendarOutsideWindow && r.type != OwnerErrorTypes.dayIsOff && !OwnerRefusal.stale(r))) {
+            (r.type != OwnerErrorTypes.phoneNotAllowed && r.type != OwnerErrorTypes.calendarOutsideWindow && !OwnerRefusal.stale(r))) {
           AppToast.error(r.message ?? OwnerSharedStrings.noConnection);
         }
       case OwnerOffline():
@@ -422,6 +405,18 @@ class TaxiTripFields extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+            Gap.v(12),
+            Container(
+              padding: DS.sym(h: 12, v: 2),
+              decoration: BoxDecoration(color: TaxiCal.softFill, borderRadius: DS.circular(14)),
+              child: ToggleRow(
+                tone: TaxiCal.look.tone,
+                label: TaxiCalendarStrings.keepVisible,
+                sublabel: TaxiCalendarStrings.keepVisibleSub,
+                value: form.keepVisible,
+                onChanged: form.setKeepVisible,
+              ),
             ),
             Gap.v(14),
             TaxiMoneyFields(money: form.money),

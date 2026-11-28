@@ -94,13 +94,6 @@ abstract final class TaxiHourlyLimit {
     return true;
   }
 
-  static bool toastIfHeld(String bucket) {
-    final held = heldSeconds(bucket);
-    if (held == null) return false;
-    AppToast.warning(TaxiAvailabilityStrings.rateLimited(minutes(held)));
-    return true;
-  }
-
   static void reset() {
     _blockedUntil.clear();
     clock = DateTime.now;

@@ -17,7 +17,6 @@ import '../../owner_core/data/owner_result.dart';
 import '../../owner_core/data/single_flight.dart';
 import '../../owner_core/home/owner_home_api.dart';
 import '../../owner_core/home/owner_home_models.dart';
-import '../../owner_core/json/owner_json.dart';
 import '../../owner_core/sheets/owner_states.dart';
 import '../strings/taxi_home_strings.dart';
 import 'taxi_attention_copy.dart';
@@ -252,19 +251,6 @@ class TaxiDriverHomeController extends GetxController with WidgetsBindingObserve
   }
 
   bool get switchOn => switchOverride.value ?? data?.listing.switchOn ?? false;
-
-  void patchAvailability(Map<String, dynamic> counts) {
-    final current = load.value;
-    if (isClosed || current is! OwnerLoadData<OwnerHomeDto>) return;
-    final raw = Map<String, dynamic>.from(current.value.raw);
-    final numbers = Map<String, dynamic>.from(OwnerJson.map(raw['numbers']));
-    final taxi = Map<String, dynamic>.from(OwnerJson.map(numbers['taxi']));
-    taxi['availability'] = Map<String, dynamic>.from(counts);
-    numbers['taxi'] = taxi;
-    raw['numbers'] = numbers;
-    load.value = OwnerLoadData<OwnerHomeDto>(OwnerHomeDto.fromJson(raw), stale: current.stale);
-    OwnerCache.write(_uid, OwnerCacheKeys.home, raw);
-  }
 
   Future<OwnerResult<void>> _put(bool on) {
     final o = _switchCall;

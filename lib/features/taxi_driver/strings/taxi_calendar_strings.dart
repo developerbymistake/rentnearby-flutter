@@ -19,6 +19,7 @@ abstract final class TaxiCalendarStrings {
   static const tripsThisMonth = 'Trips this month';
   static const amountsStayFree = 'Amounts stay free';
   static const addTrip = '+ Add trip';
+  static const add = '+ Add';
   static const fromTheApp = 'From the app';
   static const allConfirmedTrips = 'All confirmed trips';
   static const couldNotLoadBookings = 'Could not load bookings';
@@ -73,6 +74,8 @@ abstract final class TaxiCalendarStrings {
   static const saveTrip = 'Save trip';
   static const labelEmpty = 'Add a name for this trip.';
   static const outsideWindow = 'Pick a date inside your calendar.';
+  static const keepVisible = 'Still take bookings this day';
+  static const keepVisibleSub = 'Turn on for a short trip, like an airport drop';
   static const entryEndedType = 'EntryEnded';
   static const entryEnded = 'This trip has ended. You can still change the amounts.';
   static String overlap(int n) => n == 1 ? 'You already have 1 booking on this day.' : 'You already have $n bookings on this day.';

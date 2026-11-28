@@ -6,6 +6,7 @@ import '../../../config/app_tabs.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../design/design.dart';
 import '../../owner_core/calendar/models/calendar_models.dart';
+import '../../owner_core/calendar/month_grid_data.dart';
 import '../../owner_core/json/owner_dates.dart';
 import '../../owner_core/plan/plan_gate.dart';
 import '../../owner_core/plan/owner_inactive.dart';
@@ -25,6 +26,7 @@ import '../taxi_driver_deps.dart';
 import 'models/taxi_calendar_models.dart';
 import 'taxi_calendar_controller.dart';
 import 'taxi_calendar_widgets.dart';
+import 'taxi_day_off_sheet.dart';
 import 'taxi_day_sheet.dart';
 import 'taxi_month_grid.dart';
 import 'taxi_reminder_row.dart';
@@ -109,14 +111,18 @@ class _TaxiBookingsTabState extends State<TaxiBookingsTab> {
     super.dispose();
   }
 
-  void _addTrip() {
+  void _add() {
     final s = _selected.value;
     final today = _c.serverToday;
     final date = s != null && !s.isBefore(today) ? s : today;
-    TaxiTripSheet.show(context, controller: _c, date: date);
+    if (_c.dayRows(date).isNotEmpty) {
+      TaxiTripSheet.show(context, controller: _c, date: date);
+    } else {
+      TaxiDayFlow.choose(context, controller: _c, day: date);
+    }
   }
 
-  VoidCallback? get _addAction => PlanGate.addEnabled(_c.entriesFull) ? _addTrip : null;
+  VoidCallback? get _addAction => PlanGate.addEnabled(_c.entriesFull) ? _add : null;
 
   Future<void> _deleteInactive(CalendarEntry e) async {
     final ok = await OwnerConfirm.ask(
@@ -164,14 +170,14 @@ class _TaxiBookingsTabState extends State<TaxiBookingsTab> {
         ),
       );
 
-  bool _isOff(DateTime d) => !d.isBefore(_c.serverToday) && (_store?.offKeys.contains(OwnerDates.dayText(d)) ?? false);
-
-  void _tapDay(DateTime d) {
-    if (_isOff(d) && _c.dayRows(d).isEmpty) {
-      AppToast.info(TaxiAvailabilityStrings.dayIsOff);
+  void _tapDay(DayCell cell) {
+    final d = cell.date;
+    _selected.value = d;
+    final future = !d.isBefore(_c.serverToday) && !cell.outsideWindow;
+    if (future && _c.dayRows(d).isEmpty && (_c.canAddOn(d) || (_store?.inWindow(d) ?? false) || (_store?.isOff(d) ?? false))) {
+      TaxiDayFlow.choose(context, controller: _c, day: d);
       return;
     }
-    _selected.value = d;
     TaxiDaySheet.show(context, controller: _c, day: d);
   }
 
@@ -248,9 +254,14 @@ class _TaxiBookingsTabState extends State<TaxiBookingsTab> {
           cells: _c.grid.toList(),
           selected: _selected.value,
           offDays: _store?.offKeys ?? const <String>{},
-          onTap: (cell) => _tapDay(cell.date),
+          onTap: _tapDay,
         )));
-    out.add((_) => Padding(padding: DS.insets(t: 12, b: 10), child: const TaxiLegend()));
+    out
+      ..add((_) => Padding(padding: DS.insets(t: 12, b: 6), child: const TaxiLegend()))
+      ..add((_) => Padding(
+            padding: DS.insets(b: 10),
+            child: Text(TaxiAvailabilityStrings.hiddenRule, style: Ink3D.text(12, FontWeight.w500, Ink3D.grey, letterSpacing: 0)),
+          ));
     final f = view.festival;
     if (f != null) out.add((_) => _FestivalCard(festival: f));
     final meter = _c.entriesMeter;
@@ -261,7 +272,7 @@ class _TaxiBookingsTabState extends State<TaxiBookingsTab> {
               padding: DS.insets(t: 6, b: 12),
               child: TaxiMeterPair(left: ownTile, right: TaxiMeterTile(value: '${view.appCount}', label: TaxiCalendarStrings.fromAppThisMonth)),
             ))
-        ..add((_) => PrimaryButton(label: TaxiCalendarStrings.addTrip, tone: TaxiCal.kit, onPressed: _addAction))
+        ..add((_) => PrimaryButton(label: TaxiCalendarStrings.add, tone: TaxiCal.kit, onPressed: _addAction))
         ..addAll(_fullLine())
         ..add((_) => Padding(padding: DS.insets(t: 14), child: TaxiMoneyCard(month: _c.month.value, locked: true)));
       if (view.monthRows.isNotEmpty) {
@@ -298,7 +309,7 @@ class _TaxiBookingsTabState extends State<TaxiBookingsTab> {
                 right: TaxiMeterTile(value: TaxiCalendarStrings.monthsAhead(PlanGate.limit(PlanKey.monthsAhead)), label: TaxiCalendarStrings.aheadYouCanSee),
               ),
             ))
-        ..add((_) => PrimaryButton(label: TaxiCalendarStrings.addTrip, tone: TaxiCal.kit, onPressed: _addAction))
+        ..add((_) => PrimaryButton(label: TaxiCalendarStrings.add, tone: TaxiCal.kit, onPressed: _addAction))
         ..addAll(_fullLine())
         ..add((_) => _pastLink());
     }

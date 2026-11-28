@@ -142,9 +142,11 @@ void main() {
       final c = calSetUp(CalFake(months: {'2026-11': monthJson(entries: novEntries(), used: 4)}));
       await pumpPhone(tester, TaxiBookingsTab(root: true, controller: c));
       await settle(tester);
-      final add = find.text('+ Add trip');
+      final add = find.text('+ Add');
       await tester.scrollUntilVisible(add, 200, scrollable: find.byType(Scrollable).first);
       await tester.tap(add);
+      await settle(tester);
+      await tester.tap(find.text('A trip you got by phone or WhatsApp'));
       await settle(tester);
       expect(find.byKey(GateKeys.sheet), findsOneWidget);
       expect(find.text('Save trip'), findsNothing);
@@ -154,7 +156,7 @@ void main() {
       final c = calSetUp(CalFake(months: {'2026-11': monthJson(entries: novEntries(), plus: true, used: 50, limit: 50)}), plan: OwnerPlans.plus);
       await pumpPhone(tester, TaxiBookingsTab(root: true, controller: c));
       await settle(tester);
-      final add = find.text('+ Add trip');
+      final add = find.text('+ Add');
       await tester.scrollUntilVisible(add, 200, scrollable: find.byType(Scrollable).first);
       await tester.tap(add, warnIfMissed: false);
       await settle(tester);

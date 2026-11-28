@@ -7,10 +7,13 @@ import '../../owner_core/calendar/models/calendar_models.dart';
 import '../../owner_core/json/owner_dates.dart';
 import '../../owner_core/sheets/owner_sheet.dart';
 import '../../owner_core/strings/owner_shared_strings.dart';
+import '../availability/taxi_availability_store.dart';
+import '../strings/taxi_availability_strings.dart';
 import '../strings/taxi_calendar_strings.dart';
 import '../taxi_driver_deps.dart';
 import 'taxi_calendar_controller.dart';
 import 'taxi_calendar_widgets.dart';
+import 'taxi_day_off_sheet.dart';
 import 'taxi_trip_sheet.dart';
 import 'taxi_trip_text.dart';
 
@@ -19,21 +22,34 @@ abstract final class TaxiDaySheet {
     final d = OwnerDates.only(day);
     final rows = controller.dayRows(d);
     final festival = controller.festivalOn(d);
-    final canAdd = controller.canAddOn(d) && !TaxiDriverDeps.isDayOff(d);
+    final canAdd = controller.canAddOn(d);
+    final store = TaxiAvailabilityStore.maybe;
+    final off = store?.isOff(d) ?? false;
+    final canOff = off || (store != null && !d.isBefore(store.today) && store.inWindow(d));
     final action = await OwnerSheet.show<_DayAction>(
       context,
       look: TaxiCal.look,
       title: TaxiCalendarStrings.daySheetTitle(d),
       subtitle: rows.isEmpty ? TaxiCalendarStrings.nothingOnDay : TaxiCalendarStrings.tripsOnDay(rows.length),
       child: (c) => TaxiDayBody(rows: rows, festival: festival, onOpen: (e) => e.inactiveByPlan ? AppToast.info(OwnerSharedStrings.inactiveToast) : Navigator.of(c).pop(_DayAction.open(e.id))),
-      footer: canAdd
-          ? (c) => PrimaryButton(label: TaxiCalendarStrings.addTripOnDay, tone: TaxiCal.kit, onPressed: () => Navigator.of(c).pop(const _DayAction.add()))
+      footer: canAdd || canOff
+          ? (c) => Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (canAdd) PrimaryButton(label: TaxiCalendarStrings.addTripOnDay, tone: TaxiCal.kit, onPressed: () => Navigator.of(c).pop(const _DayAction.add())),
+                  if (canAdd && canOff) Gap.v(8),
+                  if (canOff) SecondaryButton(label: TaxiAvailabilityStrings.dayOff, tone: TaxiCal.kit, onPressed: () => Navigator.of(c).pop(const _DayAction.dayOff())),
+                ],
+              )
           : null,
     );
     if (action == null || !context.mounted) return;
     final id = action.entryId;
     if (id != null) {
       TaxiDriverDeps.openEntry(id);
+    } else if (action.dayOff) {
+      await TaxiDayFlow.dayOff(context, controller: controller, day: d);
     } else {
       await TaxiTripSheet.show(context, controller: controller, date: d);
     }
@@ -41,10 +57,16 @@ abstract final class TaxiDaySheet {
 }
 
 class _DayAction {
-  const _DayAction.add() : entryId = null;
-  const _DayAction.open(String this.entryId);
+  const _DayAction.add()
+      : entryId = null,
+        dayOff = false;
+  const _DayAction.dayOff()
+      : entryId = null,
+        dayOff = true;
+  const _DayAction.open(String this.entryId) : dayOff = false;
 
   final String? entryId;
+  final bool dayOff;
 }
 
 class TaxiDayBody extends StatelessWidget {

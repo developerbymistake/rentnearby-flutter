@@ -21,9 +21,7 @@ import '../hub/taxi_hub_controller.dart';
 import '../strings/taxi_hub_strings.dart';
 import '../taxi_driver_deps.dart';
 import '../widgets/taxi_widgets.dart';
-import '../strings/taxi_availability_strings.dart';
 import 'taxi_attention_copy.dart';
-import 'taxi_availability_card.dart';
 import 'taxi_driver_home_controller.dart';
 import 'taxi_home_compose.dart';
 
@@ -246,11 +244,6 @@ class TaxiHomeBody extends StatelessWidget {
         }
         if (state == TaxiHomeState.takenDown) {
           children.add(const TaxiStrip(art: ListingArt.shield, text: TaxiHomeStrings.takenDownStrip, fill: TaxiLook.greenSoft, ink: TaxiLook.greenText));
-        }
-        if (show) {
-          children
-            ..add(const TaxiLabel(text: TaxiAvailabilityStrings.labelCaps))
-            ..add(TaxiAvailabilityCard(info: dto.availability, today: dto.today));
         }
         if (views.isNotEmpty) {
           children

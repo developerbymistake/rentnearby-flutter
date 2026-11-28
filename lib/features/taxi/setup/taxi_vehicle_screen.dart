@@ -14,6 +14,7 @@ import '../../../design/extra/taxi_setup_kit.dart';
 import '../../../models/city_model.dart';
 import '../../../screens/add_listing_location_mixin.dart';
 import '../../../utils/app_toast.dart';
+import '../../../utils/money_format.dart';
 import '../../../widgets/onboarding_closed_dialog.dart';
 import '../../owner_core/onboarding/onboarding_exit.dart';
 import '../models/taxi_owner_model.dart';
@@ -23,6 +24,7 @@ import '../taxi_vehicle_types_controller.dart';
 import 'taxi_identity_validators.dart';
 import 'taxi_photo_pick.dart';
 import 'taxi_rate_form.dart';
+import 'taxi_review_strings.dart';
 import 'taxi_routes_form.dart';
 import 'taxi_setup_controller.dart';
 import 'taxi_vehicle_type_picker_sheet.dart';
@@ -65,6 +67,8 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   final _rate = TaxiRateFormController();
   String? _savedRoutesKey;
   bool _submitting = false;
+  bool _backToReview = false;
+  String? _editSnapshot;
 
   String? _vehicleTypeId;
   String? _vehicleTypeName;
@@ -150,7 +154,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     if (widget.onboarding) {
       _routes.seed(t);
       _rate.seed(t);
-      if (t != null && t.routesDone) _savedRoutesKey = _routes.key;
+      if (t != null && t.routesDone) _savedRoutesKey = TaxiRoutesFormController.keyOf(t.routes);
       _step = _startStep(t);
       _prevStep = _step;
     }
@@ -295,8 +299,8 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
 
   void _onBack() {
     if (_blocked) return;
-    if (widget.onboarding && _step > 0) {
-      _goTo(_step - 1);
+    if (widget.onboarding && (_step > 0 || _backToReview)) {
+      _back();
       return;
     }
     if (widget.onboarding && !_ctrl.mainBelow) {
@@ -479,37 +483,85 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     return true;
   }
 
+  static const _reviewStep = 5;
+
   void _goTo(int step) {
     FocusScope.of(context).unfocus();
     if (_step == 2 && step != 2) setLocationStepActive(false);
+    if (step == _reviewStep) _backToReview = false;
     setState(() => _step = step);
+  }
+
+  // Back from an edit opened on Review drops the unsaved route and rate and returns there.
+  void _back() {
+    if (_backToReview) {
+      _routes.seed(_ctrl.taxi.value);
+      _rate.seed(_ctrl.taxi.value);
+      _goTo(_reviewStep);
+      return;
+    }
+    _goTo(_step - 1);
+  }
+
+  void _advance(int next) => _goTo(_backToReview ? _reviewStep : next);
+
+  void _edit(int step) {
+    if (_blocked) return;
+    _backToReview = true;
+    _editSnapshot = _basicSnapshot;
+    _goTo(step);
+  }
+
+  String get _basicSnapshot => [
+        _vehicleTypeId,
+        _seats,
+        TaxiOptionSets.normalizePlate(_plateCtrl.text),
+        _localPhoto?.path,
+        _remotePhotoUrl,
+        _localDisplay?.path,
+        _remoteDisplayUrl,
+        _phone,
+        _effectiveWhatsApp,
+        _dlTyped,
+        _dob,
+      ].join('|');
+
+  // Vehicle and Driver are saved with the base, so a changed edit from Review saves here.
+  void _nextFromBasic(int next) {
+    if (!_backToReview) {
+      _goTo(next);
+    } else if (_basicSnapshot == _editSnapshot) {
+      _goTo(_reviewStep);
+    } else if (selectedDistrictId != null && !isResolvingDistrict) {
+      _save();
+    } else {
+      _goTo(next);
+    }
   }
 
   void _handleNext() {
     if (_blocked) return;
     if (_step == 0) {
-      if (_validateVehicle()) _goTo(1);
+      if (_validateVehicle()) _nextFromBasic(1);
       return;
     }
     if (_step == 1) {
-      if (_validateContact()) _goTo(2);
+      if (_validateContact()) _nextFromBasic(2);
       return;
     }
     if (_step == 2) {
       _save();
     } else if (_step == 3) {
-      if (_routes.formOpen) {
-        FocusScope.of(context).unfocus();
-        _routes.saveForm();
-      } else {
-        _saveRoutes();
-      }
+      _saveRoutes();
+    } else if (_step == 4) {
+      _saveRate();
     } else {
-      _submit();
+      _confirmSubmit();
     }
   }
 
   Future<void> _recoverStep() async {
+    _backToReview = false;
     await _ctrl.load();
     if (!mounted) return;
     final t = _ctrl.taxi.value;
@@ -524,10 +576,12 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     if (_blocked) return;
     FocusScope.of(context).unfocus();
     if (!_routes.validate()) return;
-    if (_routes.key != _savedRoutesKey) {
+    final payload = _routes.payload();
+    _routes.openSingle();
+    if (payload.toString() != _savedRoutesKey) {
       _busy = true;
       try {
-        final ok = await _ctrl.saveRoutes(_routes.payload(), quietLimit: true);
+        final ok = await _ctrl.saveRoutes(payload, quietLimit: true);
         if (!mounted) return;
         if (!ok) {
           final type = _ctrl.lastErrorType;
@@ -538,34 +592,70 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
           }
           return;
         }
-        _routes.seed(_ctrl.taxi.value);
-        _savedRoutesKey = _routes.key;
+        final saved = _ctrl.taxi.value;
+        _routes.seed(saved);
+        _savedRoutesKey = TaxiRoutesFormController.keyOf(saved?.routes ?? const []);
       } finally {
         _busy = false;
       }
     }
-    if (mounted) _goTo(4);
+    if (mounted) _advance(4);
   }
 
-  Future<void> _submit() async {
-    if (_blocked) return;
-    FocusScope.of(context).unfocus();
+  Future<bool> _persistRate() async {
     final rateError = _rate.check();
     if (rateError != null) {
       AppToast.error(rateError);
-      return;
+      if (_step != 4) _goTo(4);
+      return false;
     }
+    if (!_rate.dirty && _rate.stored) return true;
+    final saved = await _ctrl.saveLocalRate(dayRate: _rate.dayRate, kmPerDay: _rate.kmPerDay);
+    if (!mounted) return false;
+    if (!saved) {
+      if (_ctrl.lastErrorType == 'TaxiStepLocked') await _recoverStep();
+      return false;
+    }
+    _rate.seed(_ctrl.taxi.value);
+    return true;
+  }
+
+  Future<void> _saveRate() async {
+    if (_blocked) return;
+    FocusScope.of(context).unfocus();
     _busy = true;
     try {
-      if (_rate.dirty || !_rate.stored) {
-        final saved = await _ctrl.saveLocalRate(dayRate: _rate.dayRate, kmPerDay: _rate.kmPerDay);
-        if (!mounted) return;
-        if (!saved) {
-          if (_ctrl.lastErrorType == 'TaxiStepLocked') await _recoverStep();
-          return;
-        }
-        _rate.seed(_ctrl.taxi.value);
-      }
+      if (await _persistRate() && mounted) _goTo(_reviewStep);
+    } finally {
+      _busy = false;
+    }
+  }
+
+  Future<void> _confirmSubmit() async {
+    if (_blocked) return;
+    FocusScope.of(context).unfocus();
+    _busy = true;
+    bool? send;
+    try {
+      send = await showTaxiOwnerDialog(
+        context,
+        art: ListingArt.clipboard,
+        title: TaxiReviewStrings.confirmTitle,
+        body: TaxiReviewStrings.confirmBody,
+        cancelLabel: TaxiReviewStrings.notNow,
+        confirmLabel: TaxiReviewStrings.send,
+      );
+    } finally {
+      _busy = false;
+    }
+    if (send == true && mounted) await _submit();
+  }
+
+  Future<void> _submit() async {
+    FocusScope.of(context).unfocus();
+    _busy = true;
+    try {
+      if (!await _persistRate()) return;
       final t = _ctrl.taxi.value;
       if (t == null || !t.step1Done) {
         AppToast.warning(TaxiSetupStrings.completeVehicle);
@@ -722,7 +812,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         _localDisplay == null &&
         (_ctrl.taxi.value?.step1Done ?? false) &&
         _savedBasicKey == _basicBody(pinnedOrLiveLocation!).toString()) {
-      _goTo(3);
+      _advance(3);
       return;
     }
     final review = _wasApproved && _needsReview;
@@ -779,7 +869,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       TaxiDriverDeps.refreshHome().ignore();
       if (widget.onboarding) {
         _routes.refreshDefaultFrom();
-        _goTo(3);
+        _advance(3);
         return;
       }
       Get.back();
@@ -834,8 +924,9 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
                       0 => _vehicleStep(),
                       1 => _contactStep(),
                       2 => _baseStep(),
-                      3 => _scroll(3, [TaxiRoutesForm(controller: _routes, tone: _tone)]),
-                      _ => _scroll(4, [TaxiLocalRateCard(controller: _rate, tone: _tone)]),
+                      3 => _scroll(3, [TaxiRouteFormCard(controller: _routes, tone: _tone)]),
+                      4 => _scroll(4, [TaxiLocalRateCard(controller: _rate, tone: _tone)]),
+                      _ => _reviewStepView(),
                     },
                   ),
                 ),
@@ -866,13 +957,18 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         onBack: _onBack,
       );
     }
-    final menu = _step == 0 && !_ctrl.mainBelow;
+    final menu = _step == 0 && !_ctrl.mainBelow && !_backToReview;
     final t = _ctrl.taxi.value;
     return PageHeader3D(
       tone: _tone,
-      title: switch (_step) { 3 => TaxiSetupStrings.routeTitleOne, 4 => TaxiSetupStrings.rateTitle, _ => TaxiSetupStrings.step1Title },
-      subtitle: TaxiSetupStrings.wizardSteps[_step],
-      art: _step == 3 ? ListingArt.compass : ListingArt.taxi,
+      title: switch (_step) {
+        3 => TaxiSetupStrings.routeTitleOne,
+        4 => TaxiSetupStrings.rateTitle,
+        _reviewStep => TaxiReviewStrings.title,
+        _ => TaxiSetupStrings.step1Title,
+      },
+      subtitle: _step == _reviewStep ? TaxiReviewStrings.stepLine : TaxiSetupStrings.wizardSteps[_step],
+      art: switch (_step) { 3 => ListingArt.compass, _reviewStep => ListingArt.clipboard, _ => ListingArt.taxi },
       inlineTitle: true,
       onBack: menu ? null : _onBack,
       leadingIcon: menu ? Icons.more_vert_rounded : null,
@@ -883,26 +979,22 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
 
   String get _primaryLabel {
     if (!widget.onboarding) return _step < 2 ? TaxiSetupStrings.next : TaxiSetupStrings.save;
-    if (_step == 3 && _routes.formOpen) return TaxiSetupStrings.save;
-    return _step < 4 ? TaxiSetupStrings.next : TaxiSetupStrings.submit;
+    return _step < _reviewStep ? TaxiSetupStrings.next : TaxiSetupStrings.submit;
   }
 
-  Widget _footer() => ListenableBuilder(
-        listenable: _routes,
-        builder: (context, _) => Obx(() {
-          final saving = _ctrl.isSaving.value;
-          final disabled = saving || _isFinalizing || _isUploading || (_step == 2 && isResolvingDistrict);
-          return FormFooter(
-            tone: _tone,
-            top: const ToastDock(),
-            primaryLabel: _primaryLabel,
-            onPrimary: disabled ? null : _handleNext,
-            primaryLoading: saving || _isFinalizing,
-            secondaryLabel: _step > 0 ? 'Back' : null,
-            onSecondary: _blocked ? null : () => _goTo(_step - 1),
-          );
-        }),
-      );
+  Widget _footer() => Obx(() {
+        final saving = _ctrl.isSaving.value;
+        final disabled = saving || _isFinalizing || _isUploading || (_step == 2 && isResolvingDistrict);
+        return FormFooter(
+          tone: _tone,
+          top: const ToastDock(),
+          primaryLabel: _primaryLabel,
+          onPrimary: disabled ? null : _handleNext,
+          primaryLoading: saving || _isFinalizing,
+          secondaryLabel: _step > 0 || _backToReview ? 'Back' : null,
+          onSecondary: _blocked ? null : _back,
+        );
+      });
 
   Widget _section({required _Ring? ring, required String art, required String title, String? hint, bool required = true, required Widget child}) => FormSectionCard(
         key: ring == null ? null : _cardKeys[ring],
@@ -925,6 +1017,66 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         padding: EdgeInsets.only(bottom: DS.s(24)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
       );
+
+  Widget _reviewRow({required String art, required String title, required String detail, required int step}) => Container(
+        margin: EdgeInsets.fromLTRB(DS.s(18), DS.gv(14), DS.s(18), 0),
+        padding: EdgeInsets.symmetric(horizontal: DS.s(18)),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: DS.br(CardRadius.card), boxShadow: DS.shadows(Form3D.cardShadow)),
+        child: SummaryRow3D(
+          tone: _tone,
+          art: art,
+          title: title,
+          detail: detail.isEmpty ? null : detail,
+          actionLabel: TaxiReviewStrings.edit,
+          onAction: () => _edit(step),
+          divider: false,
+        ),
+      );
+
+  static String _line(List<String?> parts) => parts.where((p) => p != null && p.trim().isNotEmpty).join(' · ');
+
+  Widget _reviewStepView() {
+    final t = _ctrl.taxi.value;
+    final route = (t?.routes.isNotEmpty ?? false) ? t!.routes.first : null;
+    final rate = t?.localDayRate, km = t?.localDayKm;
+    final seats = t?.seats;
+    final phone = t?.contactPhone ?? '';
+    final name = Get.find<AuthController>().user.value?.name?.trim() ?? '';
+    return _scroll(_reviewStep, [
+      _reviewRow(
+        art: ListingArt.taxi,
+        title: TaxiReviewStrings.vehicle,
+        detail: _line([
+          t?.vehicleTypeName ?? _types.nameOf(t?.vehicleTypeId),
+          seats == null ? null : TaxiReviewStrings.seats(TaxiOptionSets.seatsLabel(seats)),
+          t?.plateDisplay ?? t?.numberPlate,
+        ]),
+        step: 0,
+      ),
+      _reviewRow(
+        art: ListingArt.cardIndex,
+        title: TaxiReviewStrings.driver,
+        detail: TaxiReviewStrings.driverLine(
+          lead: name.isNotEmpty ? name : (phone.isEmpty ? null : '+91 $phone'),
+          licence: t?.hasDrivingLicence ?? false,
+        ),
+        step: 1,
+      ),
+      _reviewRow(art: ListingArt.roundPushpin, title: TaxiReviewStrings.base, detail: t?.baseLabel ?? '', step: 2),
+      _reviewRow(
+        art: ListingArt.compass,
+        title: TaxiReviewStrings.route,
+        detail: route == null ? '' : _line([TaxiReviewStrings.routeLine(route.fromName, route.toName), Money.exact(route.fare)]),
+        step: 3,
+      ),
+      _reviewRow(
+        art: ListingArt.moneyBag,
+        title: TaxiReviewStrings.dayRate,
+        detail: rate == null || km == null ? '' : TaxiReviewStrings.rateLine(Money.exact(rate), km),
+        step: 4,
+      ),
+    ]);
+  }
 
   Widget _vehicleStep() => _scroll(0, [
         if (widget.onboarding && (_ctrl.taxi.value?.isRejected ?? false))

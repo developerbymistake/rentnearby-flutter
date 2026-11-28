@@ -157,7 +157,6 @@ class AppRoutes {
   static const String taxiBalanceDue = '/taxi-balance-due';
   static const String taxiPlanVisible = '/taxi-plan-visible';
   static const String taxiAttention = '/taxi-attention';
-  static const String taxiAvailability = '/taxi-availability';
   static const String taxiRouteResults = '/taxi-route-results';
 
   static const Set<String> stayOwnerNewRoutes = {
@@ -187,7 +186,6 @@ class AppRoutes {
     taxiBalanceDue,
     taxiPlanVisible,
     taxiAttention,
-    taxiAvailability,
   };
 
   static const Set<String> travellerOnly = {

@@ -33,7 +33,6 @@ class TaxiAvailabilityStore extends GetxController {
   Future<void>? _queued;
   DateTime? _loadedAt;
   bool _cacheRead = false;
-  bool _prefetched = false;
 
   String? get _uid => _userId != null ? _userId() : (Get.isRegistered<AuthController>() ? Get.find<AuthController>().user.value?.id : null);
 
@@ -52,12 +51,30 @@ class TaxiAvailabilityStore extends GetxController {
     return !d.isBefore(today) && v.hasOff(d);
   }
 
-  bool isBooked(DateTime day) => value.value?.isBooked(day) ?? false;
+  bool inWindow(DateTime day) {
+    final w = value.value?.window;
+    final from = w?.monthFrom;
+    final to = w?.monthTo;
+    if (from == null || to == null) return true;
+    final d = OwnerDates.only(day);
+    return !d.isBefore(OwnerDates.firstOfMonth(from)) && !d.isAfter(OwnerDates.lastOfMonth(to));
+  }
 
-  void prefetch() {
-    if (_prefetched) return;
-    _prefetched = true;
-    ensure().ignore();
+  Future<OwnerResult<TaxiAvailability>> saveDay(DateTime day, {required bool off, String? reason}) async {
+    final d = OwnerDates.only(day);
+    OwnerResult<TaxiAvailability> r;
+    try {
+      r = await TaxiHourlyLimit.guard(
+        TaxiHourlyLimit.availability,
+        () => off
+            ? _api.save(set: [TaxiDayOff(date: d, reason: TaxiReasonText.clean(reason))], clear: const [])
+            : _api.save(set: const [], clear: [OwnerDates.dayText(d)]),
+      );
+    } catch (_) {
+      r = const OwnerFailed<TaxiAvailability>(message: '');
+    }
+    if (r case OwnerOk<TaxiAvailability>(:final value) when !isClosed) apply(value);
+    return r;
   }
 
   Future<void> ensure() {
