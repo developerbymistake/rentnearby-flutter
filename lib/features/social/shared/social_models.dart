@@ -651,13 +651,28 @@ class TravellerProfile {
 }
 
 class SocialMe {
-  const SocialMe({this.profile, required this.limits, this.followRequests = 0, this.chatUnread = ChatUnread.zero, this.catalog = SocialCatalogData.empty, this.guidelinesAccepted});
+  const SocialMe({
+    this.profile,
+    required this.limits,
+    this.followRequests = 0,
+    this.chatUnread = ChatUnread.zero,
+    this.catalog = SocialCatalogData.empty,
+    this.guidelinesAccepted,
+    this.tripInvites = 0,
+    this.joinRequests = 0,
+    this.joinRequestsTripId,
+  });
 
   final MyProfile? profile;
   final SocialLimits limits;
   final int followRequests;
   final ChatUnread chatUnread;
   final SocialCatalogData catalog;
+  final int tripInvites;
+  final int joinRequests;
+
+  /// Set only when every counted join request is on one post.
+  final String? joinRequestsTripId;
 
   /// null = the server did not say (older answer): never block on it, the server enforces.
   final bool? guidelinesAccepted;
@@ -669,6 +684,9 @@ class SocialMe {
         chatUnread: chatUnread ?? this.chatUnread,
         catalog: catalog,
         guidelinesAccepted: guidelinesAccepted ?? this.guidelinesAccepted,
+        tripInvites: tripInvites,
+        joinRequests: joinRequests,
+        joinRequestsTripId: joinRequestsTripId,
       );
 
   factory SocialMe.fromJson(Map<String, dynamic> j) {
@@ -680,6 +698,9 @@ class SocialMe {
       followRequests: BuddyJson.integer(counts['followRequests']),
       chatUnread: ChatUnread.fromJson(BuddyJson.mapOrNull(counts['chatUnread'])),
       catalog: SocialCatalogData.fromJson(BuddyJson.mapOrNull(j['catalog'])),
+      tripInvites: BuddyJson.integer(counts['tripInvites']),
+      joinRequests: BuddyJson.integer(counts['joinRequests']),
+      joinRequestsTripId: switch (BuddyJson.strOrNull(counts['joinRequestsTripId'])) { final id? when id.isNotEmpty => id, _ => null },
       guidelinesAccepted: j['guidelinesAccepted'] is bool ? j['guidelinesAccepted'] as bool : (p != null && p['guidelinesAccepted'] is bool ? p['guidelinesAccepted'] as bool : null),
     );
   }

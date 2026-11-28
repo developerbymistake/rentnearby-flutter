@@ -53,12 +53,10 @@ void main() {
     final oldDate = c.dateOf(oldStart)!;
     final d = draftOf(c, 2);
     expect(d.addDay(), TripDraftBlock.none);
-    expect(c.applyLegDraft(2, d), TripLegApplyBlock.emptyDay);
-    expect(d.move('L2d1s1', 2, 0), TripDraftBlock.none);
-    expect(d.firstEmptyDay, isNull);
     expect(c.applyLegDraft(2, d), TripLegApplyBlock.none);
     final p = c.plan.value!;
     expect(p.legDayCount(2), 3);
+    expect(legSignature(p, 2), [':L2d1s0,L2d1s1', ':L2d2s0', ':']);
     expect(p.legStart(3), oldStart + 1);
     expect(c.dateOf(p.legStart(3)), DateTime(oldDate.year, oldDate.month, oldDate.day + 1));
     expect(legSignature(p, 1), [':L1d1s0,L1d1s1']);
@@ -115,16 +113,18 @@ void main() {
     expect(other.applyLegDraft(1, d2), TripLegApplyBlock.none);
   });
 
-  test('apply_refused_with_an_empty_day_but_allows_a_rest_day', () {
+  test('apply_accepts_an_empty_day_and_a_rest_day', () {
     final c = engineRig(enginePlan([[2, 2]]));
     final d = draftOf(c, 1);
-    expect(d.addDay(), TripDraftBlock.none);
-    expect(c.applyLegDraft(1, d), TripLegApplyBlock.emptyDay);
+    expect(d.move('L1d2s0', 0, 2), TripDraftBlock.none);
+    expect(d.move('L1d2s1', 0, 3), TripDraftBlock.none);
+    expect(c.applyLegDraft(1, d), TripLegApplyBlock.none);
     expect(c.plan.value!.days.length, 2);
+    expect(c.plan.value!.dayAt(2)!.spots, isEmpty);
+    expect(legSignature(c.plan.value!, 1), [':L1d1s0,L1d1s1,L1d2s0,L1d2s1', ':']);
 
     final rest = engineRig(enginePlan([[2, 0, 2]], restDays: {2}));
     final r = draftOf(rest, 1);
-    expect(r.firstEmptyDay, isNull);
     expect(r.move('L1d1s0', 2, 0), TripDraftBlock.none);
     expect(rest.applyLegDraft(1, r), TripLegApplyBlock.none);
     final p = rest.plan.value!;

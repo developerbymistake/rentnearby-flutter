@@ -101,6 +101,7 @@ abstract final class SocialStringsA {
   static const String addPlace = 'Add place';
   static const String homeCity = 'Home city';
   static const String homeCityHint = 'shown on your profile';
+  static const String homeCityFound = 'Found from your location. Tap to change.';
   static const String homeCityNote = 'Never shown on your public plan cards.';
   static const String change = 'Change';
   static const String save = 'Save';
@@ -118,7 +119,7 @@ abstract final class SocialStringsA {
   static String skillsHint(int n) => '${ofThree(n)} · $pickTwoToThree';
 
   static const String pickPlaceTitle = 'Add a place';
-  static const String pickHomeTitle = 'Home city';
+  static const String pickHomeTitle = 'Your home city';
   static const String searchPlace = 'Search a city or state';
   static const String stateLine = 'State';
   static const String noPlaceFound = 'No place found';

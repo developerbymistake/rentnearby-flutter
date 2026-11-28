@@ -369,18 +369,15 @@ class _ActionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final scaler = MediaQuery.textScalerOf(context);
     final style = label(tone);
-    final circle = draft && !dimmed;
-    final soft = selected && !circle;
+    final soft = selected;
     final text = soft ? TripStringsSpotsX.addedToTrip : TripStringsSpotsX.addToTrip;
-    final rightW = circle ? DS.s(KitMetrics.touch) : _pillW(text, style, scaler);
+    final rightW = _pillW(text, style, scaler);
     final detailsW = _detailsW(style, scaler);
     final stacked = detailsW + DS.s(12) + rightW > width;
     final toggle = draft && dimmed ? null : onToggle;
-    final right = circle
-        ? _CircleToggle(tone: tone, selected: selected, onTap: toggle)
-        : soft
-            ? _SoftPill(tone: tone, onTap: toggle)
-            : _hit(WhitePillButton(tone: tone, label: TripStringsSpotsX.addToTrip, icon: Icons.add_rounded, height: KitMetrics.touch, fontSize: _pillFont, expand: false, onGradient: true, onTap: toggle), toggle);
+    final right = soft
+        ? _SoftPill(tone: tone, onTap: toggle)
+        : _hit(WhitePillButton(tone: tone, label: TripStringsSpotsX.addToTrip, icon: Icons.add_rounded, height: KitMetrics.touch, fontSize: _pillFont, expand: false, onGradient: true, onTap: toggle), toggle);
     final details = _Details(tone: tone, onTap: onDetails);
     return Padding(
       padding: DS.insets(l: _padX, t: 14, r: _padX, b: 16),
@@ -487,36 +484,6 @@ class _SoftPill extends StatelessWidget {
       onTap,
     );
   }
-}
-
-class _CircleToggle extends StatelessWidget {
-  final ListingTone tone;
-  final bool selected;
-  final VoidCallback? onTap;
-
-  const _CircleToggle({required this.tone, required this.selected, this.onTap});
-
-  @override
-  Widget build(BuildContext context) => Tap3D(
-        onTap: onTap,
-        label: selected ? TripStringsSpotsX.addedToTrip : TripStringsSpotsX.addToTrip,
-        selected: selected,
-        exclude: true,
-        child: SizedBox(
-          width: DS.s(KitMetrics.touch),
-          height: DS.s(KitMetrics.touch),
-          child: Center(
-            child: DecoratedBox(
-              decoration: BoxDecoration(color: selected ? tone.text : DesignColors.surface, shape: BoxShape.circle, border: selected ? Border.all(color: DesignColors.surface, width: DS.s(2)) : null),
-              child: SizedBox(
-                width: DS.s(26),
-                height: DS.s(26),
-                child: Icon(selected ? Icons.check_rounded : Icons.circle_outlined, size: DS.s(14), color: selected ? DesignColors.surface : tone.text),
-              ),
-            ),
-          ),
-        ),
-      );
 }
 
 class TripSpotCardSkeleton extends StatelessWidget {

@@ -84,7 +84,6 @@ void main() {
     expect(d.remove('a'), TripDraftBlock.none);
     expect(_ids(d), [[], ['b']]);
     expect(d.dayCount, 2);
-    expect(d.firstEmptyDay, 0);
     expect(d.remove('a'), TripDraftBlock.notFound);
   });
 
@@ -98,7 +97,6 @@ void main() {
     expect(d.addDay(), TripDraftBlock.tooManyDays);
     expect(d.dayCount, 3);
     expect(d.toLegDays().map((x) => x.day), [2, 3, 4]);
-    expect(d.firstEmptyDay, 1);
   });
 
   test('delete_day_spreads_earliest_first_and_keeps_order', () {
@@ -182,23 +180,11 @@ void main() {
 
   test('rest_day_is_not_empty', () {
     final d = _draft(_plan([[_s('a')], []], rest: {1}));
-    expect(d.firstEmptyDay, isNull);
     expect(d.toLegDays()[1].restDay, isTrue);
     d.move('a', 1, 0);
-    expect(d.firstEmptyDay, 0);
     expect(d.toLegDays()[1].restDay, isFalse);
     d.move('a', 0, 0);
     expect(d.changed, isFalse);
-    expect(d.firstEmptyDay, isNull);
-  });
-
-  test('first_empty_day_skips_frozen_and_rest_days', () {
-    final d = _draft(_plan([[], [], [_s('a')]], rest: {1}), frozen: 1);
-    expect(d.firstEmptyDay, isNull);
-    d.addDay();
-    expect(d.firstEmptyDay, 3);
-    d.addSpots(3, [_s('x')]);
-    expect(d.firstEmptyDay, isNull);
   });
 
   test('reset_restores_the_original', () {

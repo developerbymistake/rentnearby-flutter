@@ -155,6 +155,16 @@ void main() {
     });
   });
 
+  group('isDayFull', () {
+    test('full only for an existing day at six places, never for a missing day', () {
+      final p = _plan([_day(1, 5), _day(2, 6), _day(3, 0)]);
+      expect(TripDaysRules.isDayFull(p, 1), isFalse);
+      expect(TripDaysRules.isDayFull(p, 2), isTrue);
+      expect(TripDaysRules.isDayFull(p, 3), isFalse);
+      expect(TripDaysRules.isDayFull(p, 9), isFalse);
+    });
+  });
+
   group('canRemoveDay', () {
     test('the only day of a city can never go', () {
       final p = _plan([_day(1, 2)]);

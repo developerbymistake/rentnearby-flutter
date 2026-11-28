@@ -114,9 +114,10 @@ class TaxiListController extends GetxController {
     }
     final loc = _loc;
     _workers.add(everAll(
-      [loc.autoCity, loc.userLocation, loc.selectedDistrict, loc.locationLoading],
+      [loc.autoCity, loc.gpsCity, loc.userLocation, loc.selectedDistrict, loc.locationLoading],
       (_) => _onLocationChanged(),
     ));
+    unawaited(loc.ensureGpsCity());
     _workers.add(ever(refreshTrigger, (_) => _invalidate()));
     if (root) {
       _workers.add(ever(_auth.tabIndex, (i) {

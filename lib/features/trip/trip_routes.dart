@@ -250,7 +250,7 @@ class _TripOverviewRouteState extends State<TripOverviewRoute> with _HoldsTrip {
     super.dispose();
   }
 
-  void _viewPlan(String tripId) => Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId});
+  void _viewPlan(String tripId) => Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId, 'fromOverview': true});
 
   bool _askingExit = false;
   bool _stayBusy = false;

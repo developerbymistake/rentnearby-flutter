@@ -66,8 +66,14 @@ class _TripsDiscoveryScreenState extends State<TripsDiscoveryScreen> {
   void _continue(TripSummaryModel t) => TripNavigation.continueTrip(t.id);
 
   void _open(HubTileConfig c) {
-    if (c.route == AppRoutes.tripWhere) TripNavigation.openWhereToNext();
-    if (c.route == AppRoutes.buddies) SocialNav.openTravelBuddies();
+    switch (c.route) {
+      case AppRoutes.tripWhere:
+        TripNavigation.openWhereToNext();
+      case AppRoutes.travelBuddies:
+        SocialNav.openTravelBuddies();
+      case AppRoutes.people:
+        SocialNav.openPeople(tab: 'discover');
+    }
   }
 
   Widget _center(Widget child) => Align(

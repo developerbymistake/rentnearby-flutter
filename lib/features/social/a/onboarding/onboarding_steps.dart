@@ -11,6 +11,7 @@ import '../../../buddy/shared/buddy_look.dart';
 import '../../../buddy/shared/widgets/buddy_sheet.dart';
 import '../../b/social_strings_b.dart';
 import '../../shared/social_formats.dart';
+import '../edit/home_city_sheet.dart';
 import '../edit/place_picker_sheet.dart';
 import '../social_strings_a.dart';
 import '../widgets/social_chips_a.dart';
@@ -197,13 +198,14 @@ class _CountLabel extends StatelessWidget {
       );
 }
 
-class _SelectPill extends StatelessWidget {
-  const _SelectPill({required this.text, required this.hint, required this.onTap, this.pillKey});
+class SelectPill extends StatelessWidget {
+  const SelectPill({super.key, required this.text, required this.hint, required this.onTap, this.pillKey, this.leadingArt});
 
   final String? text;
   final String hint;
   final VoidCallback onTap;
   final Key? pillKey;
+  final String? leadingArt;
 
   @override
   Widget build(BuildContext context) {
@@ -219,6 +221,10 @@ class _SelectPill extends StatelessWidget {
         decoration: BoxDecoration(color: Form3D.fill, borderRadius: DS.circular(30)),
         child: Row(
           children: [
+            if (leadingArt != null) ...[
+              ExcludeSemantics(child: Art3D(asset: leadingArt!, size: 18, shadowBlur: 2, shadowOffset: const Offset(1, 2))),
+              Gap.h(8),
+            ],
             Expanded(
               child: Text(v ?? hint,
                   maxLines: 1, overflow: TextOverflow.ellipsis, style: v == null ? AuthPillInput.hintStyle : AuthPillInput.nameStyle),
@@ -474,7 +480,7 @@ class OnboardingStepYou extends StatelessWidget {
         Obx(() => Row(
               children: [
                 Expanded(
-                  child: _SelectPill(
+                  child: SelectPill(
                     pillKey: const ValueKey('ob_month'),
                     text: c.birthMonth.value == null ? null : SocialFormats.monthName(c.birthMonth.value!),
                     hint: SocialStringsA.month,
@@ -483,7 +489,7 @@ class OnboardingStepYou extends StatelessWidget {
                 ),
                 Gap.h(12),
                 Expanded(
-                  child: _SelectPill(
+                  child: SelectPill(
                     pillKey: const ValueKey('ob_year'),
                     text: c.birthYear.value?.toString(),
                     hint: SocialStringsA.year,
@@ -508,31 +514,42 @@ class OnboardingStepStyle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return OnboardingCard(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Obx(() => _CountLabel(
-              text: SocialStringsA.interestsLabel,
-              count: SocialStringsA.ofThree(c.interests.length),
-              ok: c.interests.length >= ProfileRules.interestsMin,
-              top: false,
-            )),
-        Obx(() => ChoiceTileGrid(
-              children: [
-                for (final i in c.interestOptions)
-                  ChoiceArtTile(key: ValueKey('ob_int_$i'), label: i, art: SocialArtA.interest(i), selected: c.interests.contains(i), onTap: () => c.toggleInterest(i)),
-              ],
-            )),
-        Obx(() => _CountLabel(
-              text: SocialStringsA.skillsLabel,
-              count: SocialStringsA.picked(c.skills.length),
-              ok: c.skills.length >= ProfileRules.skillsMin,
-            )),
-        Obx(() => ChoiceTileGrid(
-              children: [
-                for (final s in c.skillOptions)
-                  ChoiceArtTile(key: ValueKey('ob_skill_$s'), label: s, art: SocialArtA.skill(s), selected: c.skills.contains(s), onTap: () => c.toggleSkill(s)),
-              ],
-            )),
+        OnboardingCard(
+          children: [
+            Obx(() => _CountLabel(
+                  text: SocialStringsA.interestsLabel,
+                  count: SocialStringsA.ofThree(c.interests.length),
+                  ok: c.interests.length >= ProfileRules.interestsMin,
+                  top: false,
+                )),
+            Obx(() => ChoiceTileGrid(
+                  children: [
+                    for (final i in c.interestOptions)
+                      ChoiceArtTile(key: ValueKey('ob_int_$i'), label: i, art: SocialArtA.interest(i), selected: c.interests.contains(i), onTap: () => c.toggleInterest(i)),
+                  ],
+                )),
+          ],
+        ),
+        SizedBox(height: DS.gv(16)),
+        OnboardingCard(
+          children: [
+            Obx(() => _CountLabel(
+                  text: SocialStringsA.skillsLabel,
+                  count: SocialStringsA.picked(c.skills.length),
+                  ok: c.skills.length >= ProfileRules.skillsMin,
+                  top: false,
+                )),
+            Obx(() => ChoiceTileGrid(
+                  children: [
+                    for (final s in c.skillOptions)
+                      ChoiceArtTile(key: ValueKey('ob_skill_$s'), label: s, art: SocialArtA.skill(s), selected: c.skills.contains(s), onTap: () => c.toggleSkill(s)),
+                  ],
+                )),
+          ],
+        ),
       ],
     );
   }
@@ -652,101 +669,156 @@ class OnboardingStepAbout extends StatelessWidget {
     if (p != null) c.addPlace(p);
   }
 
+  Future<void> _pickHome(BuildContext context) async {
+    final h = await HomeCitySheet.pick(context);
+    if (h != null) c.pickHomeCity(h);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return OnboardingCard(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Obx(() => _CountLabel(
-              text: SocialStringsA.placesLabel,
-              count: SocialStringsA.placesAdded(c.places.length),
-              ok: c.places.length >= ProfileRules.placesMin,
-              top: false,
-            )),
-        Tap3D(
-          tapKey: const ValueKey('ob_add_place'),
-          onTap: () => _addPlace(context),
-          label: SocialStringsA.addPlaceHint,
-          exclude: true,
-          child: Container(
-            height: DS.s(62),
-            padding: DS.sym(h: 18),
-            decoration: BoxDecoration(color: Form3D.fill, borderRadius: DS.circular(31)),
-            child: Row(
-              children: [
-                ExcludeSemantics(child: Art3D(asset: ListingArt.search, size: 30, shadowBlur: 2, shadowOffset: const Offset(1, 2))),
-                Gap.h(12),
-                Expanded(child: Text(SocialStringsA.addPlaceHint, maxLines: 1, style: AuthPillInput.hintStyle)),
-              ],
-            ),
-          ),
-        ),
-        Obx(() => c.places.isEmpty
-            ? const SizedBox.shrink()
-            : Padding(
-                padding: EdgeInsets.only(top: DS.gv(10)),
-                child: ChoiceTileGrid(
-                  children: [for (final p in c.places) PlaceTile(key: ValueKey('ob_place_$p'), text: p, onRemove: () => c.removePlace(p))],
-                ),
-              )),
-        Obx(() => Padding(
-              padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(20), DS.s(4), DS.gv(10)),
+        OnboardingCard(
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(DS.s(4), 0, DS.s(4), DS.gv(10)),
               child: Row(
                 children: [
-                  Expanded(child: Text(SocialStringsA.aboutYou, style: Ink3D.text(13, FontWeight.w600, Ink3D.sub))),
-                  Text('${c.about.value.length}/${ProfileRules.aboutMax}', key: OnboardingStepAbout.counterKey, style: Ink3D.text(12, FontWeight.w500, Ink3D.grey, letterSpacing: 0)),
+                  ExcludeSemantics(child: Art3D(asset: ListingArt.houseWithGarden, size: 18, shadowBlur: 2, shadowOffset: const Offset(1, 2))),
+                  Gap.h(8),
+                  Expanded(child: Text(SocialStringsA.homeCity, style: Ink3D.text(13, FontWeight.w600, Ink3D.sub))),
+                  Flexible(
+                    child: Text(SocialStringsA.homeCityHint,
+                        maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.right, style: Ink3D.text(12, FontWeight.w500, Ink3D.grey, letterSpacing: 0)),
+                  ),
                 ],
               ),
-            )),
-        Obx(() {
-          final filled = c.about.value.trim().isNotEmpty;
-          return Container(
-            padding: DS.sym(h: 16, v: 10),
-            constraints: BoxConstraints(minHeight: DS.s(84)),
-            decoration: BoxDecoration(
-              borderRadius: DS.br(CardRadius.card),
-              border: Border.all(color: filled ? BuddyLook.tealStart : Form3D.outline, width: DS.s(2)),
             ),
-            child: TextField(
-              key: const ValueKey('ob_about'),
-              controller: aboutCtrl,
-              maxLength: ProfileRules.aboutMax,
-              maxLines: 3,
-              minLines: 2,
-              inputFormatters: noEmojiInputFormatters,
-              style: Ink3D.text(16, FontWeight.w400, Ink3D.body, height: 1.45, letterSpacing: 0),
-              decoration: AuthPillInput.decoration(SocialStringsA.aboutHint).copyWith(hintStyle: Ink3D.text(16, FontWeight.w400, Form3D.hint, letterSpacing: 0)),
-              onChanged: (v) => c.about.value = v,
+            Obx(() {
+              final city = c.homeCity.value;
+              final state = c.homeState.value;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SelectPill(
+                    pillKey: const ValueKey('ob_home_city'),
+                    leadingArt: ListingArt.roundPushpin,
+                    text: city == null || city.isEmpty ? null : PickedHome(city: city, state: state ?? '').label,
+                    hint: SocialStringsA.addHomeCity,
+                    onTap: () => _pickHome(context),
+                  ),
+                  if (c.homeCityFromGps)
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(8), 0, 0),
+                      child: Text(SocialStringsA.homeCityFound, style: Ink3D.text(12.5, FontWeight.w400, Ink3D.grey, letterSpacing: 0)),
+                    ),
+                ],
+              );
+            }),
+          ],
+        ),
+        SizedBox(height: DS.gv(16)),
+        OnboardingCard(
+          children: [
+            Obx(() => _CountLabel(
+                  text: SocialStringsA.placesLabel,
+                  count: SocialStringsA.placesAdded(c.places.length),
+                  ok: c.places.length >= ProfileRules.placesMin,
+                  top: false,
+                )),
+            Tap3D(
+              tapKey: const ValueKey('ob_add_place'),
+              onTap: () => _addPlace(context),
+              label: SocialStringsA.addPlaceHint,
+              exclude: true,
+              child: Container(
+                height: DS.s(62),
+                padding: DS.sym(h: 18),
+                decoration: BoxDecoration(color: Form3D.fill, borderRadius: DS.circular(31)),
+                child: Row(
+                  children: [
+                    ExcludeSemantics(child: Art3D(asset: ListingArt.search, size: 30, shadowBlur: 2, shadowOffset: const Offset(1, 2))),
+                    Gap.h(12),
+                    Expanded(child: Text(SocialStringsA.addPlaceHint, maxLines: 1, style: AuthPillInput.hintStyle)),
+                  ],
+                ),
+              ),
             ),
-          );
-        }),
-        Obx(() => c.about.value.trim().isEmpty
-            ? Padding(
-                padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(6), DS.s(4), 0),
-                child: Text(SocialStringsA.needed, style: Ink3D.text(12, FontWeight.w500, AuthInk.warn, letterSpacing: 0)),
-              )
-            : const SizedBox.shrink()),
-        Obx(() {
-          if (c.about.value.trim().isEmpty) return const SizedBox.shrink();
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(16), DS.s(4), DS.gv(14)),
-                child: Text(SocialStringsA.howOthersSee, style: Ink3D.text(13, FontWeight.w600, Ink3D.sub, letterSpacing: 0)),
-              ),
-              ProfilePreviewCard(
-                name: c.trimmedName,
-                city: c.homeCity,
-                about: c.about.value,
-                interests: c.interests.toList(),
-                places: c.places.toList(),
-                skills: c.skills.toList(),
-                gender: c.gender.value,
-                photoUrl: photoUrl,
-              ),
-            ],
-          );
-        }),
+            Obx(() => c.places.isEmpty
+                ? const SizedBox.shrink()
+                : Padding(
+                    padding: EdgeInsets.only(top: DS.gv(10)),
+                    child: ChoiceTileGrid(
+                      children: [for (final p in c.places) PlaceTile(key: ValueKey('ob_place_$p'), text: p, onRemove: () => c.removePlace(p))],
+                    ),
+                  )),
+          ],
+        ),
+        SizedBox(height: DS.gv(16)),
+        OnboardingCard(
+          children: [
+            Obx(() => Padding(
+                  padding: EdgeInsets.fromLTRB(DS.s(4), 0, DS.s(4), DS.gv(10)),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text(SocialStringsA.aboutYou, style: Ink3D.text(13, FontWeight.w600, Ink3D.sub))),
+                      Text('${c.about.value.length}/${ProfileRules.aboutMax}', key: OnboardingStepAbout.counterKey, style: Ink3D.text(12, FontWeight.w500, Ink3D.grey, letterSpacing: 0)),
+                    ],
+                  ),
+                )),
+            Obx(() {
+              final filled = c.about.value.trim().isNotEmpty;
+              return Container(
+                padding: DS.sym(h: 16, v: 10),
+                constraints: BoxConstraints(minHeight: DS.s(84)),
+                decoration: BoxDecoration(
+                  borderRadius: DS.br(CardRadius.card),
+                  border: Border.all(color: filled ? BuddyLook.tealStart : Form3D.outline, width: DS.s(2)),
+                ),
+                child: TextField(
+                  key: const ValueKey('ob_about'),
+                  controller: aboutCtrl,
+                  maxLength: ProfileRules.aboutMax,
+                  maxLines: 3,
+                  minLines: 2,
+                  inputFormatters: noEmojiInputFormatters,
+                  style: Ink3D.text(16, FontWeight.w400, Ink3D.body, height: 1.45, letterSpacing: 0),
+                  decoration: AuthPillInput.decoration(SocialStringsA.aboutHint).copyWith(hintStyle: Ink3D.text(16, FontWeight.w400, Form3D.hint, letterSpacing: 0)),
+                  onChanged: (v) => c.about.value = v,
+                ),
+              );
+            }),
+            Obx(() => c.about.value.trim().isEmpty
+                ? Padding(
+                    padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(6), DS.s(4), 0),
+                    child: Text(SocialStringsA.needed, style: Ink3D.text(12, FontWeight.w500, AuthInk.warn, letterSpacing: 0)),
+                  )
+                : const SizedBox.shrink()),
+            Obx(() {
+              if (c.about.value.trim().isEmpty) return const SizedBox.shrink();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(DS.s(4), DS.gv(16), DS.s(4), DS.gv(14)),
+                    child: Text(SocialStringsA.howOthersSee, style: Ink3D.text(13, FontWeight.w600, Ink3D.sub, letterSpacing: 0)),
+                  ),
+                  ProfilePreviewCard(
+                    name: c.trimmedName,
+                    city: c.homeCity.value,
+                    about: c.about.value,
+                    interests: c.interests.toList(),
+                    places: c.places.toList(),
+                    skills: c.skills.toList(),
+                    gender: c.gender.value,
+                    photoUrl: photoUrl,
+                  ),
+                ],
+              );
+            }),
+          ],
+        ),
       ],
     );
   }

@@ -27,6 +27,7 @@ class TripStringsV2Create {
 
   static String pickHeading(int day, int n) => 'Add a place to Day $day · $n of ${TripConstants.maxSpotsPerDay} places';
   static const String dayFullMove = 'This day has ${TripConstants.maxSpotsPerDay} places. Move one to another day or add a day.';
+  static const String dayGone = 'This day is no longer in your plan.';
   static const String legFull = 'No room left in this city. Add a day on the plan for more places.';
   static String placesLine(int n) => '$n ${n == 1 ? 'place' : 'places'} to visit';
   static const String pickOnePlace = 'Pick at least one place';

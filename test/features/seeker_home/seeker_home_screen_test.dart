@@ -11,7 +11,12 @@ import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/widgets/trip_city_tile.dart';
 import 'package:bakhli/design/design.dart';
 import 'package:bakhli/design/extra/instagram_look.dart';
+import 'package:bakhli/features/seeker_home/build_circle_card.dart';
+import 'package:bakhli/features/seeker_home/home_updates.dart';
 import 'package:bakhli/features/seeker_home/seeker_trip_card.dart';
+import 'package:bakhli/features/social/b/rail/trips_to_join_rail.dart';
+import 'package:bakhli/features/social/b/widgets/find_buddies_post_card.dart';
+import 'package:bakhli/widgets/home_hero_carousel.dart';
 
 import 'package:bakhli/screens/home_screen.dart';
 import 'package:flutter/material.dart';
@@ -66,7 +71,8 @@ void main() {
         'Hi, Rohit',
         'Where to next?',
         'Plan your trip',
-        'Quick actions',
+        'Post your trip',
+        'Your updates',
         'Popular destinations',
         'Follow us',
       ];
@@ -114,54 +120,51 @@ void main() {
       }
     }
 
-    testWidgets('o_sk_1_quickActions_threeTilesInOrder_noAddExpense', (t) async {
-      t.view.devicePixelRatio = 1;
-      t.view.physicalSize = const Size(392, 1600);
-      addTearDown(t.view.reset);
+    testWidgets('I-31: Your updates has three tiles in order, Quick actions is gone, every other card still builds', (t) async {
+      _tall(t, h: 2600);
       registerHome(feed: fixtureNoTrip());
       await t.pumpWidget(_app(homeHost()));
       await _settle(t);
-      final titles = ['Plan a trip', 'My trips', 'Buddies'];
+      expect(find.text('Quick actions'), findsNothing);
+      for (final s in ['Plan a trip', 'Buddies', 'Pick a city and go', 'Continue or review', 'Travel together']) {
+        expect(find.byKey(ValueKey('seeker-qa-$s'), skipOffstage: false), findsNothing, reason: s);
+      }
+      expect(find.byType(HomeHeroCarousel), findsOneWidget);
+      expect(find.byType(BuildCircleCard), findsOneWidget);
+      expect(find.byType(FindBuddiesPostCard), findsOneWidget);
+      expect(find.byType(HomeUpdates), findsOneWidget);
+      expect(find.byType(TripsToJoinRail), findsOneWidget);
+      expect(find.text('Follow us'), findsOneWidget);
       final xs = <double>[];
-      for (final s in titles) {
-        final f = find.byKey(ValueKey('seeker-qa-$s'));
-        expect(f, findsOneWidget, reason: s);
+      for (final id in ['invites', 'follow', 'join']) {
+        final f = find.byKey(ValueKey('home-upd-$id'));
+        expect(f, findsOneWidget, reason: id);
         xs.add(t.getTopLeft(f).dx);
       }
-      expect(find.byKey(const ValueKey('seeker-qa-Add expense'), skipOffstage: false), findsNothing, reason: 'Bug 5');
-      expect(find.bySemanticsLabel('Plan a trip, Pick a city and go'), findsOneWidget);
       expect(xs, orderedEquals([...xs]..sort()));
-      expect(xs.last, lessThan(392));
-      for (final body in ['Pick a city and go', 'Continue or review', 'Travel together']) {
-        expect(find.text(body, skipOffstage: false), findsNothing, reason: 'Change 8: no small description ($body)');
-      }
+      expect(t.getRect(find.byKey(const ValueKey('home-upd-join'))).right, lessThanOrEqualTo(392));
+      expect(find.bySemanticsLabel('Trip invites, 0'), findsOneWidget);
+      expect(t.takeException(), isNull);
     });
 
-    testWidgets('Change 8: tiles shrink to their content (no empty band)', (t) async {
+    testWidgets('I-31: tiles open My trips Joined, People Requests and the travel buddies feed', (t) async {
       _tall(t, h: 1600);
       registerHome(feed: fixtureNoTrip());
       await t.pumpWidget(_app(homeHost()));
       await _settle(t);
-      final tile = find.byKey(const ValueKey('seeker-qa-Plan a trip'));
-      final title = find.descendant(of: tile, matching: find.text('Plan a trip'));
-      final go = find.descendant(of: tile, matching: find.byType(RoundGoButton));
-      final tileRect = t.getRect(tile);
-      expect(t.getRect(go).top, greaterThan(t.getRect(title).bottom));
-      expect(tileRect.bottom - t.getRect(go).bottom, lessThan(DS.s(40)));
-    });
-
-    testWidgets('o_sk_1_tapMyTrips_pushesMyTrips, o_sk_1_tapFindBuddies_pushesPeople', (t) async {
-      _tall(t, h: 1600);
-      registerHome(feed: fixtureNoTrip());
-      await t.pumpWidget(_app(homeHost()));
+      await t.tap(find.byKey(const ValueKey('home-upd-invites')));
       await _settle(t);
-      await t.tap(find.byKey(const ValueKey('seeker-qa-My trips')));
-      await _settle(t);
+      expect(Get.arguments, {'tab': 'joined'});
       Get.back();
       await _settle(t);
-      await t.tap(find.byKey(const ValueKey('seeker-qa-Buddies')));
+      await t.tap(find.byKey(const ValueKey('home-upd-follow')));
       await _settle(t);
-      expect(visitedRoutes, [AppRoutes.myTrips, AppRoutes.people]);
+      expect(Get.arguments, {'tab': 'requests'});
+      Get.back();
+      await _settle(t);
+      await t.tap(find.byKey(const ValueKey('home-upd-join')));
+      await _settle(t);
+      expect(visitedRoutes, [AppRoutes.myTrips, AppRoutes.people, AppRoutes.travelBuddies]);
     });
 
     testWidgets('o_sk_1_noOwnerTilesNoPlanNudge', (t) async {
@@ -242,7 +245,7 @@ void main() {
       expect(find.text('Hi, Rohit'), findsOneWidget);
       expect(find.text('Where to next?'), findsOneWidget);
       expect(find.byType(SeekerHomeSkeleton), findsOneWidget);
-      expect(find.text('Quick actions'), findsNothing);
+      expect(find.text('Your updates'), findsNothing);
     });
 
     testWidgets('o_sk_5_savedCopyExists_noSkeletonAtAll', (t) async {
@@ -268,7 +271,7 @@ void main() {
       expect(find.text('Tap to retry'), findsNothing);
       expect(find.text('Popular destinations'), findsNothing);
       expect(find.text('Plan your trip'), findsWidgets);
-      expect(find.text('Quick actions'), findsOneWidget);
+      expect(find.text('Your updates'), findsOneWidget);
       expect(find.text('Follow us'), findsOneWidget);
     });
 

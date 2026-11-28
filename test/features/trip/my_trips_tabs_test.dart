@@ -21,6 +21,15 @@ Future<FakeViewerApi> _pump(WidgetTester t, {bool shared = true}) async {
   return api;
 }
 
+Future<void> _pushed(WidgetTester t, Object? arguments) async {
+  Get.put<MyTripsController>(FakeMyTrips(), permanent: true);
+  registerViewerFakes(api: FakeViewerApi(sharedResult: BuddyOk(sharedTrips(items: true, invites: true))));
+  await pumpPhone(t, const SizedBox.shrink(), toastHost: true);
+  Get.to<void>(() => const MyTripsScreen(), arguments: arguments, transition: Transition.noTransition, duration: Duration.zero);
+  await t.pump();
+  await settlePhone(t);
+}
+
 Future<void> _tab(WidgetTester t, String label) async {
   await t.tap(find.text(label));
   await settlePhone(t);
@@ -80,6 +89,23 @@ void main() {
     await t.pump(const Duration(seconds: 1));
     await settlePhone(t);
     expect(api.sharedCalls, greaterThan(before));
+    expect(t.takeException(), isNull);
+    await t.pump(const Duration(seconds: 6));
+  });
+
+  testWidgets('I-31: opened with tab joined lands on Joined', (t) async {
+    await _pushed(t, {'tab': 'joined'});
+    expect(find.byKey(const ValueKey('shared_with_me')), findsOneWidget);
+    expect(find.text('Invite waiting'), findsOneWidget);
+    expect(find.text('Rajasthan Forts Trip'), findsNothing);
+    expect(t.takeException(), isNull);
+    await t.pump(const Duration(seconds: 6));
+  });
+
+  testWidgets('I-31: any other tab argument keeps My plans first', (t) async {
+    await _pushed(t, {'tab': 'mine'});
+    expect(find.text('Rajasthan Forts Trip'), findsOneWidget);
+    expect(find.byKey(const ValueKey('shared_with_me')), findsNothing);
     expect(t.takeException(), isNull);
     await t.pump(const Duration(seconds: 6));
   });

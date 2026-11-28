@@ -84,11 +84,11 @@ void main() {
             scale: s,
           );
           expect(t.takeException(), isNull);
-          final fitted = find.descendant(of: find.byType(WhitePillButton), matching: find.byType(FittedBox));
+          final fitted = find.descendant(of: find.byType(WhitePillButton).first, matching: find.byType(FittedBox));
           final row = find.descendant(of: fitted, matching: find.byType(Row)).first;
           expect(t.getSize(row).width, lessThanOrEqualTo(t.getSize(fitted).width + 0.5));
           final details = t.getRect(find.text(TripSpotRow.details).first);
-          final pill = t.getRect(find.byType(WhitePillButton));
+          final pill = t.getRect(find.byType(WhitePillButton).first);
           if (pill.top < details.bottom) expect(details.right, lessThan(pill.left));
           final added = t.getRect(find.text(TripStringsSpotsX.addedToTrip));
           final cardB = t.getRect(find.byType(TripSpotCard).at(1));
@@ -137,7 +137,7 @@ void main() {
       expect(t.takeException(), isNull);
     });
 
-    testWidgets('draft toggle and add to trip pill never open the place page', (t) async {
+    testWidgets('draft and locked add to trip pills never open the place page', (t) async {
       var n = 0;
       await _host(
         t,
@@ -147,8 +147,8 @@ void main() {
         ]),
         size: const Size(360, 1200),
       );
-      await t.tap(find.byIcon(Icons.circle_outlined));
-      await t.tap(find.text(TripStringsSpotsX.addToTrip));
+      await t.tap(find.text(TripStringsSpotsX.addToTrip).first);
+      await t.tap(find.text(TripStringsSpotsX.addToTrip).last);
       await t.pump(const Duration(milliseconds: 400));
       expect(n, 2);
       expect(find.byType(TripSpotDetailSheet), findsNothing);

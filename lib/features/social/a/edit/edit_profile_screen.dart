@@ -18,10 +18,12 @@ import '../../shared/social_formats.dart';
 import '../../shared/social_models.dart';
 import '../../shared/social_strings.dart';
 import '../onboarding/onboarding_controller.dart';
+import '../onboarding/onboarding_steps.dart' show SelectPill;
 import '../social_strings_a.dart';
 import '../widgets/social_chips_a.dart';
 import '../widgets/social_section_card.dart';
 import 'edit_profile_controller.dart';
+import 'home_city_sheet.dart';
 import 'place_picker_sheet.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -82,10 +84,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _pickHome() async {
-    final h = await PlacePickerSheet.pickHome(context);
+    final h = await HomeCitySheet.pick(context);
     if (h == null) return;
     c.homeCity.value = h.city;
-    c.homeState.value = h.state;
+    c.homeState.value = h.state.isEmpty ? null : h.state;
   }
 
   @override
@@ -225,17 +227,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             children: [
               Obx(() {
                 final city = c.homeCity.value;
-                final label = city == null || city.isEmpty ? null : PickedHome(city: city, state: c.homeState.value ?? '').label;
-                return Row(
-                  children: [
-                    if (label != null) Flexible(child: TagChip(text: label, kind: TagKind.place)),
-                    if (label != null) Gap.h(10),
-                    _textLink(
-                      label == null ? SocialStringsA.addHomeCity : SocialStringsA.change,
-                      _pickHome,
-                      Ink3D.text(13.5, FontWeight.w600, BuddyLook.indigoText, letterSpacing: 0),
-                    ),
-                  ],
+                return SelectPill(
+                  pillKey: const ValueKey('edit_home_city'),
+                  leadingArt: ListingArt.roundPushpin,
+                  text: city == null || city.isEmpty ? null : PickedHome(city: city, state: c.homeState.value ?? '').label,
+                  hint: SocialStringsA.addHomeCity,
+                  onTap: _pickHome,
                 );
               }),
               Gap.v(8),

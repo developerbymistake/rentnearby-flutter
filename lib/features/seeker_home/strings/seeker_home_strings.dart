@@ -38,13 +38,10 @@ abstract final class SeekerHomeStrings {
   static const String stepJourney = 'plan the journey';
   static const String stepPlan = 'finish your plan';
 
-  static const String quickActions = 'Quick actions';
-  static const String tilePlanTitle = 'Plan a trip';
-  static const String tilePlanBody = 'Pick a city and go';
-  static const String tileTripsTitle = 'My trips';
-  static const String tileTripsBody = 'Continue or review';
-  static const String tileBuddyTitle = 'Buddies';
-  static const String tileBuddyBody = 'Travel together';
+  static const String updatesTitle = 'Your updates';
+  static const String tileInvitesTitle = 'Trip invites';
+  static const String tileFollowTitle = 'Follow requests';
+  static const String tileJoinTitle = 'Join requests';
 
   static const String railsErrorTitle = 'Couldn’t load';
   static const String railsErrorBody = 'Check your internet and try again.';

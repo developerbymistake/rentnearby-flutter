@@ -66,8 +66,6 @@ class TripStringsCustomize {
 
   static String placesChip(int n) => '$n/${TripConstants.maxSpotsPerDay} places';
 
-  static String emptyDayError(int day) => 'Day $day is empty. Delete it or add places.';
-
   static String removeTitle(String name) => 'Remove $name?';
 
   static String span(int minutes) {

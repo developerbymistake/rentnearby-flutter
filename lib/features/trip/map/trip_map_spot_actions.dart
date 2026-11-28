@@ -12,19 +12,21 @@ import '../trip_strings_v2_plan.dart';
 import '../utils/trip_days_rules.dart';
 import '../utils/trip_spots_cache.dart';
 import '../widgets/trip_spot_detail_sheet.dart';
+import '../widgets/trip_undo_snack.dart';
 import 'discovery_api.dart';
 
 typedef TripAddSpots = bool Function(List<TripSpotModel> spots, {int? legIndex, int? day});
-typedef TripRemoveSpot = void Function(String id, {bool keepEmptyDays});
-typedef TripInsertSpot = void Function(TripSpotRef spot, int day, int index);
+typedef TripRemoveForUndo = TripSpotRemoval? Function(String id);
+typedef TripUndoRemove = bool Function(TripSpotRemoval r);
 typedef TripSpotSheet = void Function(BuildContext context, TripSpotModel spot, {required bool selected, required bool locked, VoidCallback? onToggle, int? cityKey, String? version, required bool partial, required bool revalidate});
 
 class TripMapSpotActions {
   final TripPlan? Function() plan;
   final int Function() selectedDay;
   final TripAddSpots addSpots;
-  final TripRemoveSpot removeSpot;
-  final TripInsertSpot insertSpotAt;
+  final TripRemoveForUndo removeForUndo;
+  final TripUndoRemove undoRemove;
+  final TripPlanController? owner;
   final BuildContext Function() context;
   final List<TripSpotModel>? Function(int cityKey) cachedSpots;
   final String? Function(int cityKey) cachedVersion;
@@ -36,8 +38,9 @@ class TripMapSpotActions {
     required this.plan,
     required this.selectedDay,
     required this.addSpots,
-    required this.removeSpot,
-    required this.insertSpotAt,
+    required this.removeForUndo,
+    required this.undoRemove,
+    this.owner,
     required this.context,
     List<TripSpotModel>? Function(int cityKey)? cachedSpots,
     String? Function(int cityKey)? cachedVersion,
@@ -52,8 +55,9 @@ class TripMapSpotActions {
         plan: () => c.plan.value,
         selectedDay: () => c.selectedMapDay.value,
         addSpots: c.addSpots,
-        removeSpot: c.removeSpot,
-        insertSpotAt: c.insertSpotAt,
+        removeForUndo: c.removeSpotForUndo,
+        undoRemove: c.undoRemove,
+        owner: c,
         context: context,
       );
 
@@ -138,11 +142,12 @@ class TripMapSpotActions {
     final p = plan();
     final day = targetDayFor(s);
     if (p == null || day == null || p.dayOfSpot(s.id) != null) return false;
+    if (p.dayAt(day) == null) return false;
     if (p.spotCount >= TripConstants.maxSpots) {
       AppToast.warning(TripStringsMcaA2.maxPlaces);
       return false;
     }
-    if (!TripDaysRules.canAddOnDay(p, day)) {
+    if (TripDaysRules.isDayFull(p, day)) {
       AppToast.warning(TripStringsV2Create.dayFullMove);
       return false;
     }
@@ -151,15 +156,12 @@ class TripMapSpotActions {
 
   bool remove(DiscoverySpot s) {
     final p = plan();
-    final day = p?.dayOfSpot(s.id);
-    final d = day == null ? null : p?.dayAt(day);
-    if (p == null || day == null || d == null) return false;
-    final index = d.spots.indexWhere((x) => x.id == s.id);
-    if (index < 0) return false;
-    final ref = d.spots[index];
-    removeSpot(s.id, keepEmptyDays: true);
-    if (plan()?.dayOfSpot(s.id) != null) return false;
-    showRemovedUndo(context(), () => insertSpotAt(ref, day, index));
+    if (p == null || p.dayOfSpot(s.id) == null) return false;
+    final r = removeForUndo(s.id);
+    if (r == null) return false;
+    TripUndoSnack.show(ScaffoldMessenger.maybeOf(context()), TripStringsV2Plan.placeRemoved, plan: owner, onUndo: () {
+      if (!undoRemove(r)) AppToast.warning(TripStringsV2Plan.undoGone);
+    });
     return true;
   }
 
@@ -178,18 +180,6 @@ class TripMapSpotActions {
       version: key == null ? null : cachedVersion(key) ?? '',
       partial: m.partial,
       revalidate: true,
-    );
-  }
-
-  static void showRemovedUndo(BuildContext context, VoidCallback undo) {
-    final m = ScaffoldMessenger.maybeOf(context);
-    m?.hideCurrentSnackBar();
-    m?.showSnackBar(
-      SnackBar(
-        content: const Text(TripStringsV2Plan.placeRemoved),
-        duration: const Duration(seconds: 5),
-        action: SnackBarAction(label: TripStringsV2Plan.undo, onPressed: undo),
-      ),
     );
   }
 }

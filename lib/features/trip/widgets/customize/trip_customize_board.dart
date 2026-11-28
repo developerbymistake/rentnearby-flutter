@@ -16,7 +16,6 @@ class TripCustomizeBoard extends StatefulWidget {
   final ValueChanged<int> onDeleteDay;
   final DateTime? firstDate;
   final int dayLimitMinutes;
-  final int? errorDay;
 
   const TripCustomizeBoard({
     super.key,
@@ -26,7 +25,6 @@ class TripCustomizeBoard extends StatefulWidget {
     required this.onDeleteDay,
     required this.dayLimitMinutes,
     this.firstDate,
-    this.errorDay,
   });
 
   @override
@@ -122,7 +120,6 @@ class _TripCustomizeBoardState extends State<TripCustomizeBoard> {
             dayIndex: i,
             date: _dateOf(i),
             dayLimitMinutes: widget.dayLimitMinutes,
-            flagged: widget.errorDay == i,
             selectedSpotId: _selected,
             draggingSpotId: _dragging,
             onSelect: (id) => setState(() => _selected = _selected == id ? null : id),

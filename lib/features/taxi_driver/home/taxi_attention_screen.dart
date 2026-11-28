@@ -20,12 +20,15 @@ class TaxiAttentionScreen extends StatelessWidget {
       backgroundColor: ListingPalette.coral.page,
       body: Column(
         children: [
-          Obx(() {
-            final dto = c?.data;
-            final denied = c?.notificationsDenied.value ?? false;
-            final total = dto == null ? 0 : TaxiHomeCompose.attentionCount(dto, TaxiHomeCompose.attention(dto, denied: denied), denied: denied);
-            return TaxiPageHeader(title: TaxiHomeStrings.attentionPageTitle, subtitle: dto == null ? null : TaxiHomeStrings.attentionPageSub(total), onBack: () => Get.back());
-          }),
+          if (c == null)
+            TaxiPageHeader(title: TaxiHomeStrings.attentionPageTitle, subtitle: null, onBack: () => Get.back())
+          else
+            Obx(() {
+              final dto = c.data;
+              final denied = c.notificationsDenied.value;
+              final total = dto == null ? 0 : TaxiHomeCompose.attentionCount(dto, TaxiHomeCompose.attention(dto, denied: denied), denied: denied);
+              return TaxiPageHeader(title: TaxiHomeStrings.attentionPageTitle, subtitle: dto == null ? null : TaxiHomeStrings.attentionPageSub(total), onBack: () => Get.back());
+            }),
           Expanded(
             child: c == null
                 ? const SizedBox.shrink()

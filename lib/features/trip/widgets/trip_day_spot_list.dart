@@ -23,6 +23,8 @@ import 'drag/trip_spot_drag_scope.dart';
 import 'drag/trip_spot_drag_start.dart';
 import 'trip_leg_header.dart';
 import 'trip_leg_actions.dart';
+import 'trip_undo_snack.dart';
+import '../../../utils/app_toast.dart';
 import '../../buddy/ledger/widgets/day_spent_chip.dart';
 import '../../buddy/sharing/controllers/owner_sharing_controller.dart';
 
@@ -109,7 +111,7 @@ class TripDaySpotList extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               if (d.spots.isEmpty)
-                                _emptyBody(d)
+                                _emptyBody(d, !editing && !locked && !d.restDay ? () => TripLegActions.addPlaces(d.leg, pickDay: day) : null)
                               else
                                 _spots(context, c, plan, d, color, locked, editing),
                               for (final text in closed)
@@ -141,7 +143,7 @@ class TripDaySpotList extends StatelessWidget {
     });
   }
 
-  Widget _emptyBody(TripDay d) => Padding(
+  Widget _emptyBody(TripDay d, VoidCallback? onAdd) => Padding(
         padding: DS.sym(v: 14),
         child: Column(
           children: [
@@ -152,6 +154,10 @@ class TripDaySpotList extends StatelessWidget {
               textAlign: TextAlign.center,
               style: Ink3D.text(13.5, FontWeight.w600, Ink3D.grey),
             ),
+            if (onAdd != null) ...[
+              Gap.v(10),
+              Padding(padding: DS.sym(h: 12), child: _action(ListingArt.roundPushpin, TripStringsV2Plan.addPlace, onAdd)),
+            ],
           ],
         ),
       );
@@ -311,17 +317,11 @@ class TripDaySpotList extends StatelessWidget {
   }
 
   void _remove(BuildContext context, TripPlanController c, TripDay d, int index) {
-    final spot = d.spots[index];
-    c.removeSpot(spot.id, keepEmptyDays: true);
-    final m = ScaffoldMessenger.maybeOf(context);
-    m?.hideCurrentSnackBar();
-    m?.showSnackBar(
-      SnackBar(
-        content: const Text(TripStringsV2Plan.placeRemoved, style: TextStyle(fontFamily: FitnessAppTheme.fontName)),
-        duration: const Duration(seconds: 5),
-        action: SnackBarAction(label: TripStringsV2Plan.undo, onPressed: () => c.insertSpotAt(spot, day, index)),
-      ),
-    );
+    final r = c.removeSpotForUndo(d.spots[index].id);
+    if (r == null) return;
+    TripUndoSnack.show(ScaffoldMessenger.maybeOf(context), TripStringsV2Plan.placeRemoved, plan: c, onUndo: () {
+      if (!c.undoRemove(r)) AppToast.warning(TripStringsV2Plan.undoGone);
+    });
   }
 
   Widget _editFooter(BuildContext context, TripPlanController c, TripPlan plan, TripDay d, bool full) {
@@ -826,28 +826,12 @@ class _DaySpotsState extends State<_DaySpots> with AutomaticKeepAliveClientMixin
     if (now == null || !_sameOrder(now, p.spots)) return;
     final snap = c.snapshotDays([p.day]);
     if (!c.reorderTo(p.day, p.from, p.to)) return;
-    final m = p.messenger;
-    if (m == null || !m.mounted) return;
-    m.hideCurrentSnackBar();
-    m.showSnackBar(
-      SnackBar(
-        content: const Text(TripStringsV2Plan.orderChanged, style: TextStyle(fontFamily: FitnessAppTheme.fontName)),
-        duration: const Duration(seconds: 5),
-        action: SnackBarAction(label: TripStringsV2Plan.undo, onPressed: () => c.restoreDays(snap)),
-      ),
-    );
+    TripUndoSnack.show(p.messenger, TripStringsV2Plan.orderChanged, plan: c, onUndo: () => c.restoreDays(snap));
   }
 
   void _showUndo(ScaffoldMessengerState? m, String text, List<TripDay> snap) {
     final c = _c;
-    m?.hideCurrentSnackBar();
-    m?.showSnackBar(
-      SnackBar(
-        content: Text(text, style: const TextStyle(fontFamily: FitnessAppTheme.fontName)),
-        duration: const Duration(seconds: 5),
-        action: SnackBarAction(label: TripStringsV2Plan.undo, onPressed: () => c.restoreDays(snap)),
-      ),
-    );
+    TripUndoSnack.show(m, text, plan: c, onUndo: () => c.restoreDays(snap));
   }
 
   Widget _proxy(Widget child, int index, Animation<double> animation) {

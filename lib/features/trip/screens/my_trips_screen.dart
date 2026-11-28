@@ -62,6 +62,8 @@ class _MyTripsScreenState extends State<MyTripsScreen> with TickerProviderStateM
   @override
   void initState() {
     super.initState();
+    final args = Get.arguments;
+    if (!widget.root && args is Map && args['tab'] == 'joined') _tab = 1;
     _ctrl = MyTripsController.to;
     _ctrl.load();
     _shared = SharedTripsController.to;

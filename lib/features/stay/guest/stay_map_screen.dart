@@ -945,7 +945,10 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                     onCameraIdle: _onCameraIdle,
                   ),
                 ),
-              Obx(() => !_mapActive || !_mapReady || _locationCtrl.userLocation.value == null ? _buildMapSkeleton() : const SizedBox.shrink()),
+              Obx(() {
+                final loc = _locationCtrl.userLocation.value;
+                return !_mapActive || !_mapReady || loc == null ? _buildMapSkeleton() : const SizedBox.shrink();
+              }),
               if (_mapReady)
                 IgnorePointer(
                   ignoring: !_pinsVisible,

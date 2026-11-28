@@ -50,7 +50,6 @@ class _TripCustomizeScreenState extends State<TripCustomizeScreen> {
   late final int _legIndex;
   late final TripLegDraft _draft;
   late final int _startDayCount;
-  int? _errorDay;
   String? _blockedTitle;
   String? _blockedDetail;
   String? _doneText;
@@ -95,10 +94,7 @@ class _TripCustomizeScreenState extends State<TripCustomizeScreen> {
     success ? AppToast.success(message) : AppToast.warning(message);
   }
 
-  void _touched() => setState(() {
-        _errorDay = null;
-        _version++;
-      });
+  void _touched() => setState(() => _version++);
 
   void _clearBanners() {
     _blockedTitle = null;
@@ -197,8 +193,6 @@ class _TripCustomizeScreenState extends State<TripCustomizeScreen> {
         Get.back();
         _say(true, TripStringsCustomize.planUpdated);
         if (dayCountChanged) await TripUpdateAskSheet.afterDaysEdit();
-      case TripLegApplyBlock.emptyDay:
-        setState(() => _errorDay = _draft.firstEmptyDay);
       case TripLegApplyBlock.stale:
         _closing = true;
         Get.back();
@@ -333,7 +327,7 @@ class _TripCustomizeScreenState extends State<TripCustomizeScreen> {
   }
 
   Widget _bottomBar(BuildContext context) {
-    final canUpdate = _errorDay == null && _blockedTitle == null;
+    final canUpdate = _blockedTitle == null;
     final resetInk = canUpdate ? ListingTone.indigo.text : Ink3D.grey;
     return Container(
       padding: EdgeInsets.fromLTRB(DS.s(16), DS.s(12), DS.s(16), AppInsets.bottomViewPadding(context) + DS.s(16)),
@@ -417,7 +411,6 @@ class _TripCustomizeScreenState extends State<TripCustomizeScreen> {
                           draft: _draft,
                           dayLimitMinutes: _plan.dayLimitMinutes,
                           firstDate: _current.settings.dateOf(_draft.firstDayNumber),
-                          errorDay: _errorDay,
                           onChanged: _onChanged,
                           onAddPlaces: _addPlaces,
                           onDeleteDay: _deleteDay,

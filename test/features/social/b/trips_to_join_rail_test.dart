@@ -31,14 +31,17 @@ void main() {
   });
   tearDown(Get.reset);
 
-  test('Home: the Find buddies post card sits right below Quick actions, then Trips to join (spec 23.6)', () {
+  test('Home (I-28/I-31): Post your trip right below the hero, then Your updates, then Trips to join', () {
     final src = File('lib/screens/home_screen.dart').readAsStringSync();
-    final qa = src.indexOf('StaggerItem(index: 1, child: SeekerQuickActions())');
-    final post = src.indexOf('StaggerItem(index: 2, child: FindBuddiesPostCard(place: FindBuddiesPostPlace.home))');
+    final hero = src.indexOf('StaggerItem(index: 0, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [HomeHeroCarousel(), BuildCircleCard()]))');
+    final post = src.indexOf('StaggerItem(index: 1, child: FindBuddiesPostCard(place: FindBuddiesPostPlace.home))');
+    final updates = src.indexOf('StaggerItem(index: 2, child: HomeUpdates())');
     final rail = src.indexOf('StaggerItem(index: 3, child: TripsToJoinRail())');
-    expect(qa, greaterThan(0));
-    expect(post, greaterThan(qa));
-    expect(rail, greaterThan(post));
+    expect(hero, greaterThan(0));
+    expect(post, greaterThan(hero));
+    expect(updates, greaterThan(post));
+    expect(rail, greaterThan(updates));
+    expect(src, isNot(contains('SeekerQuickActions')));
     expect(src, contains('_sections = 6'));
   });
 

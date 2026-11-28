@@ -1,11 +1,33 @@
 import 'package:bakhli/controllers/auth_controller.dart';
+import 'package:bakhli/controllers/location_controller.dart';
+import 'package:bakhli/features/social/a/edit/place_picker_sheet.dart';
 import 'package:bakhli/features/social/a/onboarding/onboarding_controller.dart';
 import 'package:bakhli/features/social/a/social_strings_a.dart';
+import 'package:bakhli/models/city_model.dart';
 import 'package:bakhli/models/user_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
 import '../shared/social_test_support.dart';
+
+class _Loc extends LocationController {
+  int asked = 0;
+
+  @override
+  // ignore: must_call_super
+  void onInit() {}
+
+  @override
+  Future<CityModel?> ensureGpsCity() {
+    asked++;
+    return Future.value(gpsCity.value);
+  }
+
+  void resolve(String city, String state) {
+    gpsCityDistrict.value = DistrictModel(id: 'd1', name: 'Dehradun', stateName: state);
+    gpsCity.value = CityModel(id: 'c-$city', districtId: 'd1', name: city);
+  }
+}
 
 OnboardingController _make() {
   final c = OnboardingController(clock: () => DateTime(2026, 11, 26));
@@ -137,8 +159,7 @@ void main() {
     _fillStep2(c);
     _fillPlaces(c);
     c.about.value = 'Hills over beaches. Chai at every stop.';
-    c.homeCity = 'Dehradun';
-    c.homeState = 'Uttarakhand';
+    c.pickHomeCity(const PickedHome(city: 'Dehradun', state: 'Uttarakhand'));
     expect(c.profileBody(), {
       'gender': 'Male',
       'birthMonth': 8,
@@ -199,5 +220,67 @@ void main() {
     final c = _make();
     expect(c.name.value, isEmpty);
     expect(c.missingHint, 'Add your name, gender and birth month and year');
+  });
+  group('I-29 home city from the GPS city', () {
+    test('no area prefill from autoCity: home city stays empty until the GPS city resolves', () {
+      final loc = Get.put<LocationController>(_Loc()) as _Loc;
+      loc.autoCity.value = CityModel(id: 'area', districtId: 'd1', name: 'Kamalwaganja');
+      loc.selectedDistrict.value = DistrictModel(id: 'd1', name: 'Nainital', stateName: 'Uttarakhand');
+      final c = _make();
+      expect(loc.asked, 1);
+      expect(c.homeCity.value, isNull);
+      expect(c.homeState.value, isNull);
+      expect(c.homeCityFromGps, isFalse);
+      expect(c.profileBody().containsKey('homeCityName'), isFalse);
+      expect(c.profileBody().containsKey('homeStateName'), isFalse);
+    });
+
+    test('prefills from an already resolved GPS city', () {
+      final loc = Get.put<LocationController>(_Loc()) as _Loc;
+      loc.resolve('Haldwani', 'Uttarakhand');
+      final c = _make();
+      expect(c.homeCity.value, 'Haldwani');
+      expect(c.homeState.value, 'Uttarakhand');
+      expect(c.homeCityFromGps, isTrue);
+    });
+
+    test('a late GPS answer fills the field while the user has not picked', () {
+      final loc = Get.put<LocationController>(_Loc()) as _Loc;
+      final c = _make();
+      expect(c.homeCity.value, isNull);
+      loc.resolve('Haldwani', 'Uttarakhand');
+      expect(c.homeCity.value, 'Haldwani');
+      expect(c.homeCityFromGps, isTrue);
+    });
+
+    test('a user pick is never overwritten by a late GPS answer', () {
+      final loc = Get.put<LocationController>(_Loc()) as _Loc;
+      final c = _make();
+      c.pickHomeCity(const PickedHome(city: 'Dehradun', state: 'Uttarakhand'));
+      expect(c.homeCityFromGps, isFalse);
+      loc.resolve('Haldwani', 'Uttarakhand');
+      expect(c.homeCity.value, 'Dehradun');
+      expect(c.homeState.value, 'Uttarakhand');
+      expect(c.profileBody()['homeCityName'], 'Dehradun');
+      expect(c.profileBody()['homeStateName'], 'Uttarakhand');
+    });
+
+    test('picking the same city as the GPS prefill clears the from-GPS line', () {
+      final loc = Get.put<LocationController>(_Loc()) as _Loc;
+      loc.resolve('Haldwani', 'Uttarakhand');
+      final c = _make();
+      expect(c.homeCityFromGps, isTrue);
+      c.pickHomeCity(const PickedHome(city: 'Haldwani', state: 'Uttarakhand'));
+      expect(c.homeCityFromGps, isFalse);
+      expect(c.homeCity.value, 'Haldwani');
+      expect(c.homeState.value, 'Uttarakhand');
+    });
+
+    test('a pick without a state sends no state key', () {
+      final c = _make();
+      c.pickHomeCity(const PickedHome(city: 'Dehradun', state: ''));
+      expect(c.profileBody()['homeCityName'], 'Dehradun');
+      expect(c.profileBody().containsKey('homeStateName'), isFalse);
+    });
   });
 }
