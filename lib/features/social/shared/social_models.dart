@@ -155,6 +155,7 @@ class PublicTrip {
     this.nearbyNotifiedAt,
     this.notified,
     this.travelMode,
+    this.members,
   });
 
   final String tripId;
@@ -181,6 +182,9 @@ class PublicTrip {
   final bool notifyNearby;
   final DateTime? nearbyNotifiedAt;
   final String? travelMode;
+
+  /// Own post only: other travellers who joined (owner not counted); null on others' posts.
+  final int? members;
 
   /// Own post only: true = followers were told or the nearby push is queued; null = the server did not say.
   final bool? notified;
@@ -221,6 +225,7 @@ class PublicTrip {
         nearbyNotifiedAt: nearbyNotifiedAt,
         notified: notified,
         travelMode: travelMode,
+        members: members,
       );
 
   factory PublicTrip.fromJson(Map<String, dynamic> j) => PublicTrip(
@@ -249,6 +254,7 @@ class PublicTrip {
         nearbyNotifiedAt: BuddyJson.time(j['nearbyNotifiedAt']),
         notified: PostNotifyResult.of(j['notify'])?.notified,
         travelMode: TravelModes.parse(j['travelMode']),
+        members: BuddyJson.intOrNull(j['members']),
       );
 }
 
@@ -660,7 +666,6 @@ class SocialMe {
     this.guidelinesAccepted,
     this.tripInvites = 0,
     this.joinRequests = 0,
-    this.joinRequestsTripId,
   });
 
   final MyProfile? profile;
@@ -670,9 +675,6 @@ class SocialMe {
   final SocialCatalogData catalog;
   final int tripInvites;
   final int joinRequests;
-
-  /// Set only when every counted join request is on one post.
-  final String? joinRequestsTripId;
 
   /// null = the server did not say (older answer): never block on it, the server enforces.
   final bool? guidelinesAccepted;
@@ -686,7 +688,6 @@ class SocialMe {
         guidelinesAccepted: guidelinesAccepted ?? this.guidelinesAccepted,
         tripInvites: tripInvites,
         joinRequests: joinRequests,
-        joinRequestsTripId: joinRequestsTripId,
       );
 
   factory SocialMe.fromJson(Map<String, dynamic> j) {
@@ -700,7 +701,6 @@ class SocialMe {
       catalog: SocialCatalogData.fromJson(BuddyJson.mapOrNull(j['catalog'])),
       tripInvites: BuddyJson.integer(counts['tripInvites']),
       joinRequests: BuddyJson.integer(counts['joinRequests']),
-      joinRequestsTripId: switch (BuddyJson.strOrNull(counts['joinRequestsTripId'])) { final id? when id.isNotEmpty => id, _ => null },
       guidelinesAccepted: j['guidelinesAccepted'] is bool ? j['guidelinesAccepted'] as bool : (p != null && p['guidelinesAccepted'] is bool ? p['guidelinesAccepted'] as bool : null),
     );
   }

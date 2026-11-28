@@ -44,10 +44,9 @@ class _PostWhereStepState extends State<PostWhereStep> {
         runSpacing: DS.gv(8),
         children: [
           for (var i = 0; i < cities.length; i++)
-            Tap3D(
-              onTap: c.fromTrip ? null : () => _toggle(cities[i]),
+            Semantics(
               label: cities[i].name,
-              exclude: true,
+              excludeSemantics: true,
               child: Container(
                 padding: DS.insets(l: 6, t: 6, r: 12, b: 6),
                 decoration: BoxDecoration(gradient: tone.gradient, borderRadius: DS.circular(22), boxShadow: tone.glow(blur: 0, dy: 4)),
@@ -63,7 +62,6 @@ class _PostWhereStepState extends State<PostWhereStep> {
                     ),
                     Gap.h(8),
                     Text(cities[i].name, style: Ink3D.text(15, FontWeight.w700, DesignColors.onPrimary, letterSpacing: 0)),
-                    if (!c.fromTrip) ...[Gap.h(4), Icon(Icons.close_rounded, size: DS.s(16), color: DesignColors.onPrimary)],
                   ],
                 ),
               ),
@@ -138,7 +136,6 @@ class _PostWhereStepState extends State<PostWhereStep> {
         onChanged: (v) => c.query.value = v,
         margin: DS.gapInsets(l: 18, t: 8, r: 18),
       ));
-      if (d.cities.isNotEmpty) children.add(_picked(d.cities));
       final items = c.visibleCities();
       if (items.isEmpty) {
         if (c.citiesLoading.value) {

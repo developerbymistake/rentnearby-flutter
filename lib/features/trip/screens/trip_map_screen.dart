@@ -1,3 +1,4 @@
+import '../../social/b/widgets/sliding_tabs.dart';
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -1160,13 +1161,13 @@ class _TripMapScreenState extends State<TripMapScreen> with TickerProviderStateM
           if (p != null && p.days.length > 1)
             Padding(
               padding: EdgeInsets.only(top: DS.gv(10)),
-              child: TripDayChips(
+              child: SlidingTabs(
                 key: const ValueKey('trip_map_day_chips'),
-                dayCount: p.days.length,
-                selected: selected,
-                onChanged: _select,
-                compact: true,
-                padding: DS.sym(h: 18),
+                labels: [for (var d = 1; d <= p.days.length; d++) TripStringsDayplan.dayTab(d)],
+                selected: selected == TripDayChips.all ? -1 : selected - 1,
+                tone: ListingTone.indigo,
+                margin: DS.sym(h: 18),
+                onTap: (i) => _select(i + 1),
               ),
             ),
           if (missing)

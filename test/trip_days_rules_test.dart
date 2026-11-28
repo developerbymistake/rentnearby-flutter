@@ -120,10 +120,11 @@ void main() {
     });
 
     test('limitForAuto fits the day cap by time', () {
-      expect(TripDaysRules.limitForAuto(_v(const [0]), 0, 300), 52);
-      expect(TripDaysRules.limitForAuto(_v(const [3]), 0, 300), 52);
-      expect(TripDaysRules.limitForAuto(_v(const [10, 10]), 1, 300), 41);
-      expect(TripDaysRules.limitForAuto(_v(const [10, 10]), 1, 450), 50);
+      // I-41: 5 days at most.
+      expect(TripDaysRules.limitForAuto(_v(const [0]), 0, 300), 19);
+      expect(TripDaysRules.limitForAuto(_v(const [3]), 0, 300), 19);
+      expect(TripDaysRules.limitForAuto(_v(const [10, 10]), 1, 300), 10);
+      expect(TripDaysRules.limitForAuto(_v(const [10, 10]), 1, 450), 17);
     });
 
     test('a city never gets fewer days than its places need when the days allow', () {

@@ -227,8 +227,8 @@ class _PostAboutStepState extends State<PostAboutStep> {
               ],
             ),
           ),
-          ..._notify(d),
-          WizardNote(text: SocialStringsB.aboutNote(c.limits)),
+          if (!c.editing) ..._notify(d),
+          if (!c.editing) WizardNote(text: SocialStringsB.aboutNote(c.limits)),
         ],
       );
     });

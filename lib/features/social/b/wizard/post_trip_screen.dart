@@ -23,10 +23,13 @@ import 'post_where_step.dart';
 import 'post_wizard_parts.dart';
 
 class PostTripScreen extends StatefulWidget {
-  const PostTripScreen({super.key, this.tripId, this.controller});
+  const PostTripScreen({super.key, this.tripId, this.edit = false, this.controller});
 
   final String? tripId;
+  final bool edit;
   final PostTripController? controller;
+
+  static const Key headerKey = ValueKey('post_wizard_header');
 
   @override
   State<PostTripScreen> createState() => _PostTripScreenState();
@@ -34,7 +37,7 @@ class PostTripScreen extends StatefulWidget {
 
 class _PostTripScreenState extends State<PostTripScreen> {
   late final String _tag = 'post-trip-${identityHashCode(this)}';
-  late final PostTripController c = Get.put(widget.controller ?? PostTripController(tripId: widget.tripId), tag: _tag);
+  late final PostTripController c = Get.put(widget.controller ?? PostTripController(tripId: widget.tripId, edit: widget.edit), tag: _tag);
   final _scroll = ScrollController();
   Worker? _stepWorker;
 
@@ -54,9 +57,6 @@ class _PostTripScreenState extends State<PostTripScreen> {
     super.dispose();
   }
 
-  // X closes the wizard from any step; system back (PopScope) steps back instead.
-  void _close() => Navigator.of(context).pop();
-
   Future<void> _next() async {
     final s = c.step.value;
     if (s < PostTripController.stepAbout) {
@@ -70,6 +70,11 @@ class _PostTripScreenState extends State<PostTripScreen> {
     final r = await c.submit();
     if (!mounted) return;
     switch (r) {
+      case BuddyOk() when c.editing:
+        SocialLive.posts.value++;
+        if (Get.isRegistered<MyTripsController>()) MyTripsController.to.load();
+        BuddySnack.show(context, SocialStringsB.postUpdated);
+        Navigator.of(context).pop();
       case BuddyOk(:final value):
         SocialLive.posts.value++;
         if (Get.isRegistered<MyTripsController>()) MyTripsController.to.load();
@@ -132,19 +137,21 @@ class _PostTripScreenState extends State<PostTripScreen> {
           body: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              WizardHeader(
-                title: SocialStringsB.wizardTitle,
-                tabs: const [SocialStringsB.stepWhere, SocialStringsB.stepWhen, SocialStringsB.stepAbout],
-                step: step,
-                saved: c.saved.value && step > PostTripController.stepWhere,
-                savedLabel: SocialStringsB.draftSaved,
-                closeLabel: SocialStringsB.close,
-                onClose: _close,
+              Padding(
+                padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
+                child: PageHeader3D(
+                  key: PostTripScreen.headerKey,
+                  tone: ListingTone.indigo,
+                  title: c.editing ? SocialStringsB.editPost : SocialStringsB.wizardTitle,
+                  onBack: () => Navigator.of(context).maybePop(),
+                  trailing: c.saved.value && step > PostTripController.stepWhere ? const WizardSavedTick(label: SocialStringsB.draftSaved) : null,
+                  bottom: WizardProgress(tabs: const [SocialStringsB.stepWhere, SocialStringsB.stepWhen, SocialStringsB.stepAbout], step: step),
+                ),
               ),
               Expanded(child: _body()),
               if (ready)
                 WizardBottomBar(
-                  label: last ? SocialStringsB.postTrip : SocialStringsB.next,
+                  label: last ? (c.editing ? SocialStringsB.savePost : SocialStringsB.postTrip) : SocialStringsB.next,
                   teal: last,
                   loading: c.busy.value,
                   backLabel: SocialStringsB.back,

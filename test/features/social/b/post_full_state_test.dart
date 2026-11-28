@@ -5,7 +5,7 @@ import 'package:bakhli/features/social/b/post/join_request_sheet.dart';
 import 'package:bakhli/features/social/b/post/trip_post_screen.dart';
 import 'package:bakhli/features/social/b/social_strings_b.dart';
 import 'package:bakhli/features/social/shared/social_models.dart';
-import 'package:bakhli/features/social/shared/widgets/public_trip_card.dart';
+import 'package:bakhli/features/social/shared/widgets/trip_join_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -34,49 +34,53 @@ void main() {
   tearDown(Get.reset);
 
   group('UC15 Full: 50 pending requests', () {
-    for (final mode in PublicTripCardMode.values) {
-      testWidgets('${mode.name} card: others see Full in the seats pill', (t) async {
-        await pumpSocial(t, Scaffold(body: SingleChildScrollView(child: PublicTripCard(trip: PublicTrip.fromJson(_full()), mode: mode))));
-        expect(find.byKey(PublicTripCard.fullKey), findsOneWidget);
-        expect(find.text(SocialStringsB.full), findsOneWidget);
+    for (final showOwner in [true, false]) {
+      testWidgets('trip card (showOwner $showOwner): others see Full in the seats pill', (t) async {
+        await pumpSocial(t, Scaffold(body: SingleChildScrollView(child: TripJoinCard(trip: PublicTrip.fromJson(_full()), showOwner: showOwner))));
+        expect(find.byKey(TripJoinCard.fullKey), findsOneWidget);
+        expect(find.text(SocialStringsB.full), findsWidgets);
         await drain(t);
       });
     }
 
     testWidgets('the host never sees his own post as Full on the card', (t) async {
-      await pumpSocial(t, Scaffold(body: SingleChildScrollView(child: PublicTripCard(trip: PublicTrip.fromJson(_full(mine: true))))));
-      expect(find.byKey(PublicTripCard.fullKey), findsNothing);
+      await pumpSocial(t, Scaffold(body: SingleChildScrollView(child: TripJoinCard(trip: PublicTrip.fromJson(_full(mine: true))))));
+      expect(find.byKey(TripJoinCard.fullKey), findsNothing);
       await drain(t);
     });
 
-    testWidgets('feed: a Full post has no Request button, a calm disabled Full line', (t) async {
+    testWidgets('Explore: a Full post has no Request button, a calm disabled Full line', (t) async {
       final server = installServer();
       putSocialMe(server, socialMeWith());
-      server.on('GET', '/social/trips/feed', {'mine': [], 'items': [_full()], 'nextCursor': null});
+      stubGroups(server, feed: [_full()]);
       await pumpSocial(t, const TravelBuddiesScreen(), pages: _pages);
-      expect(find.byKey(const ValueKey('feed_request_trip-1')), findsNothing);
-      expect(_pill(t, const ValueKey('feed_full_trip-1')).enabled, isFalse);
-      expect(find.text('${SocialStringsB.full} · ${SocialStringsB.requestsFullLine}'), findsOneWidget);
+      final action = _pill(t, TripJoinCard.actionKey('trip-1'));
+      expect(action.enabled, isFalse);
+      expect(action.label, SocialStringsB.full);
+      expect(find.text(SocialStringsB.join), findsNothing);
       await drain(t);
     });
 
-    testWidgets('feed: the 51st request is refused with TripRequestsFull: calm text in the sheet and the card turns Full at once', (t) async {
+    testWidgets('Explore: the 51st request is refused with TripRequestsFull: calm text in the sheet and the card turns Full at once', (t) async {
       final server = installServer();
       putSocialMe(server, socialMeWith());
-      server.on('GET', '/social/trips/feed', {'mine': [], 'items': [publicTripJson()], 'nextCursor': null});
+      stubGroups(server, feed: [publicTripJson()]);
       server.refuse('POST', '/social/trips/trip-1/join-requests', status: 409, type: 'TripRequestsFull', message: 'Server words');
       await pumpSocial(t, const TravelBuddiesScreen(), pages: _pages);
-      await t.tap(find.byKey(const ValueKey('feed_request_trip-1')));
+      expect(_pill(t, TripJoinCard.actionKey('trip-1')).label, SocialStringsB.join);
+      await t.tap(find.byKey(TripJoinCard.actionKey('trip-1')));
       await settle(t);
-      server.on('GET', '/social/trips/feed', {'mine': [], 'items': [_full()], 'nextCursor': null});
+      server.on('GET', feedPath, feedPage(items: [_full()]));
       await t.tap(find.byKey(JoinRequestSheet.sendKey));
       await settle(t);
       expect(find.text(SocialStringsB.requestsFullNow), findsOneWidget);
       expect(find.text('Server words'), findsNothing);
       await t.tapAt(const Offset(10, 10));
       await settle(t);
-      expect(find.byKey(const ValueKey('feed_request_trip-1')), findsNothing);
-      expect(find.byKey(const ValueKey('feed_full_trip-1')), findsOneWidget);
+      final action = _pill(t, TripJoinCard.actionKey('trip-1'));
+      expect(action.enabled, isFalse);
+      expect(action.label, SocialStringsB.full);
+      expect(find.byKey(TripJoinCard.fullKey), findsOneWidget);
       await drain(t);
     });
 
@@ -109,13 +113,14 @@ void main() {
   });
 
   group('UC16 a member the host removed cannot ask again', () {
-    testWidgets('feed: myJoin removed shows the calm line, no Request', (t) async {
+    testWidgets('Explore: myJoin removed shows the calm line, no Request', (t) async {
       final server = installServer();
       putSocialMe(server, socialMeWith());
-      server.on('GET', '/social/trips/feed', {'mine': [], 'items': [publicTripJson(myJoin: 'removed')], 'nextCursor': null});
+      stubGroups(server, feed: [publicTripJson(myJoin: 'removed')]);
       await pumpSocial(t, const TravelBuddiesScreen(), pages: _pages);
-      expect(find.byKey(const ValueKey('feed_request_trip-1')), findsNothing);
-      expect(find.text(SocialStringsB.cannotRejoin), findsOneWidget);
+      final action = _pill(t, TripJoinCard.actionKey('trip-1'));
+      expect(action.enabled, isFalse);
+      expect(action.label, SocialStringsB.cannotJoin);
       await drain(t);
     });
 

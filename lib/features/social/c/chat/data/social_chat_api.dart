@@ -19,6 +19,9 @@ class SocialChatApi {
   Future<BuddyResult<ChatRoomModel>> tripRoom(String tripId) => BuddyApiBase.run(
       () async => ChatRoomModel.fromJson(BuddyApiBase.dataOf(await BuddyApiBase.read(() => ApiService.get('$_base/trip/$tripId')))));
 
+  Future<BuddyResult<ChatRoomModel>> setSendMode(String roomId, {required bool onlyOwnerSends}) => BuddyApiBase.run(() async =>
+      ChatRoomModel.fromJson(BuddyApiBase.dataOf(await ApiService.put('$_base/rooms/$roomId/send-mode', {'onlyOwnerSends': onlyOwnerSends}))));
+
   Future<BuddyResult<ChatRoomModel>> room(String roomId) => BuddyApiBase.run(
       () async => ChatRoomModel.fromJson(BuddyApiBase.dataOf(await BuddyApiBase.read(() => ApiService.get('$_base/rooms/$roomId')))));
 

@@ -108,7 +108,6 @@ abstract final class ViewerStrings {
   static const String checkOut = 'Check-out';
   static String nights(int n) => BuddyFormat.plural(n, 'night', 'nights');
   static const String nightsLabel = 'Nights';
-  static const String allDays = 'All days';
   static const String back = '‹';
 
   static const String noLongerOnTrip = 'You are no longer on this trip.';

@@ -161,6 +161,8 @@ class StayFloatingPill extends StatelessWidget {
     this.iconAsset = TravelIcon.map,
     this.gradient = PickKit.stayGradient,
     this.shadowColor = PickKit.stay,
+    this.fill,
+    this.textColor = FitnessAppTheme.white,
   });
 
   final String label;
@@ -168,12 +170,14 @@ class StayFloatingPill extends StatelessWidget {
   final String iconAsset;
   final Gradient gradient;
   final Color shadowColor;
+  final Color? fill;
+  final Color textColor;
 
   @override
   Widget build(BuildContext context) {
     final radius = DS.br(const BorderRadius.all(Radius.circular(24)));
     return Container(
-      decoration: BoxDecoration(gradient: gradient, borderRadius: radius, boxShadow: DS.shadows(PickKit.shadow(shadowColor))),
+      decoration: BoxDecoration(gradient: fill == null ? gradient : null, color: fill, borderRadius: radius, boxShadow: DS.shadows(PickKit.shadow(shadowColor))),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -192,7 +196,7 @@ class StayFloatingPill extends StatelessWidget {
                         fontSize: DS.f(14),
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.2,
-                        color: FitnessAppTheme.white)),
+                        color: textColor)),
               ],
             ),
           ),

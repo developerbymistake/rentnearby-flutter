@@ -1074,7 +1074,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         if (_guest.nearbyStays.isNotEmpty) _buildViewListButton() else const SizedBox.shrink(),
-                          PressScale(child: StayFloatingPill(label: 'Find Nearest', iconAsset: TravelIcon.route, gradient: _forest.gradient, shadowColor: ListingPalette.forest.g1, onTap: _openNearestConfirm)),
+                          PressScale(child: StayFloatingPill(label: 'Find Nearest', iconAsset: TravelIcon.route, fill: DesignColors.surface, textColor: _forest.accentDark, shadowColor: ListingPalette.forest.g1, onTap: _openNearestConfirm)),
                       ],
                     ),
                     ),
@@ -1136,8 +1136,6 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
     );
   }
 
-  static const double _chipHeight = 54;
-
   Widget _buildRadiusChips() {
     final radii = AppConstants.radiusOptions;
     return ToneSegmentControl(
@@ -1146,7 +1144,7 @@ class _StayMapScreenState extends State<StayMapScreen> with TickerProviderStateM
       semanticLabels: [for (final r in radii) '${r.toInt()} kilometres'],
       selected: radii.indexOf(_radius),
       tone: ListingTone.forest,
-      cellHeight: _chipHeight,
+      cellHeight: KitMetrics.touch - 8,
       onTap: (i) {
         setState(() => _radius = radii[i]);
         _loadNearby();

@@ -1,13 +1,15 @@
 import 'package:bakhli/config/app_routes.dart';
+import 'package:bakhli/design/extra/buttons_kit.dart' show KitRoundButton;
 import 'package:bakhli/utils/dio_error_mapper.dart';
 import 'package:dio/dio.dart';
 import 'package:bakhli/features/buddy/shared/buddy_result.dart';
 import 'package:bakhli/features/social/b/feed/travel_buddies_screen.dart';
+import 'package:bakhli/features/social/b/post/own_post_menu.dart';
 import 'package:bakhli/features/social/b/post/trip_post_screen.dart';
 import 'package:bakhli/features/social/b/social_strings_b.dart';
 import 'package:bakhli/features/social/shared/post_removal.dart';
 import 'package:bakhli/features/social/shared/social_strings.dart';
-import 'package:bakhli/features/social/shared/widgets/public_trip_card.dart';
+import 'package:bakhli/features/social/shared/widgets/trip_join_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart' hide Response;
@@ -23,15 +25,12 @@ final _pages = [
   GetPage(name: AppRoutes.travelBuddies, page: () => const Scaffold(body: Text('FEED'))),
 ];
 
-const _feed = '/social/trips/feed';
 const _post = '/social/trips/mine-1';
 
 Map<String, dynamic> _mine() => {
       ...publicTripJson(id: 'mine-1', ownerId: 'me', ownerName: 'Rahul Verma', cities: ['Manali'], isMine: true, waitingRequests: 0),
       'unlocksAt': DateTime.now().toUtc().add(const Duration(hours: 50)).toIso8601String(),
     };
-
-Map<String, dynamic> _page({List<Map<String, dynamic>> mine = const []}) => {'mine': mine, 'items': <Object>[], 'nextCursor': null};
 
 void main() {
   useBuddyRenderScale();
@@ -76,25 +75,44 @@ void main() {
   });
 
   group('I-3: no Remove from Travel buddies option', () {
-    testWidgets('feed: my own post card has no menu, even when an older answer still sends unlocksAt', (t) async {
+    void expectOwnMenuOnly() {
+      expect(find.byKey(OwnPostMenu.editKey), findsOneWidget);
+      expect(find.byKey(OwnPostMenu.membersKey), findsOneWidget);
+      expect(find.byKey(OwnPostMenu.deleteKey), findsOneWidget);
+      expect(find.textContaining('Remove from'), findsNothing);
+      expect(find.text(SocialStringsB.reportTrip), findsNothing);
+      expect(find.textContaining('remove this post'), findsNothing);
+    }
+
+    testWidgets('My posts: my own post card (from /social/trips/mine) has only the own-post menu, no lock line, even when an older answer still sends unlocksAt', (t) async {
       final server = installServer();
       putSocialMe(server, socialMeWith());
-      server.on('GET', _feed, _page(mine: [_mine()]));
-      await pumpSocial(t, const TravelBuddiesScreen(), pages: _pages);
-      expect(find.text(SocialStringsB.yourPost), findsOneWidget);
-      expect(find.byKey(PublicTripCard.menuKey), findsNothing);
+      stubGroups(server, mine: [_mine()]);
+      await pumpSocial(t, const TravelBuddiesScreen(myPosts: true), pages: _pages);
+      expect(find.byKey(TripJoinCard.cardKey('mine-1')), findsOneWidget);
+      expect(find.text(SocialStringsB.you), findsOneWidget);
+      final menu = find.descendant(of: find.byKey(TripJoinCard.cardKey('mine-1')), matching: find.byType(KitRoundButton));
+      expect(menu, findsOneWidget);
+      expect(find.descendant(of: find.byKey(TripJoinCard.cardKey('mine-1')), matching: find.byKey(TripJoinCard.menuKey)), findsOneWidget);
       expect(find.textContaining('remove this post'), findsNothing);
+      await t.tap(menu);
+      await settle(t);
+      expectOwnMenuOnly();
       await drain(t);
       expect(t.takeException(), isNull);
     });
 
-    testWidgets('post page: my own post has no menu and no lock line', (t) async {
+    testWidgets('post page: my own post has the own-post menu and no lock line', (t) async {
       final server = installServer();
       putSocialMe(server, socialMeWith());
       server.on('GET', _post, _mine());
       await pumpSocial(t, const TripPostScreen(tripId: 'mine-1'), pages: _pages);
-      expect(find.byKey(TripPostScreen.menuKey), findsNothing);
+      expect(find.byKey(TripPostScreen.menuKey), findsOneWidget);
       expect(find.textContaining('remove this post'), findsNothing);
+      expect(find.textContaining('3 days'), findsNothing);
+      await t.tap(find.byKey(TripPostScreen.menuKey));
+      await settle(t);
+      expectOwnMenuOnly();
       expect(find.textContaining('3 days'), findsNothing);
       await drain(t);
     });

@@ -22,8 +22,8 @@ import 'package:bakhli/features/social/b/join/join_requests_screen.dart';
 import 'package:bakhli/features/social/b/post/trip_post_screen.dart';
 import 'package:bakhli/features/social/b/rail/trips_rail_controller.dart';
 import 'package:bakhli/features/social/b/rail/trips_to_join_rail.dart';
+import 'package:bakhli/features/social/b/post/own_post_menu.dart';
 import 'package:bakhli/features/social/b/social_strings_b.dart';
-import 'package:bakhli/features/social/shared/widgets/public_trip_card.dart';
 import 'package:bakhli/features/social/b/widgets/find_buddies_post_card.dart';
 import 'package:bakhli/features/social/b/wizard/post_about_step.dart';
 import 'package:bakhli/features/social/b/wizard/post_trip_controller.dart';
@@ -38,6 +38,7 @@ import 'package:bakhli/features/social/c/plus/seeker_plus_screen.dart';
 import 'package:bakhli/features/social/c/social_strings_c.dart';
 import 'package:bakhli/features/social/shared/social_me_controller.dart';
 import 'package:bakhli/features/social/shared/social_models.dart';
+import 'package:bakhli/features/social/shared/widgets/trip_join_card.dart';
 import 'package:bakhli/features/trip/data/trip_city_catalog.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/models/conversation_model.dart';
@@ -184,8 +185,8 @@ Map<String, dynamic> _rahulPost({String myJoin = 'none'}) => {
       'owner': {..._person('rahul', 'Rahul Verma', city: 'Dehradun', gender: 'Male'), 'username': 'Bakhli#48291736'},
     };
 
-Map<String, dynamic> _feedPage({List<Map<String, dynamic>> mine = const [], List<Map<String, dynamic>> items = const []}) =>
-    {'mine': mine, 'items': items, 'nextCursor': null};
+void _groups(SocialFakeServer server, {List<Map<String, dynamic>> mine = const [], List<Map<String, dynamic>> items = const []}) =>
+    stubGroups(server, feed: items, mine: mine);
 
 Map<String, dynamic> _peoplePage(List<Map<String, dynamic>> items, {int? total, int buddies = 0}) =>
     {'items': items, 'nextCursor': null, 'total': total ?? items.length, 'buddies': buddies};
@@ -473,7 +474,7 @@ void main() {
       final server = installServer();
       putSocialMe(server, socialMeWith(gender: 'Male'));
       Get.put<PlanController>(pf.FakePlanController());
-      server.on('GET', '/social/trips/feed', _feedPage(items: [_kavyaPost(), _amanPost()]));
+      _groups(server, items: [_kavyaPost(), _amanPost()]);
       await _open(t, const TravelBuddiesScreen());
       await _snap(t, 'D9b_travel_buddies');
       await _snapFull(t, 'D9b_travel_buddies', 1700);
@@ -531,11 +532,11 @@ void main() {
       await _end(t);
     });
 
-    testWidgets('D10g Live: my post on top', (t) async {
+    testWidgets('D10g Live: My posts tab with the live card', (t) async {
       putSeeker();
       final server = installServer();
       putSocialMe(server, socialMeWith(gender: 'Male', publicUsed: 1));
-      server.on('GET', '/social/trips/feed', _feedPage(mine: [_minePost()], items: [_kavyaPost()]));
+      _groups(server, mine: [_minePost()], items: [_kavyaPost()]);
       await _open(t, const TravelBuddiesScreen(posted: true));
       await _snap(t, 'D10g_feed_live');
       await _snapFull(t, 'D10g_feed_live', 1700);
@@ -750,7 +751,7 @@ void main() {
       putSeeker();
       final server = installServer();
       putSocialMe(server, socialMeWith(gender: 'Male'));
-      server.on('GET', '/social/trips/feed', _feedPage(items: [{..._kavyaPost(), 'requestsFull': true}, _amanPost()..['myJoin'] = 'removed']));
+      _groups(server, items: [{..._kavyaPost(), 'requestsFull': true}, _amanPost()..['myJoin'] = 'removed']);
       await _open(t, const TravelBuddiesScreen());
       await _snapFull(t, 'N3_feed_full_removed', 1700);
       await _end(t);
@@ -802,14 +803,21 @@ void main() {
       await _end(t);
     });
 
-    testWidgets('N7 Own post: no menu (no Remove, no 72-hour lock); other posts keep their menu', (t) async {
+    testWidgets('N7 Own post on My posts: the own-post menu (Edit, Members, Delete), no Remove, no 72-hour lock', (t) async {
       putSeeker();
       final server = installServer();
       putSocialMe(server, socialMeWith(gender: 'Male', publicUsed: 1));
-      server.on('GET', '/social/trips/feed', _feedPage(mine: [_minePost()], items: [_kavyaPost()]));
-      await _open(t, const TravelBuddiesScreen());
-      expect(find.byKey(PublicTripCard.menuKey), findsOneWidget);
-      await _snap(t, 'N7_own_post_no_menu');
+      _groups(server, mine: [_minePost()], items: [_kavyaPost()]);
+      await _open(t, const TravelBuddiesScreen(myPosts: true));
+      final menu = find.descendant(of: find.byKey(TripJoinCard.cardKey('mine-1')), matching: find.byKey(TripJoinCard.menuKey));
+      expect(menu, findsOneWidget);
+      expect(find.textContaining('remove this post'), findsNothing);
+      await _tap(t, menu);
+      expect(find.byKey(OwnPostMenu.editKey), findsOneWidget);
+      expect(find.byKey(OwnPostMenu.membersKey), findsOneWidget);
+      expect(find.byKey(OwnPostMenu.deleteKey), findsOneWidget);
+      expect(find.textContaining('Remove from'), findsNothing);
+      await _snap(t, 'N7_own_post_menu');
       await _end(t);
     });
   });

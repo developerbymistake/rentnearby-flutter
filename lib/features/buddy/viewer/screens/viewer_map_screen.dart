@@ -14,7 +14,7 @@ import '../../../trip/widgets/trip_map_spot_card.dart';
 import '../../../trip/widgets/trip_plan_header.dart';
 import '../../../trip/widgets/trip_spot_detail_sheet.dart';
 import '../../shared/buddy_look.dart';
-import '../../shared/widgets/segment_tabs.dart';
+import '../../../social/b/widgets/sliding_tabs.dart';
 import '../../shared/widgets/view_only_chip.dart';
 import '../controllers/viewer_trip_controller.dart';
 import '../models/viewer_models.dart';
@@ -35,7 +35,6 @@ class ViewerMapScreen extends StatefulWidget {
   static const Key mapKey = ValueKey('viewer_route_map');
   static const Key noRoadKey = ValueKey('viewer_no_road');
   static const double side = 12;
-  static const double compactCell = 90;
 
   @override
   State<ViewerMapScreen> createState() => _ViewerMapScreenState();
@@ -127,15 +126,10 @@ class _ViewerMapScreenState extends State<ViewerMapScreen> {
     );
   }
 
-  bool _compact(BuildContext context, int cells) {
-    final width = MediaQuery.sizeOf(context).width - DS.s(44);
-    return width / cells < MediaQuery.textScalerOf(context).scale(DS.s(ViewerMapScreen.compactCell));
-  }
-
   Widget _top(BuildContext context, ViewerTrip? t, ViewerMapScene scene, int selected) {
     final days = scene.days;
-    final index = selected == ViewerMapScene.all ? 0 : 1 + days.indexWhere((d) => d.day == selected);
-    final labels = [ViewerStrings.allDays, for (final d in days) ViewerStrings.dayChip(d.day)];
+    final index = days.indexWhere((d) => d.day == selected);
+    final labels = [for (final d in days) ViewerStrings.dayChip(d.day)];
     return Column(
       key: _topKey,
       mainAxisSize: MainAxisSize.min,
@@ -151,14 +145,12 @@ class _ViewerMapScreenState extends State<ViewerMapScreen> {
           ),
         ),
         if (days.length > 1)
-          SegmentTabs(
+          SlidingTabs(
             labels: labels,
             selected: index,
             tone: BuddyLook.indigo,
             margin: DS.insets(l: 18, t: 12, r: 18),
-            dayDots: [Colors.transparent, for (final d in days) d.color],
-            compact: _compact(context, labels.length),
-            onTap: (i) => _pickDay(i == 0 ? ViewerMapScene.all : days[i - 1].day),
+            onTap: (i) => _pickDay(days[i].day),
           ),
       ],
     );
@@ -168,7 +160,7 @@ class _ViewerMapScreenState extends State<ViewerMapScreen> {
   Widget build(BuildContext context) => Obx(() {
         final t = _c.trip.value;
         final scene = _sceneOf(t);
-        final selected = scene.days.any((d) => d.day == _selected) ? _selected : ViewerMapScene.all;
+        final selected = scene.days.any((d) => d.day == _selected) ? _selected : (scene.days.isEmpty ? ViewerMapScene.all : scene.days.first.day);
         final picked = _picked;
         final safe = MediaQuery.paddingOf(context).bottom;
         final s = DS.s(ViewerMapScreen.side);

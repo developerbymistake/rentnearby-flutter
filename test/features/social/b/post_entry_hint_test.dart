@@ -116,11 +116,11 @@ void main() {
     await drain(t);
   });
 
-  testWidgets('UC20 feed Post button shows the same hint line under it', (t) async {
+  testWidgets('UC20 Travel groups sticky Post button shows the same hint line under it', (t) async {
     final server = installServer();
     final me = putSocialMe(server, _capped());
     await t.runAsync(me.load);
-    server.on('GET', '/social/trips/feed', {'mine': [], 'items': [], 'nextCursor': null});
+    stubGroups(server);
     await pumpSocial(t, const TravelBuddiesScreen(), pages: _pages);
     expect(find.byKey(TravelBuddiesScreen.postHintKey), findsOneWidget);
     expect(find.text(SocialStringsB.freeLimitHint), findsOneWidget);

@@ -54,6 +54,15 @@ Map<String, dynamic> messageJson(int seq, {String sender = peerId, String text =
       'clientMessageId': cid,
     };
 
+Map<String, dynamic> tripJson({String tripId = 't1', String title = 'Goa trip', bool isOwner = false, String ownerName = 'Rahul', bool onlyOwnerSends = false, int memberCount = 3}) => {
+      'tripId': tripId,
+      'title': title,
+      'memberCount': memberCount,
+      'isOwner': isOwner,
+      'ownerName': ownerName,
+      'onlyOwnerSends': onlyOwnerSends,
+    };
+
 ChatRoomModel roomOf({String roomId = 'r1', String kind = 'D', String status = 'Active', bool iStarted = true, String lock = 'none', bool canSend = true, Map<String, dynamic>? trip, int unread = 0, String? preview, String? peerGender}) =>
     ChatRoomModel.fromJson(roomJson(roomId: roomId, kind: kind, status: status, iStarted: iStarted, lock: lock, canSend: canSend, trip: trip, unread: unread, preview: preview, peerGender: peerGender));
 
@@ -132,6 +141,15 @@ class FakeChatApi extends SocialChatApi {
 
   @override
   Future<BuddyResult<ChatUnread>> read(String roomId, int seq) async => const BuddyOk(ChatUnread.zero);
+
+  final List<bool> sendModes = [];
+  BuddyResult<ChatRoomModel>? sendModeResult;
+
+  @override
+  Future<BuddyResult<ChatRoomModel>> setSendMode(String roomId, {required bool onlyOwnerSends}) async {
+    sendModes.add(onlyOwnerSends);
+    return sendModeResult ?? roomResult;
+  }
 
   @override
   Future<BuddyResult<void>> deleteRoom(String roomId) async {

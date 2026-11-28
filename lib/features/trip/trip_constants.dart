@@ -43,7 +43,8 @@ class TripConstants {
   static const int maxFareEdits = 3;
   static const int leadsPerTripPerDay = 10;
   static const int maxLeadDays = 14;
-  static const int maxDaysCap = 14;
+  // I-41: a day-wise itinerary has at most 5 days.
+  static const int maxDaysCap = 5;
   static const int enquiriesPerHour = 20;
   static const int enquiriesPerDay = 60;
   static const int driverNoteMax = 300;

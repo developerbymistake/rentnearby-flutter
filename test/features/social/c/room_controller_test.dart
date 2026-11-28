@@ -310,4 +310,115 @@ void main() {
     expect(api.withUserCalls, 2);
     expect(c.canSend, isTrue);
   });
+
+  group('I-39 who can send messages', () {
+    ChatRoomModel tripRoom({bool isOwner = false, bool only = false, String lock = 'none', bool canSend = true, String owner = 'Rahul'}) =>
+        roomOf(kind: 'T', lock: lock, canSend: canSend, trip: tripJson(isOwner: isOwner, onlyOwnerSends: only, ownerName: owner));
+
+    test('a member with Only me on cannot send and sees the owner-only notice', () async {
+      api.roomResult = BuddyOk(tripRoom(only: true, lock: RoomLock.ownerOnly, canSend: false));
+      final c = await open();
+      expect(c.ownerOnlyShown, isTrue);
+      expect(c.canSend, isFalse);
+      expect(c.plusLockShown, isFalse);
+    });
+
+    test('the owner keeps sending with Only me on', () async {
+      api.roomResult = BuddyOk(tripRoom(isOwner: true, only: true));
+      final c = await open();
+      expect(c.ownerOnlyShown, isFalse);
+      expect(c.canSend, isTrue);
+    });
+
+    test('a member who left sees the left notice, not owner-only', () async {
+      api.roomResult = BuddyOk(tripRoom(only: true, lock: RoomLock.left, canSend: false));
+      final c = await open();
+      expect(c.ownerOnlyShown, isFalse);
+    });
+
+    test('Everyone mode keeps the usual rules', () async {
+      api.roomResult = BuddyOk(tripRoom());
+      final c = await open();
+      expect(c.ownerOnlyShown, isFalse);
+      expect(c.canSend, isTrue);
+    });
+
+    test('an OnlyOwnerSends refusal gives the text back, sets the flag and re-reads the room', () async {
+      api.roomResult = BuddyOk(tripRoom());
+      final c = await open();
+      final before = api.roomCalls;
+      api.roomResult = BuddyOk(tripRoom(only: true, lock: RoomLock.ownerOnly, canSend: false, owner: 'Rahul'));
+      hub.hubReplies.add({'ok': false, 'type': 'OnlyOwnerSends', 'message': 'Only the trip owner can send messages in this chat.'});
+      await c.send('Hello');
+      await settle();
+      expect(c.messages.where((m) => m.isLocal), isEmpty);
+      expect(c.bounced.value, 'Hello');
+      expect(c.ownerOnlyShown, isTrue);
+      expect(c.canSend, isFalse);
+      expect(api.roomCalls, before + 1);
+      expect(c.refusal.value?.type, 'OnlyOwnerSends');
+    });
+
+    test('DmRoomSettings applies the flag at once and re-reads the room', () async {
+      api.roomResult = BuddyOk(tripRoom());
+      final c = await open();
+      final before = api.roomCalls;
+      api.roomResult = BuddyOk(tripRoom(only: true, lock: RoomLock.ownerOnly, canSend: false, owner: 'Rahul'));
+      hub.controller.add(const DmRoomSettingsEvent(roomId: 'r1', onlyOwnerSends: true, ownerName: 'Rahul'));
+      await Future<void>.delayed(Duration.zero);
+      expect(c.room.value?.trip?.onlyOwnerSends, isTrue);
+      expect(c.ownerOnlyShown, isTrue);
+      await settle();
+      expect(api.roomCalls, before + 1);
+      expect(c.lock, RoomLock.ownerOnly);
+    });
+
+    test('DmRoomSettings back to Everyone unlocks after the re-read', () async {
+      api.roomResult = BuddyOk(tripRoom(only: true, lock: RoomLock.ownerOnly, canSend: false));
+      final c = await open();
+      api.roomResult = BuddyOk(tripRoom());
+      hub.controller.add(const DmRoomSettingsEvent(roomId: 'r1', onlyOwnerSends: false, ownerName: 'Rahul'));
+      await settle();
+      expect(c.ownerOnlyShown, isFalse);
+      expect(c.canSend, isTrue);
+    });
+
+    test('DmRoomSettings of another room is ignored', () async {
+      api.roomResult = BuddyOk(tripRoom());
+      final c = await open();
+      final before = api.roomCalls;
+      hub.controller.add(const DmRoomSettingsEvent(roomId: 'other', onlyOwnerSends: true, ownerName: 'Rahul'));
+      await settle();
+      expect(api.roomCalls, before);
+      expect(c.ownerOnlyShown, isFalse);
+    });
+
+    test('a reconnect re-reads a trip room, not a direct room', () async {
+      api.roomResult = BuddyOk(tripRoom());
+      await open();
+      final before = api.roomCalls;
+      hub.controller.add(const DmReconnectedEvent());
+      await settle();
+      expect(api.roomCalls, before + 1);
+    });
+
+    test('a reconnect does not re-read a direct room', () async {
+      await open();
+      final before = api.roomCalls;
+      hub.controller.add(const DmReconnectedEvent());
+      await settle();
+      expect(api.roomCalls, before);
+    });
+
+    test('setSendMode sends the pick and takes the returned room', () async {
+      api.roomResult = BuddyOk(tripRoom(isOwner: true));
+      final c = await open();
+      api.sendModeResult = BuddyOk(tripRoom(isOwner: true, only: true));
+      final r = await c.setSendMode(true);
+      expect(r.isOk, isTrue);
+      expect(api.sendModes, [true]);
+      expect(c.room.value?.trip?.onlyOwnerSends, isTrue);
+      expect(c.canSend, isTrue);
+    });
+  });
 }

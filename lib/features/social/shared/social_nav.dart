@@ -27,13 +27,19 @@ abstract final class SocialNav {
 
   static Future<dynamic>? openTravelLevels() => _go(AppRoutes.travelLevels);
 
+  static const String groupsExplore = 'explore';
+  static const String groupsMine = 'mine';
+
   // The feed already on top: never stack a second copy.
-  static Future<dynamic>? openTravelBuddies({bool posted = false}) =>
-      Get.currentRoute == AppRoutes.travelBuddies ? null : _go(AppRoutes.travelBuddies, {if (posted) 'posted': true});
+  static Future<dynamic>? openTravelBuddies({bool posted = false, String tab = groupsExplore}) => Get.currentRoute == AppRoutes.travelBuddies
+      ? null
+      : _go(AppRoutes.travelBuddies, {if (posted) 'posted': true, if (tab != groupsExplore) 'tab': tab});
 
   static Future<dynamic>? openTripPost(String tripId) => _go(AppRoutes.tripPost, {'tripId': tripId});
 
   static Future<dynamic>? openPostTrip({String? tripId}) => _go(AppRoutes.postTrip, {'tripId': ?tripId});
+
+  static Future<dynamic>? openEditPost(String tripId) => _go(AppRoutes.postTrip, {'tripId': tripId, 'edit': true});
 
   static Future<dynamic>? openJoinRequests(String tripId) => _go(AppRoutes.joinRequests, {'tripId': tripId});
 

@@ -18,6 +18,7 @@ abstract final class RoomLock {
   static const String limit = 'limit';
   static const String left = 'left';
   static const String plus = 'plus';
+  static const String ownerOnly = 'ownerOnly';
 }
 
 abstract final class RoomBucket {
@@ -27,7 +28,17 @@ abstract final class RoomBucket {
 }
 
 class RoomTrip {
-  const RoomTrip({required this.tripId, required this.title, this.memberCount = 0, this.photoUrls = const [], this.initials = const [], this.cityKey = 0});
+  const RoomTrip({
+    required this.tripId,
+    required this.title,
+    this.memberCount = 0,
+    this.photoUrls = const [],
+    this.initials = const [],
+    this.cityKey = 0,
+    this.isOwner = false,
+    this.ownerName = '',
+    this.onlyOwnerSends = false,
+  });
 
   final String tripId;
   final String title;
@@ -35,6 +46,21 @@ class RoomTrip {
   final List<String> photoUrls;
   final List<String> initials;
   final int cityKey;
+  final bool isOwner;
+  final String ownerName;
+  final bool onlyOwnerSends;
+
+  RoomTrip copyWith({bool? onlyOwnerSends, String? ownerName}) => RoomTrip(
+        tripId: tripId,
+        title: title,
+        memberCount: memberCount,
+        photoUrls: photoUrls,
+        initials: initials,
+        cityKey: cityKey,
+        isOwner: isOwner,
+        ownerName: ownerName ?? this.ownerName,
+        onlyOwnerSends: onlyOwnerSends ?? this.onlyOwnerSends,
+      );
 
   factory RoomTrip.fromJson(Map<String, dynamic> j) => RoomTrip(
         tripId: BuddyJson.str(j['tripId']),
@@ -43,6 +69,9 @@ class RoomTrip {
         photoUrls: BuddyJson.strings(j['photoUrls']),
         initials: BuddyJson.strings(j['memberInitials']),
         cityKey: BuddyJson.integer(j['cityKey']),
+        isOwner: BuddyJson.boolean(j['isOwner']),
+        ownerName: BuddyJson.str(j['ownerName']),
+        onlyOwnerSends: BuddyJson.boolean(j['onlyOwnerSends']),
       );
 }
 
@@ -91,6 +120,7 @@ class ChatRoomModel {
   String get title => isTrip ? (trip?.title ?? '') : (peer?.name ?? '');
 
   ChatRoomModel copyWith({
+    RoomTrip? trip,
     String? status,
     String? lock,
     bool? canSend,
@@ -107,7 +137,7 @@ class ChatRoomModel {
         status: status ?? this.status,
         iStarted: iStarted,
         peer: peer,
-        trip: trip,
+        trip: trip ?? this.trip,
         subtitle: subtitle,
         peerFollowsMe: peerFollowsMe,
         iFollowPeer: iFollowPeer,
@@ -175,6 +205,7 @@ class ChatMessageModel {
 
   static const String joined = 'joined';
   static const String left = 'left';
+  static const String sendMode = 'sendmode';
 
   bool get isSystem => system != null;
   bool get isLocal => seq <= 0;
@@ -201,7 +232,7 @@ class ChatMessageModel {
       senderName: BuddyJson.strOrNull(j['senderName']),
       text: BuddyJson.str(j['text']),
       masked: BuddyJson.boolean(j['masked']),
-      system: system == joined || system == left ? system : null,
+      system: system == joined || system == left || system == sendMode ? system : null,
       createdAt: BuddyJson.time(j['createdAt']),
       expiresAt: BuddyJson.time(j['expiresAt']),
       clientMessageId: BuddyJson.strOrNull(j['clientMessageId']),

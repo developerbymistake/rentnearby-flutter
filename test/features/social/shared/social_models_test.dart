@@ -90,6 +90,15 @@ void main() {
     expect(t.copyWith(myJoin: 'requested').waitingRequests, 3);
   });
 
+  test('PublicTrip reads members on my own post, null when the server leaves it out, kept by copyWith', () {
+    final mine = PublicTrip.fromJson({'tripId': 't1', 'owner': personJson('o', 'Neha Pant'), 'isMine': true, 'members': 2});
+    expect(mine.members, 2);
+    expect(mine.copyWith(seatsLeft: 1).members, 2);
+    final other = PublicTrip.fromJson({'tripId': 't2', 'owner': personJson('o', 'Neha Pant')});
+    expect(other.members, isNull);
+    expect(PublicTrip.fromJson(const {}).members, isNull);
+  });
+
   test('LimitUse never reports a negative left', () {
     const u = LimitUse(limit: 1, used: 3);
     expect(u.left, 0);

@@ -58,11 +58,42 @@ void main() {
     final api = _Api()..pages[null] = FeedPage(items: [_trip('a')], nextCursor: 'p2');
     final c = Get.put(TravelBuddiesController(api: api));
     await _settle();
-    api.pages[null] = FeedPage(mine: [_trip('m')], items: [_trip('a')]);
+    api.pages[null] = FeedPage(items: [_trip('a'), _trip('b')]);
     SocialLive.posts.value++;
     await _settle();
-    expect(c.mine.map((t) => t.tripId), ['m']);
+    expect(c.items.map((t) => t.tripId), ['a', 'b']);
     expect(c.hasMore, isFalse);
+  });
+
+  test('I-37: Explore holds only the feed items, an empty feed is ready and empty', () async {
+    final api = _Api();
+    final c = Get.put(TravelBuddiesController(api: api));
+    await _settle();
+    expect(c.state.value, FeedLoad.ready);
+    expect(c.items, isEmpty);
+  });
+
+  test('I-37: applyFollow flips Follow on every card of that poster only', () async {
+    PublicTrip owned(String id, String owner) => PublicTrip.fromJson(publicTripJson(id: id, ownerId: owner));
+    final api = _Api()..pages[null] = FeedPage(items: [owned('a', 'kavya'), owned('b', 'aman'), owned('c', 'kavya')]);
+    final c = Get.put(TravelBuddiesController(api: api));
+    await _settle();
+    c.applyFollow('kavya', true);
+    expect(c.items.map((t) => t.iFollowOwner), [true, false, true]);
+    c.applyFollow('kavya', false);
+    expect(c.items.map((t) => t.iFollowOwner), [false, false, false]);
+  });
+
+  test('applyMyJoin and applyRefusal update the card in place', () async {
+    final api = _Api()..pages[null] = FeedPage(items: [_trip('a'), _trip('b')]);
+    final c = Get.put(TravelBuddiesController(api: api));
+    await _settle();
+    c.applyMyJoin('a', 'requested');
+    c.applyRefusal('b', 'TripRequestsFull');
+    expect(c.items[0].myJoin, 'requested');
+    expect(c.items[1].requestsFull, isTrue);
+    c.applyRefusal('a', 'CannotRejoin');
+    expect(c.items[0].myJoin, 'removed');
   });
   test('T3: the Travel by filter reaches every feed call, and Any sends no filter', () async {
     final api = _Api()..pages[null] = FeedPage(items: [_trip('a')], nextCursor: 'p2');

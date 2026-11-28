@@ -100,7 +100,14 @@ class RoomController extends GetxController {
   /// A Free sender after his one message in this room (direct or trip group): the Plus bar replaces the composer.
   bool get plusLockShown => plusLocked.value || lock == RoomLock.plus;
 
+  /// A trip member while the owner set "Only me": the owner-only notice replaces the composer.
+  bool get ownerOnlyShown {
+    final t = room.value?.trip;
+    return isTrip && lock != RoomLock.left && t != null && !t.isOwner && (t.onlyOwnerSends || lock == RoomLock.ownerOnly);
+  }
+
   bool get canSend {
+    if (ownerOnlyShown) return false;
     if (view.value != RoomView.ready || !canMessage || cannotMessageNow.value || plusLockShown) return false;
     final r = room.value;
     if (r != null) return r.canSend && r.lock == RoomLock.none && r.status != RoomStatus.declined;
@@ -383,6 +390,15 @@ class RoomController extends GetxController {
     if (r case BuddyOk(:final value)) room.value = value;
   }
 
+  Future<BuddyResult<ChatRoomModel>> setSendMode(bool onlyOwner) async {
+    final id = currentRoomId;
+    if (id == null) return const BuddyFailed<ChatRoomModel>(message: '');
+    final gen = _gen;
+    final r = await _api.setSendMode(id, onlyOwnerSends: onlyOwner);
+    if (gen == _gen && r is BuddyOk<ChatRoomModel>) room.value = r.value;
+    return r;
+  }
+
   Future<void> refreshLock() async {
     plusLocked.value = false;
     if (currentRoomId != null) return _refreshRoom();
@@ -431,7 +447,8 @@ class RoomController extends GetxController {
         type == SocialErrorTypes.textTooLong ||
         type == SocialErrorTypes.roomNotFound ||
         type == SocialErrorTypes.personNotFound ||
-        type == SocialErrorTypes.plusRequired;
+        type == SocialErrorTypes.plusRequired ||
+        type == SocialErrorTypes.onlyOwnerSends;
     if (!bounce) {
       _markFailed(cid);
       refusal.value = r;
@@ -452,6 +469,10 @@ class RoomController extends GetxController {
     } else if (type == SocialErrorTypes.plusRequired) {
       plusLocked.value = true;
       SocialMeController.maybe?.refreshQuiet();
+    } else if (type == SocialErrorTypes.onlyOwnerSends) {
+      final t = current?.trip;
+      room.value = current?.copyWith(lock: RoomLock.ownerOnly, canSend: false, trip: t?.copyWith(onlyOwnerSends: true));
+      unawaited(_refreshRoom());
     } else if (type == SocialErrorTypes.roomNotFound || type == SocialErrorTypes.personNotFound) {
       view.value = RoomView.gone;
     }
@@ -472,8 +493,14 @@ class RoomController extends GetxController {
         _bumpPeerRead(r.seq);
       case final DmRoomChangedEvent c when c.roomId == id:
         room.value = room.value?.copyWith(status: c.status, lock: c.lock, canSend: c.lock == RoomLock.none);
+      case final DmRoomSettingsEvent s when s.roomId == id:
+        final current = room.value;
+        final t = current?.trip;
+        if (current != null && t != null) room.value = current.copyWith(trip: t.copyWith(onlyOwnerSends: s.onlyOwnerSends, ownerName: s.ownerName.isEmpty ? null : s.ownerName));
+        unawaited(_refreshRoom());
       case DmReconnectedEvent():
         if (id != null && view.value == RoomView.ready) unawaited(fillGap());
+        if (id != null && isTrip) unawaited(_refreshRoom());
       default:
         break;
     }

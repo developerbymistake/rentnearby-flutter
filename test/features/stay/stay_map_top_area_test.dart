@@ -29,7 +29,7 @@ class _TopState extends State<_Top> {
           Container(
             decoration: BoxDecoration(gradient: ListingPalette.forest.gradient, borderRadius: DS.br(CardRadius.header)),
             padding: DS.insets(l: 20, t: 12, r: 20, b: 16),
-            child: ToneSegmentControl(labels: _labels, semanticLabels: _sem, selected: sel, tone: ListingTone.forest, cellHeight: 54, onTap: (i) => setState(() => sel = i)),
+            child: ToneSegmentControl(labels: _labels, semanticLabels: _sem, selected: sel, tone: ListingTone.forest, cellHeight: KitMetrics.touch - 8, onTap: (i) => setState(() => sel = i)),
           ),
           Padding(
             padding: EdgeInsets.only(top: DS.gv(12), left: DS.s(StayMapTopControls.side), right: DS.s(StayMapTopControls.side)),
@@ -64,17 +64,19 @@ void main() {
     final chips = src.substring(src.indexOf('Widget _buildRadiusChips()'), src.indexOf('void _onLocateTap()'));
     expect(chips.contains('TextStyle('), isFalse);
     expect(chips.contains('GestureDetector'), isFalse);
+    expect(chips, contains('cellHeight: KitMetrics.touch - 8'));
     expect(AppConstants.defaultRadiusKm, 20.0);
   });
 
-  testWidgets('radius chips: 20 km selected at start, a tap moves the selection, Ink3D 13 w700, 54 high', (t) async {
+  testWidgets('radius chips: 20 km selected at start, a tap moves the selection, Ink3D 13 w700, same total height as the compact search bar', (t) async {
     await _pump(t);
     expect(_styleOf(t, '20 km').color, DesignColors.onPrimary);
     expect(_styleOf(t, '12 km').color, Ink3D.body);
     expect(_styleOf(t, '12 km').fontWeight, FontWeight.w700);
     expect(_styleOf(t, '12 km').fontFamily, Ink3D.text(13, FontWeight.w700, Ink3D.body).fontFamily);
     expect(_styleOf(t, '12 km').fontSize, Ink3D.text(13, FontWeight.w700, Ink3D.body).fontSize);
-    expect(t.getSize(find.byKey(const ValueKey('segment-0'))).height, closeTo(DS.s(54), 0.5));
+    expect(t.getSize(find.byKey(const ValueKey('segment-0'))).height, closeTo(DS.s(KitMetrics.touch - 8), 0.5));
+    expect(t.getSize(find.byType(ToneSegmentControl)).height, closeTo(DS.s(KitMetrics.touch), 0.5));
     for (var i = 0; i < _labels.length; i++) {
       await t.tap(find.text(_labels[i]));
       await t.pump();

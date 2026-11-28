@@ -35,81 +35,73 @@ class WizardNote extends StatelessWidget {
       );
 }
 
-class WizardHeader extends StatelessWidget {
-  const WizardHeader({super.key, required this.title, required this.tabs, required this.step, required this.saved, required this.savedLabel, required this.onClose, required this.closeLabel});
+class WizardProgress extends StatelessWidget {
+  const WizardProgress({super.key, required this.tabs, required this.step});
 
-  final String title;
   final List<String> tabs;
   final int step;
-  final bool saved;
-  final String savedLabel;
-  final VoidCallback onClose;
-  final String closeLabel;
-
-  static const Key closeKey = ValueKey('post_wizard_close');
 
   @override
   Widget build(BuildContext context) {
     final tone = ListingTone.indigo;
     return Padding(
-      padding: EdgeInsets.fromLTRB(DS.s(18), MediaQuery.paddingOf(context).top + DS.s(10), DS.s(18), DS.s(10)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      padding: DS.gapInsets(l: 18, t: 14, r: 18, b: 10),
+      child: Row(
         children: [
-          Row(
-            children: [
-              Semantics(label: closeLabel, button: true, excludeSemantics: true, child: KitRoundButton(key: closeKey, icon: Icons.close_rounded, onTap: onClose)),
-              Gap.h(8),
-              Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Ink3D.text(18, FontWeight.w600, Ink3D.title, letterSpacing: 0))),
-              if (saved)
-                Row(
-                  key: const ValueKey('post_draft_saved'),
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.check_rounded, size: DS.s(16), color: SocialLookB.seatsText),
-                    Gap.h(4),
-                    Text(savedLabel, style: Ink3D.text(12.5, FontWeight.w600, SocialLookB.seatsText, letterSpacing: 0)),
-                  ],
-                ),
-            ],
-          ),
-          Gap.v(14),
-          Row(
-            children: [
-              for (var i = 0; i < tabs.length; i++) ...[
-                if (i > 0) Gap.h(10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          for (var i = 0; i < tabs.length; i++) ...[
+            if (i > 0) Gap.h(10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: DS.s(5),
+                    decoration: BoxDecoration(color: i <= step ? tone.g2 : Form3D.todo, borderRadius: DS.circular(3)),
+                  ),
+                  Gap.v(8),
+                  Row(
                     children: [
-                      Container(
-                        height: DS.s(5),
-                        decoration: BoxDecoration(color: i <= step ? tone.g2 : Form3D.todo, borderRadius: DS.circular(3)),
-                      ),
-                      Gap.v(8),
-                      Row(
-                        children: [
-                          if (i < step) ...[Icon(Icons.check_rounded, size: DS.s(15), color: SocialLookB.seatsText), Gap.h(4)],
-                          Flexible(
-                            child: Text(
-                              tabs[i],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Ink3D.text(14, i == step ? FontWeight.w600 : FontWeight.w500, i == step ? Ink3D.title : Ink3D.sub, letterSpacing: 0),
-                            ),
-                          ),
-                        ],
+                      if (i < step) ...[Icon(Icons.check_rounded, size: DS.s(15), color: SocialLookB.seatsText), Gap.h(4)],
+                      Flexible(
+                        child: Text(
+                          tabs[i],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Ink3D.text(14, i == step ? FontWeight.w600 : FontWeight.w500, i == step ? Ink3D.title : Ink3D.sub, letterSpacing: 0),
+                        ),
                       ),
                     ],
                   ),
-                ),
-              ],
-            ],
-          ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
+}
+
+class WizardSavedTick extends StatelessWidget {
+  const WizardSavedTick({super.key, required this.label});
+
+  final String label;
+
+  static const Key savedKey = ValueKey('post_draft_saved');
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: PageHeader3D.buttonSize,
+        child: Row(
+          key: savedKey,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check_rounded, size: DS.s(16), color: SocialLookB.seatsText),
+            Gap.h(4),
+            Text(label, style: Ink3D.text(12.5, FontWeight.w600, SocialLookB.seatsText, letterSpacing: 0)),
+          ],
+        ),
+      );
 }
 
 class WizardBottomBar extends StatelessWidget {

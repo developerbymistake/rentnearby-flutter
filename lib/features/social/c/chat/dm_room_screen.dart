@@ -42,6 +42,7 @@ import 'report_message_dialog.dart';
 import 'room_controller.dart';
 import 'rooms_controller.dart';
 import 'social_rooms_tabs.dart';
+import 'who_can_send_sheet.dart';
 
 class DmRoomScreen extends StatefulWidget {
   const DmRoomScreen({super.key, this.roomId, this.userId, this.name, this.photoUrl, this.tripId, this.controller});
@@ -164,7 +165,7 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
     if (r == null || !mounted) return;
     _c.refusal.value = null;
     final type = r.type;
-    if (type == SocialErrorTypes.awaitingReply || type == SocialErrorTypes.guidelinesNotAccepted) return;
+    if (type == SocialErrorTypes.awaitingReply || type == SocialErrorTypes.guidelinesNotAccepted || type == SocialErrorTypes.onlyOwnerSends) return;
     if (type == SocialErrorTypes.plusRequired) {
       PlusSheets.limitReached(context, errorType: type!, data: r.data, from: 'chat', title: SocialStringsC.freeMessageUsedTitle, line: SocialStringsC.freeMessageUsedLine);
       return;
@@ -213,6 +214,7 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
             return Column(
               children: [
                 SafeArea(bottom: false, child: _header()),
+                if (view == RoomView.ready && _c.isTrip) _tripSafety(),
                 Expanded(child: MediaQuery.removePadding(context: context, removeTop: true, child: _body(view))),
                 if (view == RoomView.ready) _pinnedSafety(),
                 if (view == RoomView.ready) _bottom(),
@@ -308,6 +310,12 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
       ),
     );
   }
+
+  Widget _tripSafety() => Padding(
+        key: const ValueKey('dm_trip_safety'),
+        padding: DS.gapInsets(l: 18, t: 8, r: 18, b: 4),
+        child: ChatSafetyNote3D(text: SocialStringsC.safety, margin: EdgeInsets.zero),
+      );
 
   Widget _pinnedSafety() {
     final r = _c.room.value;
@@ -502,9 +510,18 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
     final left = _c.lock == RoomLock.left;
     showMenu3D(context, anchor: anchor, width: 220, items: [
       MenuItem3D(label: SocialStringsC.membersItem, art: ListingArt.panda, onTap: () => BuddyNavigation.openTravellers(trip.tripId)),
+      if (trip.isOwner) MenuItem3D(label: SocialStringsC.whoCanSend, art: ListingArt.crown, onTap: _whoCanSend),
       if (seq != null) MenuItem3D(label: SocialStringsC.reportChat, art: ListingArt.warning, danger: true, onTap: () => _reportMessage(roomId, seq)),
       if (!left) MenuItem3D(label: SocialStringsC.leaveTrip, art: ListingArt.memo, danger: true, onTap: () => _leave(trip.tripId)),
     ]);
+  }
+
+  Future<void> _whoCanSend() async {
+    final cur = _c.room.value?.trip?.onlyOwnerSends ?? false;
+    final pick = await WhoCanSendSheet.show(context, onlyOwner: cur);
+    if (pick == null || pick == cur || !mounted) return;
+    final r = await _c.setSendMode(pick);
+    if (r is! BuddyOk) BuddyFeedback.writeFailed(r);
   }
 
   Future<void> _leave(String tripId) async {
@@ -527,6 +544,7 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
     final p = _c.preflight.value;
     if (_c.cannotMessageNow.value || _c.room.value == null && p != null && !p.canMessage) return SocialStringsC.cannotMessage;
     if (_c.lock == RoomLock.left) return _c.isTrip ? SocialStringsC.leftTrip : SocialStringsC.cannotMessage;
+    if (_c.ownerOnlyShown) return SocialStringsC.onlyOwnerSends(_c.room.value?.trip?.ownerName ?? '');
     return null;
   }
 
@@ -536,7 +554,10 @@ class _DmRoomScreenState extends State<DmRoomScreen> {
     final r = _c.room.value;
     final p = _c.preflight.value;
     final notice = _noticeText;
-    if (notice != null) return ChatNoticePanel3D(key: const ValueKey('dm_notice'), tone: _tone, text: notice);
+    if (notice != null) {
+      final ownerOnly = _c.ownerOnlyShown && !_c.cannotMessageNow.value;
+      return ChatNoticePanel3D(key: ValueKey(ownerOnly ? 'dm_owner_only' : 'dm_notice'), tone: _tone, text: notice);
+    }
     if (_c.plusLockShown) return _lockBar(SocialStringsC.freeMessageUsedTitle, SocialStringsC.freeMessageUsedLine, 'dm_lock_plus');
     final lock = _c.lock;
     final newChats = _newChats();

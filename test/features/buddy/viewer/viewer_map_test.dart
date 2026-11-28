@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:bakhli/design/extra/trip_plan_look.dart';
 import 'package:bakhli/design/tokens/design_scale.dart';
 import 'package:bakhli/features/buddy/buddy_live.dart';
-import 'package:bakhli/features/buddy/shared/widgets/segment_tabs.dart';
 import 'package:bakhli/features/buddy/viewer/controllers/viewer_trip_controller.dart';
 import 'package:bakhli/features/buddy/viewer/data/viewer_spot_photos.dart';
 import 'package:bakhli/features/buddy/viewer/data/viewer_trip_cache.dart';
@@ -16,6 +15,7 @@ import 'package:bakhli/features/buddy/viewer/widgets/viewer_map_scene.dart';
 import 'package:bakhli/features/buddy/viewer/widgets/viewer_route_map.dart';
 import 'package:bakhli/features/map_discovery/pack/map_pack_index.dart';
 import 'package:bakhli/features/map_discovery/pack/map_pack_models.dart';
+import 'package:bakhli/features/social/b/widgets/sliding_tabs.dart';
 import 'package:bakhli/features/trip/map/discovery_api.dart';
 import 'package:bakhli/features/trip/map/map_marker_sizes.dart';
 import 'package:bakhli/features/trip/map/trip_route_stops.dart';
@@ -42,9 +42,20 @@ Map<String, dynamic> _road() => {
       ],
     };
 
-ViewerTrip _trip() {
+ViewerTrip _trip({int extraDays = 0}) {
   final j = s14Json();
-  ((j['days'] as List).first as Map<String, dynamic>)['routeGeoJson'] = _road();
+  final days = j['days'] as List;
+  (days.first as Map<String, dynamic>)['routeGeoJson'] = _road();
+  final base = days.last as Map<String, dynamic>;
+  for (var d = 3; d < 3 + extraDays; d++) {
+    days.add({
+      ...base,
+      'day': d,
+      'spots': [
+        for (final sp in (base['spots'] as List).cast<Map<String, dynamic>>()) {...sp, 'id': '${sp['id']}-d$d'},
+      ],
+    });
+  }
   return ViewerTrip.fromJson(j);
 }
 
@@ -87,12 +98,12 @@ class _FakeMapState extends State<_FakeMap> {
   }
 }
 
-Future<ViewerTripController> _pumpMap(WidgetTester t, {int? day}) async {
+Future<ViewerTripController> _pumpMap(WidgetTester t, {int? day, int extraDays = 0}) async {
   t.view.devicePixelRatio = 2;
   t.view.physicalSize = const Size(784, 1600);
   addTearDown(t.view.reset);
   final c = Get.put(ViewerTripController(tripId, api: FakeViewerApi(), ledger: FakeViewerLedger()), tag: tripId);
-  c.trip.value = _trip();
+  c.trip.value = _trip(extraDays: extraDays);
   await t.pumpWidget(app(ViewerMapScreen(tripId: tripId, day: day, mapBuilder: (_, v) => _FakeMap(v))));
   await t.pump();
   await t.pump(const Duration(milliseconds: 300));
@@ -246,33 +257,64 @@ void main() {
   });
 
   group('screen', () {
-    testWidgets('header subtitle, view only chip, day dots and controls', (t) async {
+    testWidgets('header subtitle, view only chip, Day tabs (no All) and controls', (t) async {
       final c = await _pumpMap(t);
       final trip = c.trip.value!;
       expect(find.text(trip.title), findsOneWidget);
       expect(find.text(ViewerStrings.mapSubtitle(trip.owner.name, trip.dayCount, trip.spotCount)), findsOneWidget);
       expect(find.text('Shared by Rahul · 7 days · 18 places'), findsOneWidget);
-      final tabs = t.widget<SegmentTabs>(find.byType(SegmentTabs));
-      expect(tabs.dayDots!.skip(1), [ViewerLook.routeColor(1), ViewerLook.routeColor(2)]);
+      final tabs = t.widget<SlidingTabs>(find.byType(SlidingTabs));
+      expect(tabs.labels, ['Day 1', 'Day 2']);
+      expect(tabs.selected, 0);
+      expect(find.text('All days'), findsNothing);
+      expect(find.text('All'), findsNothing);
       expect(find.byType(TripMapControls), findsOneWidget);
       expect(find.byKey(const ValueKey('disc-zoom-in')), findsOneWidget);
       expect(find.byKey(const ValueKey('disc-locate')), findsOneWidget);
       expect(find.byKey(const ValueKey('disc-eye')), findsNothing);
     });
 
-    testWidgets('one map for all days: a day pick dims, never rebuilds the map', (t) async {
+    testWidgets('one map for all days: opens on Day 1, a day pick dims and moves the pill, never rebuilds the map', (t) async {
       await _pumpMap(t);
       expect(_FakeMap.created, 1);
-      expect(_FakeMap.last!.selected, ViewerMapScene.all);
+      expect(_FakeMap.last!.selected, 1);
+      Rect pill() => t.getRect(find.descendant(of: find.byType(AnimatedPositioned), matching: find.byType(DecoratedBox)).first);
+      expect(pill().center.dx, closeTo(t.getRect(find.byKey(SlidingTabs.tabKey(0))).center.dx, 0.5));
       await t.tap(find.text('Day 2'));
       await t.pump();
+      await t.pump(const Duration(milliseconds: 600));
       expect(_FakeMap.created, 1);
       expect(_FakeMap.last!.selected, 2);
+      expect(t.widget<SlidingTabs>(find.byType(SlidingTabs)).selected, 1);
+      expect(pill().center.dx, closeTo(t.getRect(find.byKey(SlidingTabs.tabKey(1))).center.dx, 0.5));
       expect(_FakeMap.last!.scene.lineOpacity(1, _FakeMap.last!.selected), ViewerMapScene.dimLine);
-      await t.tap(find.text('All days'));
+      await t.tap(find.text('Day 1'));
       await t.pump();
+      await t.pump(const Duration(milliseconds: 600));
       expect(_FakeMap.created, 1);
-      expect(_FakeMap.last!.selected, ViewerMapScene.all);
+      expect(_FakeMap.last!.selected, 1);
+    });
+
+    testWidgets('a day passed in opens on that day', (t) async {
+      await _pumpMap(t, day: 2);
+      expect(_FakeMap.last!.selected, 2);
+      expect(t.widget<SlidingTabs>(find.byType(SlidingTabs)).selected, 1);
+    });
+
+    testWidgets('many days: the tab row scrolls and the picked day stays in view', (t) async {
+      await _pumpMap(t, day: 8, extraDays: 6);
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 600));
+      final tabs = t.widget<SlidingTabs>(find.byType(SlidingTabs));
+      expect(tabs.labels, [for (var d = 1; d <= 8; d++) 'Day $d']);
+      expect(tabs.selected, 7);
+      expect(_FakeMap.last!.selected, 8);
+      expect(find.descendant(of: find.byType(SlidingTabs), matching: find.byType(SingleChildScrollView)), findsOneWidget);
+      final row = t.getRect(find.byType(SlidingTabs));
+      final last = t.getRect(find.byKey(SlidingTabs.tabKey(7)));
+      expect(last.left, greaterThanOrEqualTo(row.left - 0.5));
+      expect(last.right, lessThanOrEqualTo(row.right + 0.5));
+      expect(t.takeException(), isNull);
     });
 
     testWidgets('tap a place: read-only card with only Details; chevron and empty map close it', (t) async {
@@ -329,13 +371,14 @@ void main() {
 
     testWidgets('no road line note shows only while a dashed day is shown', (t) async {
       await _pumpMap(t);
-      expect(find.text(ViewerStrings.noRoadLine), findsOneWidget);
-      await t.tap(find.text('Day 1'));
-      await t.pump();
       expect(find.byKey(ViewerMapScreen.noRoadKey), findsNothing);
       await t.tap(find.text('Day 2'));
       await t.pump();
+      expect(find.text(ViewerStrings.noRoadLine), findsOneWidget);
       expect(find.text('Road line not available'), findsOneWidget);
+      await t.tap(find.text('Day 1'));
+      await t.pump();
+      expect(find.byKey(ViewerMapScreen.noRoadKey), findsNothing);
     });
   });
 }

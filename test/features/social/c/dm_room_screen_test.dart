@@ -6,6 +6,7 @@ import 'package:bakhli/features/social/a/widgets/social_chips_a.dart';
 import 'package:bakhli/features/social/c/chat/dm_room_screen.dart';
 import 'package:bakhli/features/social/c/chat/models/chat_models.dart';
 import 'package:bakhli/features/social/c/chat/room_controller.dart';
+import 'package:bakhli/features/social/c/chat/who_can_send_sheet.dart';
 import 'package:bakhli/features/social/c/social_strings_c.dart';
 import 'package:bakhli/features/social/c/widgets/chat_room_header.dart';
 import 'package:bakhli/features/social/shared/social_me_controller.dart';
@@ -81,7 +82,8 @@ void main() {
         expect(t.widget<ChatSystemNote>(find.ancestor(of: find.text('Meera joined the trip'), matching: find.byType(ChatSystemNote))).colors, BuddyLook.note[NoteToneColor.teal]);
         expect(find.byKey(const ValueKey('dm_trip_art')), findsOneWidget);
         expect(find.text('Booked the cab for 6 AM from Delhi.'), findsOneWidget);
-        expect(find.text(SocialStringsC.safety), findsNothing);
+        expect(find.byKey(const ValueKey('dm_trip_safety')), findsOneWidget);
+        expect(find.byKey(const ValueKey('dm_pinned_safety')), findsNothing);
         expect(find.byKey(const ValueKey('dm_composer')), findsOneWidget);
         expect(t.takeException(), isNull);
         await disposeSocial(t);
@@ -252,5 +254,147 @@ void main() {
     expect(api.beforeCalls, [51]);
     expect(t.takeException(), isNull);
     await disposeSocial(t);
+  });
+
+  group('I-38c / I-39 trip chat', () {
+    ChatRoomModel tripRoom({bool isOwner = false, bool only = false, String lock = 'none', bool canSend = true}) =>
+        roomOf(kind: 'T', lock: lock, canSend: canSend, trip: tripJson(isOwner: isOwner, onlyOwnerSends: only, ownerName: 'Rahul'));
+
+    Future<void> pumps(WidgetTester t) async {
+      for (var i = 0; i < 6; i++) {
+        await t.pump(const Duration(milliseconds: 100));
+      }
+    }
+
+    Future<void> openMenu(WidgetTester t) async {
+      await t.tap(find.byKey(const ValueKey('dm_room_more')));
+      await pumps(t);
+    }
+
+    for (final owner in [true, false]) {
+      testWidgets('the safety note is pinned at the top of the trip chat (owner: $owner)', (t) async {
+        final api = FakeChatApi()
+          ..roomResult = BuddyOk(tripRoom(isOwner: owner))
+          ..messagesResult = BuddyOk(MessagesPage(items: [msgOf(1, sender: 'u-rohan', senderName: 'Rohan M.', text: 'See you at 6')], lastSeq: 1));
+        await pumpSocial(t, DmRoomScreen(controller: controller(api)));
+        final note = find.byKey(const ValueKey('dm_trip_safety'));
+        expect(note, findsOneWidget);
+        expect(find.descendant(of: note, matching: find.text(SocialStringsC.safety)), findsOneWidget);
+        expect(find.descendant(of: find.byType(ListView), matching: note), findsNothing);
+        final headerBottom = t.getBottomLeft(find.byKey(const ValueKey('dm_room_header'))).dy;
+        expect(t.getTopLeft(note).dy, greaterThanOrEqualTo(headerBottom - 0.5));
+        expect(t.getTopLeft(note).dy, lessThan(t.getTopLeft(find.text('See you at 6')).dy));
+        expect(find.byKey(const ValueKey('dm_pinned_safety')), findsNothing);
+        expect(t.takeException(), isNull);
+        await disposeSocial(t);
+      });
+    }
+
+    testWidgets('a 1-to-1 chat keeps its bottom safety note and has no trip note', (t) async {
+      final api = FakeChatApi()
+        ..roomResult = BuddyOk(roomOf(status: 'Request', iStarted: true))
+        ..messagesResult = BuddyOk(MessagesPage(items: [msgOf(1, sender: myId, text: 'Hi')], lastSeq: 1));
+      await pumpSocial(t, DmRoomScreen(controller: controller(api)));
+      expect(find.byKey(const ValueKey('dm_trip_safety')), findsNothing);
+      expect(find.byKey(const ValueKey('dm_pinned_safety')), findsOneWidget);
+      expect(find.text(SocialStringsC.safety), findsOneWidget);
+      await disposeSocial(t);
+    });
+
+    testWidgets('the owner menu has Who can send messages after Members', (t) async {
+      final api = FakeChatApi()..roomResult = BuddyOk(tripRoom(isOwner: true));
+      await pumpSocial(t, DmRoomScreen(controller: controller(api)));
+      await openMenu(t);
+      expect(find.text(SocialStringsC.membersItem), findsOneWidget);
+      expect(find.text(SocialStringsC.whoCanSend), findsOneWidget);
+      expect(t.getTopLeft(find.text(SocialStringsC.whoCanSend)).dy, greaterThan(t.getTopLeft(find.text(SocialStringsC.membersItem)).dy));
+      expect(find.text(SocialStringsC.leaveTrip), findsOneWidget);
+      await disposeSocial(t);
+    });
+
+    testWidgets('a member menu has no Who can send messages; Members and Leave stay', (t) async {
+      final api = FakeChatApi()..roomResult = BuddyOk(tripRoom());
+      await pumpSocial(t, DmRoomScreen(controller: controller(api)));
+      await openMenu(t);
+      expect(find.text(SocialStringsC.whoCanSend), findsNothing);
+      expect(find.text(SocialStringsC.membersItem), findsOneWidget);
+      expect(find.text(SocialStringsC.leaveTrip), findsOneWidget);
+      await disposeSocial(t);
+    });
+
+    testWidgets('picking Only me in the sheet calls the api', (t) async {
+      final api = FakeChatApi()
+        ..roomResult = BuddyOk(tripRoom(isOwner: true))
+        ..sendModeResult = BuddyOk(tripRoom(isOwner: true, only: true));
+      await pumpSocial(t, DmRoomScreen(controller: controller(api)));
+      await openMenu(t);
+      await t.tap(find.text(SocialStringsC.whoCanSend));
+      await pumps(t);
+      expect(find.byKey(WhoCanSendSheet.everyoneKey), findsOneWidget);
+      await t.tap(find.byKey(WhoCanSendSheet.onlyMeKey));
+      await pumps(t);
+      expect(api.sendModes, [true]);
+      expect(find.byKey(const ValueKey('dm_composer')), findsOneWidget);
+      expect(t.takeException(), isNull);
+      await disposeSocial(t);
+    });
+
+    testWidgets('picking the current value sends nothing', (t) async {
+      final api = FakeChatApi()..roomResult = BuddyOk(tripRoom(isOwner: true));
+      await pumpSocial(t, DmRoomScreen(controller: controller(api)));
+      await openMenu(t);
+      await t.tap(find.text(SocialStringsC.whoCanSend));
+      await pumps(t);
+      await t.tap(find.byKey(WhoCanSendSheet.everyoneKey));
+      await pumps(t);
+      expect(api.sendModes, isEmpty);
+      await disposeSocial(t);
+    });
+
+    for (final w in socialWidths) {
+      for (final s in socialScales) {
+        testWidgets('a member with Only me on sees the owner-only line instead of the message box (${w.toInt()} x$s)', (t) async {
+          final api = FakeChatApi()..roomResult = BuddyOk(tripRoom(only: true, lock: 'ownerOnly', canSend: false));
+          await pumpSocial(t, DmRoomScreen(controller: controller(api)), width: w, scale: s);
+          expect(find.byKey(const ValueKey('dm_owner_only')), findsOneWidget);
+          expect(find.text('Only Rahul can send messages in this trip chat'), findsOneWidget);
+          expect(find.byKey(const ValueKey('dm_composer')), findsNothing);
+          expect(find.byKey(const ValueKey('dm_notice')), findsNothing);
+          expect(t.takeException(), isNull);
+          await disposeSocial(t);
+        });
+      }
+    }
+
+    test('the owner-only line never shows an empty name', () {
+      expect(SocialStringsC.onlyOwnerSends(''), 'Only the trip owner can send messages in this trip chat');
+      expect(SocialStringsC.onlyOwnerSends('Rahul'), 'Only Rahul can send messages in this trip chat');
+    });
+
+    testWidgets('the owner-only line beats the Plus bar', (t) async {
+      final api = FakeChatApi()..roomResult = BuddyOk(tripRoom(only: true, lock: 'plus', canSend: false));
+      await pumpSocial(t, DmRoomScreen(controller: controller(api)));
+      expect(find.byKey(const ValueKey('dm_owner_only')), findsOneWidget);
+      expect(find.byKey(const ValueKey('dm_lock_plus')), findsNothing);
+      await disposeSocial(t);
+    });
+
+    testWidgets('the owner keeps the message box with Only me on', (t) async {
+      final api = FakeChatApi()..roomResult = BuddyOk(tripRoom(isOwner: true, only: true));
+      await pumpSocial(t, DmRoomScreen(controller: controller(api)));
+      expect(find.byKey(const ValueKey('dm_owner_only')), findsNothing);
+      expect(t.widget<TextField>(find.byKey(const ValueKey('dm_composer'))).enabled, isTrue);
+      await disposeSocial(t);
+    });
+
+    testWidgets('the sendmode line renders as a system note', (t) async {
+      final api = FakeChatApi()
+        ..roomResult = BuddyOk(tripRoom())
+        ..messagesResult = BuddyOk(MessagesPage(items: [msgOf(1, system: 'sendmode', text: 'Rahul changed who can send messages')], lastSeq: 1));
+      await pumpSocial(t, DmRoomScreen(controller: controller(api)));
+      expect(find.ancestor(of: find.text('Rahul changed who can send messages'), matching: find.byType(ChatSystemNote)), findsOneWidget);
+      expect(find.byType(ChatBubble3D), findsNothing);
+      await disposeSocial(t);
+    });
   });
 }

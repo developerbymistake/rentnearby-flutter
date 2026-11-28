@@ -75,4 +75,32 @@ void main() {
     expect(mp.lastSeq, 2);
     expect(mp.peerLastReadSeq, 1);
   });
+
+  test('I-39 trip block reads owner fields and copyWith keeps the rest', () {
+    final r = ChatRoomModel.fromJson(roomJson(kind: 'T', lock: 'ownerOnly', canSend: false, trip: tripJson(isOwner: false, ownerName: 'Rahul', onlyOwnerSends: true)));
+    expect(r.lock, RoomLock.ownerOnly);
+    expect(r.trip?.isOwner, isFalse);
+    expect(r.trip?.ownerName, 'Rahul');
+    expect(r.trip?.onlyOwnerSends, isTrue);
+    final off = r.copyWith(trip: r.trip!.copyWith(onlyOwnerSends: false));
+    expect(off.trip?.onlyOwnerSends, isFalse);
+    expect(off.trip?.ownerName, 'Rahul');
+    expect(off.trip?.title, 'Goa trip');
+    expect(off.lock, RoomLock.ownerOnly);
+    expect(r.copyWith(unread: 2).trip?.onlyOwnerSends, isTrue);
+  });
+
+  test('I-39 trip block defaults when the owner fields are missing', () {
+    final t = RoomTrip.fromJson(const {'tripId': 't1', 'title': 'Goa'});
+    expect(t.isOwner, isFalse);
+    expect(t.ownerName, '');
+    expect(t.onlyOwnerSends, isFalse);
+  });
+
+  test('I-39 the sendmode line is a system line', () {
+    final m = ChatMessageModel.fromJson(messageJson(6, system: 'sendmode', text: 'Rahul changed who can send messages'));
+    expect(m.isSystem, isTrue);
+    expect(m.system, ChatMessageModel.sendMode);
+    expect(m.senderId, isNull);
+  });
 }

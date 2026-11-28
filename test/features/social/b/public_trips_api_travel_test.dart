@@ -19,12 +19,25 @@ void main() {
 
   test('T3: feed sends travel only when a mode is picked', () async {
     final server = installServer();
-    server.on('GET', _feed, {'mine': [], 'items': [], 'nextCursor': null});
+    server.on('GET', _feed, feedPage());
     await const PublicTripsApi().feed(travel: 'taxi');
     await const PublicTripsApi().feed();
     final calls = server.calls('GET', _feed);
     expect(calls[0].queryParameters['travel'], 'taxi');
     expect(calls[1].queryParameters.containsKey('travel'), isFalse);
+  });
+
+  test('I-37: Explore reads only feed items; My posts comes from /social/trips/mine, newest first as sent', () async {
+    final server = installServer();
+    server.on('GET', _feed, feedPage(items: [publicTripJson(id: 'a')]));
+    server.on('GET', minePath, minePage([publicTripJson(id: 'm2', isMine: true, waitingRequests: 3), publicTripJson(id: 'm1', isMine: true)]));
+    final feed = (await const PublicTripsApi().feed()).valueOrNull!;
+    expect(feed.items.map((t) => t.tripId), ['a']);
+    final mine = (await const PublicTripsApi().mine()).valueOrNull!;
+    expect(mine.map((t) => t.tripId), ['m2', 'm1']);
+    expect(mine.first.isMine, isTrue);
+    expect(mine.first.waitingRequests, 3);
+    expect(server.calls('GET', minePath), hasLength(1));
   });
 
   test('T2/T5: the post body always carries travelMode and the answer is parsed', () async {

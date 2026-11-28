@@ -1,3 +1,4 @@
+import 'trip_constants.dart';
 import 'utils/trip_format.dart';
 
 class TripStringsMcaA3 {
@@ -6,7 +7,7 @@ class TripStringsMcaA3 {
   static String nearbyCities(List<String> names) => '${names.join(', ')} and more';
   static const String connectToAddCity = 'Connect to add a city';
   static const String maxCities = '4 cities · the most in one trip';
-  static const String noDaysLeft = 'No days left · 14 is the most';
+  static const String noDaysLeft = 'No days left · ${TripConstants.maxDaysCap} is the most';
   static String cities(int n) => '$n cities';
   static String spots(int n) => n == 1 ? '1 spot' : '$n spots';
   static String nights(int n) => n == 1 ? '1 night' : '$n nights';

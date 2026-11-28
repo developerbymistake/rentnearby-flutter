@@ -1,4 +1,5 @@
 class TripStringsDayplan {
+  static String dayTab(int day) => 'Day $day';
   static const String lockedByRequest = 'Plan is locked while your taxi request is active. Cancel the request to edit.';
   static const String lockedByBooking = 'Plan is locked while your booking is active. Cancel the booking to edit.';
   static const String lockedByStay = 'Plan is locked while your stay booking is active. Cancel the stay booking to edit.';
